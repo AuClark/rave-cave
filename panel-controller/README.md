@@ -114,6 +114,7 @@ See [rpi-rgb-led-matrix docs](https://github.com/hzeller/rpi-rgb-led-matrix) for
 - **`hw.py`** — Hardware probing (Pi model, HAT/Bonnet, camera, uptime, memory)
 - **`requirements.txt`** — Python deps (prefer system packages)
 - **`systemd/rave-panel-controller.service`** — systemd unit for auto-start
+- **`PANEL-TEST-LOG.md`** — Panel testing register: commands that worked, session observations, bring-up guide, scorecard
 - **`README.md`** — This file
 
 ## Troubleshooting
