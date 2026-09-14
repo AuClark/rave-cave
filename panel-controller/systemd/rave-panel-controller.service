@@ -1,0 +1,25 @@
+[Unit]
+Description=Rave Cave Panel Controller Web Server
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=raver
+Group=raver
+WorkingDirectory=/home/raver/panel-controller
+ExecStart=/usr/bin/python3 /home/raver/panel-controller/server.py
+Restart=on-failure
+RestartSec=10s
+
+# Logging
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=rave-panel-controller
+
+# Security hardening (optional)
+NoNewPrivileges=true
+PrivateTmp=true
+
+[Install]
+WantedBy=multi-user.target

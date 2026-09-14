@@ -8,6 +8,8 @@ Jonathan Clark's beat-synced lighting rig: Raspberry Pi 4B pulls live mix data f
 
 **[PLAN.md](PLAN.md)**: Full project plan—architecture (mermaid diagram), StageLinQ data map (what we get / what we infer), hardware map (already ordered vs still-buy), power budget, Pi 4B setup (network, USB-DMX on Linux), endpoints (WLED, laser DMX, tubes BLE, smoke relay), weekend build order (Fri/Sat/Sun), risks, open questions.
 
+**[panel-controller/](panel-controller/)**: Separate HUB75 LED panel + Pi Camera rig (`rave-box`, Pi 3 Model A+ with Adafruit RGB Matrix Bonnet). Flask web server for live camera feed and hardware status. See [panel-controller/README.md](panel-controller/README.md).
+
 ## Architecture
 
 ```
