@@ -1,6 +1,6 @@
 # Floor Tubes: Control Findings
 
-> **Status (2026-09-26): Tube 1 runs WLED on an ESP32.** The stock controller's data wire was moved to an ESP-32S (GPIO13), and the strip is **60 addressable LEDs**, GRB. WLED 16.0.1 runs at `192.168.0.110` (`wled-b782e4`), and the Mac streams beat-synced frames to it over DDP (`scripts/tubes/ddp_demo.py`). The Bluetooth notes below are kept for tubes still on the stock controller.
+> **Status (2026-09-26): Tube 1 runs WLED on an ESP32.** The stock controller's data wire was moved to an ESP-32S (GPIO13), and the strip is **60 addressable LEDs**, GRB. WLED 16.0.1 runs as **`rave-tube-1.local`** (was `wled-b782e4`; 192.168.20.110 on FT Hangar), and the Mac streams beat-synced frames to it over DDP (`scripts/tubes/ddp_demo.py`). The Bluetooth notes below are kept for tubes still on the stock controller.
 
 Notes from reverse-engineering the standing LED floor tubes so they can be driven from our own code instead of the vendor app. **Status: we can connect and write commands, but no command has been visually confirmed to change the tube yet.**
 
@@ -146,15 +146,22 @@ Keep the stock controller intact if possible (cut-and-connector, not cut-and-sol
 
 ## Tube 1 on WLED (working)
 
-- Board: ESP-32S NodeMCU (MAC `90:15:06:b7:82:e4`, 4MB flash), hostname `wled-b782e4`, IP `192.168.0.110`.
+- Board: ESP-32S NodeMCU (MAC `90:15:06:b7:82:e4`, 4MB flash), hostname **`rave-tube-1`** (name "Rave Tube 1"), 192.168.20.110 on FT Hangar.
 - Flashed from the Mac with esptool (files in `~/tools/wled/`, sources from `wled/WLED-WebInstaller` `bin/boot/` and the WLED v16.0.1 release): `0x1000 bootloader_esp32_8m.bin` (esptool re-flags it to 4MB), `0x8000 partitions_c3_4m.bin`, `0xe000 boot_app0.bin`, `0x10000 WLED_16.0.1_ESP32.bin`, `--flash-mode dio --flash-size 4MB`.
 - Stock board pad labels: **V** = orange (5V), **C** = grey (data), **G** = white (GND).
 - WLED config: GPIO13, WS281x (type 22), GRB, 60 LEDs, 850 mA limit (powered through the ESP32's USB). Idle look: Aurora effect, Party palette.
 - DDP: UDP 4048, 10-byte header (`41 seq 01 01` + 32-bit offset + 16-bit length) then RGB bytes. WLED drops back to its own effect a few seconds after the stream stops.
 
+## Naming
+
+WLED's mDNS name (`id.mdns`) doubles as the network hostname. Set with
+`curl -X POST http://<ip>/json/cfg -d '{"id":{"mdns":"rave-tube-N","name":"Rave Tube N"}}'`, then reboot
+(`{"rb":true}` to `/json/state`). The show engine addresses tubes by hostname, resolved every 30 s,
+so an IP change at a new venue is picked up automatically.
+
 ## Tube 2 on WLED
 
-- Same board and setup as Tube 1: ESP-32S, MAC `90:15:06:b7:68:00`, WLED 16.0.1, name "Tube 2", `192.168.20.96` on FT Hangar.
+- Same board and setup as Tube 1: ESP-32S, MAC `90:15:06:b7:68:00`, WLED 16.0.1, hostname **`rave-tube-2`** (name "Rave Tube 2"), 192.168.20.96 on FT Hangar.
 - GPIO13, WS281x, GRB, 60 LEDs, 850 mA. Wi-Fi pushed over serial with `scripts/tubes/wled_wifi_serial.py`.
 - Listed in `pi/showbrain/config.json` as `tube2`.
 

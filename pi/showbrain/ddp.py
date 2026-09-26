@@ -4,18 +4,36 @@ Works for WLED devices and the rave-box panel receiver. Frames are lists of
 (r, g, b) floats 0..1; `send` scales by brightness and packs 8-bit RGB.
 """
 import socket
+import threading
+import time
 
 MAX_PAYLOAD = 1440          # multiple of 3, fits comfortably in one Ethernet/Wi-Fi frame
 
 
 class DDPOutput:
     def __init__(self, host, count, port=4048, brightness=1.0, name=None):
-        self.addr = (host, port)
+        # Hostnames (e.g. rave-tube-1.local) are resolved once, then refreshed every 30 s in the
+        # background, so a changed IP is picked up without a per-frame DNS/mDNS lookup.
+        self.host, self.port = host, port
+        self.addr = None
+        self._resolve()
+        threading.Thread(target=self._refresh, daemon=True).start()
         self.count = count
         self.brightness = brightness
         self.name = name or host
         self.sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         self.seq = 0
+
+    def _resolve(self):
+        try:
+            self.addr = (socket.gethostbyname(self.host), self.port)
+        except OSError:
+            pass                     # keep the last good address (or None until first success)
+
+    def _refresh(self):
+        while True:
+            time.sleep(30 if self.addr else 3)
+            self._resolve()
 
     def send_array(self, rgb):
         """rgb: numpy float array (..., 3) in 0..1, pixel order already flattened row-major."""
@@ -34,6 +52,8 @@ class DDPOutput:
         self.send_raw(bytes(data))
 
     def send_raw(self, data):
+        if self.addr is None:
+            return
         self.seq = (self.seq % 15) + 1
         for off in range(0, len(data), MAX_PAYLOAD):
             chunk = data[off: off + MAX_PAYLOAD]

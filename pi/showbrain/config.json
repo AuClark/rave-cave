@@ -9,7 +9,7 @@
     {
       "name": "tube1",
       "kind": "strip",
-      "host": "192.168.20.110",
+      "host": "rave-tube-1.local",
       "leds": 60,
       "brightness": 0.6,
       "role": {
@@ -19,7 +19,7 @@
     {
       "name": "tube2",
       "kind": "strip",
-      "host": "192.168.20.96",
+      "host": "rave-tube-2.local",
       "leds": 60,
       "brightness": 0.6,
       "role": {
