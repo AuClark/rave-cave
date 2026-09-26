@@ -1,0 +1,58 @@
+{
+  "feed_port": 9100,
+  "commander_port": 8090,
+  "fps": 50,
+  "lead_ms": 40,
+  "intensity": 0.8,
+  "drop_bars": 16,
+  "fixtures": [
+    {
+      "name": "tube1",
+      "kind": "strip",
+      "host": "192.168.20.110",
+      "leds": 60,
+      "brightness": 0.6,
+      "role": {
+        "flip": false
+      }
+    },
+    {
+      "name": "tube2",
+      "kind": "strip",
+      "host": "192.168.20.96",
+      "leds": 60,
+      "brightness": 0.6,
+      "role": {
+        "flip": true
+      }
+    },
+    {
+      "name": "panel",
+      "kind": "panel",
+      "host": "192.168.20.36",
+      "width": 128,
+      "height": 16,
+      "brightness": 0.8
+    },
+    {
+      "name": "parcan",
+      "kind": "dmx_par",
+      "address": 1,
+      "brightness": 1.0,
+      "delay_ms": 35,
+      "channels": {
+        "dimmer": 1,
+        "r": 2,
+        "g": 3,
+        "b": 4,
+        "w": 5,
+        "a": 6,
+        "uv": 7,
+        "strobe": 8,
+        "program": 9,
+        "speed": 10
+      },
+      "verified_extra": []
+    }
+  ]
+}
