@@ -8,6 +8,8 @@ Jonathan Clark's beat-synced lighting rig: Raspberry Pi 4B pulls live mix data f
 
 **[PLAN.md](PLAN.md)**: Full project plan—architecture (mermaid diagram), StageLinQ data map (what we get / what we infer), hardware map (already ordered vs still-buy), power budget, Pi 4B setup (network, USB-DMX on Linux), endpoints (WLED, laser DMX, tubes BLE, smoke relay), weekend build order (Fri/Sat/Sun), risks, open questions.
 
+**[panel-controller/](panel-controller/)**: Small HUB75 LED panel system (4× PH6 panels on `rave-box`, Pi 3 A+ with Adafruit RGB Matrix Bonnet): setup, web UI, test log, display ideas.
+
 ## Architecture
 
 ```
@@ -33,7 +35,7 @@ Engine DJ decks (SC5000/SC6000/Prime)
 - **Libraries**: [chrisle/StageLinq](https://github.com/chrisle/StageLinq) (TypeScript, fullest), [PyStageLinQ](https://github.com/Jaxc/PyStageLinq) (Python, StateMap only), [Mixboard](https://github.com/LaokeQwQ/Mixboard) (live dashboard)
 - **Pixels**: ESP32-WROOM-32 + WLED (DDP or Art-Net from Pi) + SP901E pixel amp (3.3V→5V level shift) + 12V WS2815 60 LED/m (10m = 600 LEDs, dual-data, IP67)
 - **Laser**: ALIEN SLP-RGB500 (500mW RGB, 10ch DMX, IEC C14 240V inlet) via cheap USB-DMX (FT232-based, 3-pin XLR, `/dev/ttyUSB0`, QLC+ or Python pyserial)
-- **Stretch**: 103cm RGB CCT floor tubes (BLE/IR, bleak Python or lirc), smoke machine (DMX or mains relay)
+- **Stretch**: 103cm RGB CCT floor tubes (BLE via bleak, see [TUBES.md](TUBES.md)), smoke machine (DMX or mains relay)
 
 ## Why Not SoundSwitch?
 
@@ -68,7 +70,7 @@ Engine DJ decks (SC5000/SC6000/Prime)
 - **Laser safety (Class 3B/4 if 500mW real)**: Aerials/wall/ceiling only, never audience. Mount back/up. AU typically needs laser safety officer for entertainment use.
 - **WS2815 60 LED/m power**: 12A/5m at full white exceeds 10A brick. Power inject both ends, WLED brightness cap 50–80%, colours (not white) = 1/3 current.
 - **Mains relay for smoke**: If DIY, **mains-rated SSR in IP box, fused, strain relief**. Do NOT use 5V toy relay modules for 240V. If unsure, trigger manually.
-- **BLE tubes**: Reverse-engineering unknown protocol. Stretch goal; skip if not working by Sunday lunch.
+- **BLE tubes**: Connection and command channel found (see [TUBES.md](TUBES.md)); colour packet not yet confirmed. Stretch goal; skip if not working by Sunday lunch.
 
 ## References
 
