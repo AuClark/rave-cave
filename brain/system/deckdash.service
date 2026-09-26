@@ -1,0 +1,17 @@
+[Unit]
+Description=Rave Cave deck dashboard (Pro DJ Link via beat-link)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+User=pi
+WorkingDirectory=/home/pi/deckdash
+ExecStart=/usr/bin/java -Djava.awt.headless=true -Xmx384m \
+  -Dorg.slf4j.simpleLogger.defaultLogLevel=warn \
+  -Dorg.slf4j.simpleLogger.log.org.deepsymmetry.beatlink.data.MetadataFinder=off \
+  -cp lib/*:classes DeckDash
+Restart=always
+RestartSec=3
+
+[Install]
+WantedBy=multi-user.target

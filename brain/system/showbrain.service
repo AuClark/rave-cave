@@ -1,0 +1,14 @@
+[Unit]
+Description=Rave Cave show brain (scene engine + commander)
+After=deckdash.service network-online.target
+Wants=deckdash.service
+
+[Service]
+User=pi
+WorkingDirectory=/home/pi/showbrain
+ExecStart=/usr/bin/python3 -u showbrain.py config.json
+Restart=always
+RestartSec=2
+
+[Install]
+WantedBy=multi-user.target
