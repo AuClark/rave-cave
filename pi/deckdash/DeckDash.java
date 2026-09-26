@@ -1,0 +1,416 @@
+import com.sun.net.httpserver.HttpExchange;
+import com.sun.net.httpserver.HttpServer;
+import org.deepsymmetry.beatlink.*;
+import org.deepsymmetry.beatlink.data.*;
+
+import java.awt.Color;
+import java.io.IOException;
+import java.io.OutputStream;
+import java.net.DatagramPacket;
+import java.net.DatagramSocket;
+import java.net.InetSocketAddress;
+import java.nio.ByteBuffer;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.util.*;
+import java.util.concurrent.*;
+
+/**
+ * Deck dashboard: joins the Pro DJ Link network as a virtual CDJ (via beat-link),
+ * gathers everything the players share, and serves it as a live web page.
+ *
+ *   GET /                 dashboard (web/index.html, re-read on every request)
+ *   GET /api/state        JSON snapshot
+ *   GET /api/events       Server-Sent Events, state pushed ~10x per second
+ *   GET /api/art/N        album art for player N (JPEG)
+ *   GET /api/waveform/N   waveform preview for player N (JSON)
+ */
+public class DeckDash {
+    static final int PORT = Integer.getInteger("port", 8080);
+    static final Path WEB = Path.of(System.getProperty("web", "web"));
+    static final Map<Integer, Long> lastBeat = new ConcurrentHashMap<>();
+    static final Map<Integer, Integer> beatCount = new ConcurrentHashMap<>();
+    static final List<OutputStream> sseClients = new CopyOnWriteArrayList<>();
+    static final long started = System.currentTimeMillis();
+
+    public static void main(String[] args) throws Exception {
+        DeviceFinder.getInstance().start();
+        BeatFinder.getInstance().start();
+        brainSock = new DatagramSocket();
+        BeatFinder.getInstance().addBeatListener(beat -> {
+            long now = System.currentTimeMillis();
+            lastBeat.put(beat.getDeviceNumber(), now);
+            beatCount.merge(beat.getDeviceNumber(), 1, Integer::sum);
+            toBrain(new Json().obj().str("t", "beat").num("player", beat.getDeviceNumber())
+                    .num("bwb", beat.getBeatWithinBar()).num("bpm", round(beat.getEffectiveTempo(), 3))
+                    .num("nextBeatMs", beat.getNextBeat()).bool("master", beat.isTempoMaster()).num("ts", now).end().toString());
+        });
+
+        VirtualCdj vcdj = VirtualCdj.getInstance();
+        vcdj.setDeviceName("RaveCave");
+        // Stay off the real players' numbers; metadata comes from the USB export via CrateDigger.
+        vcdj.setUseStandardPlayerNumber(false);
+        log("waiting for DJ Link devices...");
+        while (!vcdj.start()) {
+            log("no DJ Link network yet, retrying in 5 s");
+            Thread.sleep(5000);
+        }
+        log("joined as device " + vcdj.getDeviceNumber() + " on " + vcdj.getLocalAddress());
+
+        for (String name : List.of("MetadataFinder", "CrateDigger", "ArtFinder", "WaveformFinder",
+                                   "BeatGridFinder", "TimeFinder")) {
+            try {
+                switch (name) {
+                    case "MetadataFinder" -> MetadataFinder.getInstance().start();
+                    case "CrateDigger" -> CrateDigger.getInstance().start();
+                    case "ArtFinder" -> ArtFinder.getInstance().start();
+                    case "WaveformFinder" -> {
+                        WaveformFinder.getInstance().setColorPreferred(true);
+                        WaveformFinder.getInstance().setFindDetails(true);  // needed by the timeline analyser
+                        WaveformFinder.getInstance().start();
+                    }
+                    case "BeatGridFinder" -> BeatGridFinder.getInstance().start();
+                    case "TimeFinder" -> TimeFinder.getInstance().start();
+                }
+                log(name + " started");
+            } catch (Exception e) {
+                log(name + " failed to start: " + e);
+            }
+        }
+
+        HttpServer http = HttpServer.create(new InetSocketAddress(PORT), 0);
+        http.setExecutor(Executors.newCachedThreadPool());
+        http.createContext("/", DeckDash::index);
+        http.createContext("/api/state", ex -> send(ex, 200, "application/json", state().getBytes(StandardCharsets.UTF_8)));
+        http.createContext("/api/events", DeckDash::events);
+        http.createContext("/api/art/", DeckDash::art);
+        http.createContext("/api/waveform/", DeckDash::waveform);
+        http.createContext("/api/wavedetail/", DeckDash::waveDetail);
+        http.createContext("/api/timeline/", ex -> {
+            String t = Timeline.forPlayer(playerFrom(ex));
+            if (t == null) send(ex, 404, "application/json", "{}".getBytes());
+            else send(ex, 200, "application/json", t.getBytes(StandardCharsets.UTF_8));
+        });
+        http.start();
+        log("dashboard on http://0.0.0.0:" + PORT + "/");
+
+        ScheduledExecutorService tick = Executors.newScheduledThreadPool(2);
+        tick.scheduleAtFixedRate(() -> {
+            try { toBrain(brainStatus()); } catch (Exception e) { log("brain status: " + e); }
+        }, 0, 50, TimeUnit.MILLISECONDS);
+        tick.scheduleAtFixedRate(() -> {
+            if (sseClients.isEmpty()) return;
+            byte[] msg = ("data: " + state() + "\n\n").getBytes(StandardCharsets.UTF_8);
+            for (OutputStream out : sseClients) {
+                try {
+                    out.write(msg);
+                    out.flush();
+                } catch (IOException e) {
+                    sseClients.remove(out);
+                }
+            }
+        }, 0, 100, TimeUnit.MILLISECONDS);
+    }
+
+    // ---------- HTTP ----------
+
+    static void index(HttpExchange ex) throws IOException {
+        Path f = WEB.resolve("index.html");
+        send(ex, 200, "text/html; charset=utf-8", Files.readAllBytes(f));
+    }
+
+    static void events(HttpExchange ex) throws IOException {
+        ex.getResponseHeaders().add("Content-Type", "text/event-stream");
+        ex.getResponseHeaders().add("Cache-Control", "no-cache");
+        ex.sendResponseHeaders(200, 0);
+        sseClients.add(ex.getResponseBody());
+    }
+
+    static int playerFrom(HttpExchange ex) {
+        String p = ex.getRequestURI().getPath();
+        return Integer.parseInt(p.substring(p.lastIndexOf('/') + 1));
+    }
+
+    static void art(HttpExchange ex) throws IOException {
+        AlbumArt art = ArtFinder.getInstance().isRunning() ? ArtFinder.getInstance().getLatestArtFor(playerFrom(ex)) : null;
+        if (art == null) {
+            send(ex, 404, "text/plain", "no art".getBytes());
+            return;
+        }
+        ByteBuffer b = art.getRawBytes();
+        byte[] bytes = new byte[b.remaining()];
+        b.get(bytes);
+        send(ex, 200, "image/jpeg", bytes);
+    }
+
+    static void waveform(HttpExchange ex) throws IOException {
+        WaveformPreview wf = WaveformFinder.getInstance().isRunning()
+                ? WaveformFinder.getInstance().getLatestPreviewFor(playerFrom(ex)) : null;
+        if (wf == null) {
+            send(ex, 404, "application/json", "{}".getBytes());
+            return;
+        }
+        StringBuilder h = new StringBuilder(), c = new StringBuilder();
+        for (int i = 0; i < wf.segmentCount; i++) {
+            if (i > 0) { h.append(','); c.append(','); }
+            h.append(wf.segmentHeight(i, true));
+            c.append('"').append(hex(wf.segmentColor(i, true))).append('"');
+        }
+        String json = "{\"segments\":" + wf.segmentCount + ",\"maxHeight\":" + wf.maxHeight
+                + ",\"color\":" + wf.isColor + ",\"heights\":[" + h + "],\"colors\":[" + c + "]}";
+        send(ex, 200, "application/json", json.getBytes(StandardCharsets.UTF_8));
+    }
+
+    static final Map<String, byte[]> waveDetailCache = new ConcurrentHashMap<>();
+
+    /** Detailed colour waveform, 150 frames/s, 4 bytes per frame: height (0-31), r, g, b. */
+    static void waveDetail(HttpExchange ex) throws IOException {
+        WaveformDetail wd = WaveformFinder.getInstance().isRunning()
+                ? WaveformFinder.getInstance().getLatestDetailFor(playerFrom(ex)) : null;
+        if (wd == null) {
+            send(ex, 404, "text/plain", "no detail".getBytes());
+            return;
+        }
+        byte[] body = waveDetailCache.computeIfAbsent(String.valueOf(wd.dataReference), k -> {
+            int n = wd.getFrameCount();
+            byte[] b = new byte[n * 4];
+            for (int f = 0; f < n; f++) {
+                Color c = wd.segmentColor(f, 1);
+                b[f * 4] = (byte) Math.min(255, wd.segmentHeight(f, 1));
+                b[f * 4 + 1] = (byte) c.getRed();
+                b[f * 4 + 2] = (byte) c.getGreen();
+                b[f * 4 + 3] = (byte) c.getBlue();
+            }
+            return b;
+        });
+        ex.getResponseHeaders().add("X-Wave-Key", String.valueOf(wd.dataReference));
+        send(ex, 200, "application/octet-stream", body);
+    }
+
+    static void send(HttpExchange ex, int code, String type, byte[] body) throws IOException {
+        ex.getResponseHeaders().add("Content-Type", type);
+        ex.getResponseHeaders().add("Cache-Control", "no-cache");
+        ex.sendResponseHeaders(code, body.length);
+        try (OutputStream out = ex.getResponseBody()) {
+            out.write(body);
+        }
+    }
+
+    // ---------- state ----------
+
+    static String state() {
+        Json j = new Json().obj();
+        long now = System.currentTimeMillis();
+        j.num("now", now).num("uptimeSec", (now - started) / 1000);
+        VirtualCdj v = VirtualCdj.getInstance();
+        j.key("self").obj().num("deviceNumber", v.getDeviceNumber()).str("name", "RaveCave")
+                .str("address", String.valueOf(v.getLocalAddress())).end();
+
+        DeviceUpdate master = v.getTempoMaster();
+        j.key("master").obj();
+        if (master != null) j.num("player", master.getDeviceNumber()).str("name", master.getDeviceName());
+        j.num("bpm", round(v.getMasterTempo(), 2)).end();
+
+        j.key("devices").arr();
+        List<DeviceAnnouncement> devs = new ArrayList<>(DeviceFinder.getInstance().getCurrentDevices());
+        devs.sort(Comparator.comparingInt(DeviceAnnouncement::getDeviceNumber));
+        for (DeviceAnnouncement d : devs) {
+            j.obj().num("number", d.getDeviceNumber()).str("name", d.getDeviceName())
+                    .str("address", d.getAddress().getHostAddress()).str("mac", mac(d.getHardwareAddress()))
+                    .num("seenMsAgo", now - d.getTimestamp()).end();
+        }
+        j.end();
+
+        j.key("media").arr();
+        if (MetadataFinder.getInstance().isRunning()) {
+            for (MediaDetails m : MetadataFinder.getInstance().getMountedMediaDetails()) {
+                j.obj().num("player", m.slotReference.player).str("slot", String.valueOf(m.slotReference.slot))
+                        .str("name", m.name).str("created", m.creationDate).num("tracks", m.trackCount)
+                        .num("playlists", m.playlistCount).num("totalBytes", m.totalSize)
+                        .num("freeBytes", m.freeSpace).str("type", String.valueOf(m.mediaType)).end();
+            }
+        }
+        j.end();
+
+        j.key("players").arr();
+        for (DeviceAnnouncement d : devs) {
+            DeviceUpdate u = v.getLatestStatusFor(d.getDeviceNumber());
+            if (u instanceof CdjStatus s) player(j, d, s, now);
+        }
+        j.end();
+        return j.end().toString();
+    }
+
+    static void player(Json j, DeviceAnnouncement d, CdjStatus s, long now) {
+        int n = s.getDeviceNumber();
+        j.obj().num("number", n).str("name", s.getDeviceName()).str("address", d.getAddress().getHostAddress())
+                .str("firmware", s.getFirmwareVersion());
+        j.key("status").obj()
+                .bool("trackLoaded", s.isTrackLoaded()).bool("playing", s.isPlaying()).bool("paused", s.isPaused())
+                .bool("cued", s.isCued()).bool("searching", s.isSearching()).bool("looping", s.isLooping())
+                .bool("atEnd", s.isAtEnd()).bool("reverse", s.isPlayingBackwards())
+                .bool("onAir", s.isOnAir()).bool("synced", s.isSynced()).bool("bpmSynced", s.isBpmOnlySynced())
+                .bool("tempoMaster", s.isTempoMaster()).bool("busy", s.isBusy())
+                .str("playState1", String.valueOf(s.getPlayState1())).str("playState2", String.valueOf(s.getPlayState2()))
+                .str("playState3", String.valueOf(s.getPlayState3()))
+                .num("trackBpm", s.getBpm() == 0xffff ? 0 : s.getBpm() / 100.0)
+                .num("pitchPct", round(Util.pitchToPercentage(s.getPitch()), 2))
+                .num("effectiveBpm", round(s.getEffectiveTempo(), 2))
+                .num("beatWithinBar", s.getBeatWithinBar()).num("beatNumber", s.getBeatNumber())
+                .str("cueCountdown", s.formatCueCountdown())
+                .num("trackSourcePlayer", s.getTrackSourcePlayer()).str("trackSourceSlot", String.valueOf(s.getTrackSourceSlot()))
+                .str("trackType", String.valueOf(s.getTrackType())).num("rekordboxId", s.getRekordboxId())
+                .num("trackNumber", s.getTrackNumber()).num("syncNumber", s.getSyncNumber())
+                .bool("usbLoaded", s.isLocalUsbLoaded()).bool("sdLoaded", s.isLocalSdLoaded())
+                .bool("linkMediaAvailable", s.isLinkMediaAvailable())
+                .num("loopBeats", s.canReportLooping() ? s.getActiveLoopBeats() : -1)
+                .num("packetNumber", s.getPacketNumber()).end();
+
+        Long lb = lastBeat.get(n);
+        j.key("beat").obj().num("msSinceLast", lb == null ? -1 : now - lb).num("count", beatCount.getOrDefault(n, 0)).end();
+
+        if (TimeFinder.getInstance().isRunning()) {
+            TrackPositionUpdate pos = TimeFinder.getInstance().getLatestPositionFor(n);
+            if (pos != null) {
+                j.key("position").obj().num("ms", TimeFinder.getInstance().getTimeFor(n))
+                        .bool("definitive", pos.definitive).bool("precise", pos.precise).end();
+            }
+        }
+
+        TrackMetadata md = MetadataFinder.getInstance().isRunning() ? MetadataFinder.getInstance().getLatestMetadataFor(n) : null;
+        if (md != null) {
+            j.key("track").obj().str("title", md.getTitle()).str("artist", label(md.getArtist()))
+                    .str("album", label(md.getAlbum())).str("genre", label(md.getGenre())).str("key", label(md.getKey()))
+                    .str("label", label(md.getLabel())).str("remixer", label(md.getRemixer()))
+                    .str("originalArtist", label(md.getOriginalArtist())).str("comment", md.getComment())
+                    .num("durationSec", md.getDuration()).num("bpm", md.getTempo() / 100.0).num("rating", md.getRating())
+                    .num("year", md.getYear()).num("bitRate", md.getBitRate()).str("dateAdded", md.getDateAdded())
+                    .num("artworkId", md.getArtworkId())
+                    .str("color", md.getColor() == null ? null : md.getColor().colorName)
+                    .str("colorHex", md.getColor() == null || ColorItem.isNoColor(md.getColor().color) ? null : hex(md.getColor().color))
+                    .str("ref", String.valueOf(md.trackReference));
+            CueList cues = md.getCueList();
+            j.key("cues").arr();
+            if (cues != null) {
+                for (CueList.Entry e : cues.entries) {
+                    j.obj().num("hotCue", e.hotCueNumber).bool("loop", e.isLoop).num("ms", e.cueTime)
+                            .num("loopMs", e.isLoop ? e.loopTime : 0).str("comment", e.comment)
+                            .str("color", e.getColor() == null ? null : hex(e.getColor())).end();
+                }
+            }
+            j.end().end();
+        }
+
+        BeatGrid grid = BeatGridFinder.getInstance().isRunning() ? BeatGridFinder.getInstance().getLatestBeatGridFor(n) : null;
+        if (grid != null) {
+            int beat = Math.max(1, Math.min(grid.beatCount, s.getBeatNumber()));
+            j.key("grid").obj().num("beats", grid.beatCount).num("bar", s.getBeatNumber() > 0 ? grid.getBarNumber(beat) : 0)
+                    .num("bars", grid.getBarNumber(grid.beatCount)).end();
+        }
+        boolean hasArt = ArtFinder.getInstance().isRunning() && ArtFinder.getInstance().getLatestArtFor(n) != null;
+        WaveformPreview wf = WaveformFinder.getInstance().isRunning() ? WaveformFinder.getInstance().getLatestPreviewFor(n) : null;
+        j.bool("hasArt", hasArt).str("waveformKey", wf == null ? null : String.valueOf(wf.dataReference));
+        WaveformDetail wd = WaveformFinder.getInstance().isRunning() ? WaveformFinder.getInstance().getLatestDetailFor(n) : null;
+        j.str("timelineKey", wd == null || grid == null ? null : String.valueOf(wd.dataReference));
+        j.end();
+    }
+
+    // ---------- show brain feed (UDP to localhost:9100) ----------
+
+    static DatagramSocket brainSock;
+    static final InetSocketAddress BRAIN = new InetSocketAddress("127.0.0.1", Integer.getInteger("brainPort", 9100));
+
+    static void toBrain(String json) {
+        try {
+            byte[] b = json.getBytes(StandardCharsets.UTF_8);
+            brainSock.send(new DatagramPacket(b, b.length, BRAIN));
+        } catch (Exception ignored) {
+        }
+    }
+
+    /** Compact status for the show engine: position, beat, state and track per player. */
+    static String brainStatus() {
+        long now = System.currentTimeMillis();
+        VirtualCdj v = VirtualCdj.getInstance();
+        Json j = new Json().obj().str("t", "status").num("ts", now);
+        DeviceUpdate m = v.getTempoMaster();
+        j.num("master", m == null ? 0 : m.getDeviceNumber()).key("players").arr();
+        // Look up each announced device directly (same path as the dashboard). getLatestStatus()
+        // can come back empty after the clock jumps at boot (no RTC; NTP sync moves time forward).
+        for (DeviceAnnouncement da : DeviceFinder.getInstance().getCurrentDevices()) {
+            DeviceUpdate u = v.getLatestStatusFor(da.getDeviceNumber());
+            if (!(u instanceof CdjStatus s)) continue;
+            int n = s.getDeviceNumber();
+            TrackMetadata md = MetadataFinder.getInstance().isRunning() ? MetadataFinder.getInstance().getLatestMetadataFor(n) : null;
+            long pos = TimeFinder.getInstance().isRunning() ? TimeFinder.getInstance().getTimeFor(n) : -1;
+            j.obj().num("n", n).bool("playing", s.isPlaying()).bool("paused", s.isPaused()).bool("cued", s.isCued())
+                    .bool("looping", s.isLooping()).bool("master", s.isTempoMaster()).bool("loaded", s.isTrackLoaded())
+                    .bool("onAir", s.isOnAir()).bool("atEnd", s.isAtEnd())
+                    .num("bpm", round(s.getEffectiveTempo(), 3)).num("pitch", round(Util.pitchToPercentage(s.getPitch()), 3))
+                    .num("beat", s.getBeatNumber()).num("pos", pos)
+                    .str("ref", md == null ? null : String.valueOf(md.trackReference))
+                    .str("title", md == null ? null : md.getTitle())
+                    .str("key", md == null ? null : label(md.getKey())).end();
+        }
+        return j.end().end().toString();
+    }
+
+    // ---------- helpers ----------
+
+    static String label(SearchableItem i) { return i == null ? null : i.label; }
+    static double round(double v, int dp) { double m = Math.pow(10, dp); return Math.round(v * m) / m; }
+    static String hex(Color c) { return c == null ? null : String.format("#%02x%02x%02x", c.getRed(), c.getGreen(), c.getBlue()); }
+    static String mac(byte[] b) {
+        StringBuilder s = new StringBuilder();
+        for (int i = 0; b != null && i < b.length; i++) s.append(i > 0 ? ":" : "").append(String.format("%02x", b[i]));
+        return s.toString();
+    }
+    static void log(String m) { System.out.println(new java.util.Date() + "  " + m); System.out.flush(); }
+
+    /** Tiny streaming JSON writer, enough for this. */
+    static class Json {
+        final StringBuilder b = new StringBuilder();
+        final Deque<Character> closers = new ArrayDeque<>();
+        final Deque<Boolean> first = new ArrayDeque<>();
+        boolean afterKey = false;
+
+        void sep() {
+            if (afterKey) { afterKey = false; return; }
+            if (!first.isEmpty()) {
+                if (!first.pop()) b.append(',');
+                first.push(false);
+            }
+        }
+        Json obj() { sep(); b.append('{'); closers.push('}'); first.push(true); return this; }
+        Json arr() { sep(); b.append('['); closers.push(']'); first.push(true); return this; }
+        Json end() { first.pop(); b.append(closers.pop()); return this; }
+        Json key(String k) { sep(); quote(k); b.append(':'); afterKey = true; return this; }
+        Json str(String k, String v) { key(k); afterKey = false; if (v == null) b.append("null"); else quote(v); return this; }
+        Json num(String k, double v) {
+            key(k); afterKey = false;
+            if (Double.isNaN(v) || Double.isInfinite(v)) b.append("null");
+            else if (v == Math.rint(v) && Math.abs(v) < 1e15) b.append((long) v);
+            else b.append(v);
+            return this;
+        }
+        Json bool(String k, boolean v) { key(k); afterKey = false; b.append(v); return this; }
+        /** Write a pre-serialised JSON value (e.g. a number array) under key k. */
+        Json raw(String k, String json) { key(k); afterKey = false; b.append(json); return this; }
+        void quote(String s) {
+            b.append('"');
+            for (char c : s.toCharArray()) {
+                switch (c) {
+                    case '"' -> b.append("\\\"");
+                    case '\\' -> b.append("\\\\");
+                    case '\n' -> b.append("\\n");
+                    case '\r' -> b.append("\\r");
+                    case '\t' -> b.append("\\t");
+                    default -> { if (c < 0x20) b.append(String.format("\\u%04x", (int) c)); else b.append(c); }
+                }
+            }
+            b.append('"');
+        }
+        public String toString() { return b.toString(); }
+    }
+}

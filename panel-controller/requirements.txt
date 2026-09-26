@@ -1,0 +1,10 @@
+# Rave Cave Panel Controller Dependencies
+#
+# Prefer system packages where available (faster, smaller):
+#   sudo apt install python3-flask python3-picamera2 python3-pil i2c-tools
+#
+# These are pip fallbacks if system packages aren't available.
+
+Flask>=2.3.0
+picamera2>=0.3.12
+Pillow>=9.0.0

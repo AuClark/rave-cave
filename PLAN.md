@@ -320,30 +320,16 @@ dmx.write(bytes(frame[:11]))  # Send start + 10 channels
 
 **Safety (brief, not a lecture):** If 500mW RGB is real, it's Class 3B or 4 (combined wavelengths). AU entertainment use typically requires a laser safety officer or WorkSafe notification. For weekend v1: **aerials/wall/ceiling patterns only, never audience scanning.** Mount laser at back of stage pointing up/away, or at ceiling. Test in a dark room before the show. If it burns paper instantly, it's Class 4; get qualified sign-off or don't use it. Budget RGB lasers often overrate (actually 100–200mW), but don't assume.
 
-### 103cm RGB CCT Floor Lamp Tubes (BLE/IR, Stretch Goal)
+### 103cm RGB CCT Floor Lamp Tubes (BLE, Stretch Goal)
 
-**Protocol:** Bluetooth Low Energy (BLE) or IR remote. App is likely generic "LED BLE" or "Smart Life" (Tuya ecosystem).
+**Protocol:** Bluetooth Low Energy. Investigated from the Mac with `bleak`; full notes in [TUBES.md](TUBES.md).
 
-**Pi Control:**
+- The tubes are STAR LIGHTING `XSD-DD15` and advertise as `STARLIGHT` (a generic cheap LED BLE controller) and `TUYA_` (Tuya/Smart Life BLE).
+- `STARLIGHT` connects without pairing. Commands go to characteristic `FFF3` (service `FFF0`); replies come back on `FFF4`.
+- Common LED command packets were accepted without error, but **none has been visually confirmed yet**. Next step is to rerun a solid-colour test while watching the tube, then try other packet families or sniff the official app.
+- `TUYA_` would need Smart Life pairing and a local key, so it is the fallback path.
 
-1. **BLE (bleak Python):**
-   ```bash
-   pip install bleak
-   ```
-   Scan for BLE devices:
-   ```python
-   import asyncio
-   from bleak import BleakScanner
-   devices = await BleakScanner.discover()
-   for d in devices:
-       print(d.name, d.address)
-   ```
-   Find tube MAC, connect, write RGB to a characteristic (protocol unknown, needs reverse-engineering or app sniffing with Wireshark BLE).
-
-2. **IR (lirc + IR blaster):**
-   IR blaster (AliExpress, ~AU$5) on Pi GPIO. Record remote codes with `lirc`, replay with `irsend`. Unreliable (line-of-sight, 5V USB tubes might be off/on only).
-
-**Reality check:** BLE/IR tubes are a stretch goal. They're not DMX or DDP, so they don't integrate cleanly. If you want to hack them, do it Sunday afternoon AFTER the core rig (WLED + laser) is live. Otherwise, skip.
+**Reality check:** The tubes are still a stretch goal. They're not DMX or DDP, so they don't integrate cleanly. Hack on them AFTER the core rig (WLED + laser) is live.
 
 ### Smoke Machine (Mains Relay, Optional)
 
@@ -476,7 +462,7 @@ dmx.write(bytes(frame[:11]))  # Send start + 10 channels
    - **This is the fun part.** No autoscript. You have BPM, beat, faders, waveform, crossfader. Code whatever feels right.
 
 5. **Optional stretch goals (if time):**
-   - BLE tubes: scan, connect, send RGB. If it works, add them as ambient fill. If not, skip.
+   - BLE tubes: connect to `STARLIGHT`, write colour to `FFF3` (see TUBES.md). If it works, add them as ambient fill. If not, skip.
    - Smoke relay: if DMX or safe mains relay is wired, trigger on drops (1 sec burst).
 
 6. **Final test:** Full set, no laptop, Pi runs headless. Confirm it's stable for 30 min (no crashes, no desync).
@@ -490,7 +476,7 @@ dmx.write(bytes(frame[:11]))  # Send start + 10 channels
 | **StageLinQ firmware drift** | Medium: Engine OS updates may break protocol | chrisle/StageLinq is actively maintained (2024). Pin Engine OS version if possible. Test Friday night; if decks aren't broadcasting, check firmware version (old OS may predate StageLinQ). |
 | **Cheap USB-DMX chipset on Pi** | Medium: non-FTDI may not enumerate or drop frames | Buy FT232-based dongles (search "FTDI USB DMX"). Test Friday with `ls /dev/ttyUSB0`. If CH340, it may work but flaky. |
 | **Laser safety (Class 3B/4)** | **HIGH if 500mW is real:** eye damage, AU legal liability | **Aerials/wall/ceiling only.** Never audience scan. Mount at back pointing up, or at ceiling. If it burns paper, it's Class 4; get a laser safety officer or don't use it. Budget lasers often overrate (100–200mW real), but don't gamble. One paragraph, not a lecture, but this is serious. |
-| **BLE tubes reverse-engineering** | Low: may not finish in a weekend | Stretch goal. Skip if it's not working by Sunday lunch. Core rig (WLED + laser) is enough. |
+| **BLE tubes reverse-engineering** | Low: may not finish in a weekend | Connection works and the command channel is known (see TUBES.md); the colour packet is still unconfirmed. Skip if it's not working by Sunday lunch. Core rig (WLED + laser) is enough. |
 | **Mains relay for smoke** | **HIGH if DIY mains wiring is unsafe:** fire, electrocution | If machine is mains-switched: buy a USB HID relay in an enclosure OR an ESP32 + **mains-rated SSR (240V 10A) in an IP-rated box** with strain relief and fuse. Do NOT use 5V toy relay modules (blue boards) for 240V. If unsure, trigger smoke manually or skip. |
 | **WS2815 60 LED/m power draw** | Medium: 12A per 5m at full white exceeds 10A brick | Power injection both ends (solder +12V/GND at 0m and 5m from brick). WLED brightness cap 50–80%. Full white RGB is worst case; colours (R or G or B alone) are 1/3 current. Don't run full white for more than a few seconds. |
 | **IP67 soldering in rain** | Low if indoor; HIGH if outdoor | Strips are IP67 (splash-proof), but solder joints at injection points are NOT unless heat-shrunk. If outdoor or near drinks, heatshrink all joints + silicone. If indoor, electrical tape is OK for weekend v1. |
@@ -509,7 +495,7 @@ dmx.write(bytes(frame[:11]))  # Send start + 10 channels
 | **Indoor or outdoor?** | WS2815 IP67 is splash-proof, not submersion. If outdoor + rain, all solder joints need heatshrink + silicone. If indoor, electrical tape is OK. |
 | **Backdrop dimensions?** | 10m WS2815 (2× 5m rolls) = 600 LEDs total. What's the layout? Stage left 5m vertical, stage right 5m vertical? Or L/R 2.5m each + 5m backdrop horizontal? Affects segment mapping. |
 | **Smoke machine: DMX or mains-switched?** | If DMX XLR IN on back, easy (same USB-DMX universe). If just a power switch, need mains relay (see Risks). What make/model? |
-| **Floor lamp tubes: BLE, IR, or Tuya?** | What app do they use? "LED BLE", "Smart Life", generic IR? Affects reverse-engineering effort. If unknown, park them for Sunday stretch goal. |
+| **Floor lamp tubes: BLE, IR, or Tuya?** | Answered: BLE. They expose a generic `STARLIGHT` LED controller plus a `TUYA_` device. See TUBES.md. Open item is confirming which colour packet works. |
 | **Pi 4B: how much RAM?** | 2GB is enough; 4GB/8GB is overkill but fine. Confirm you have official 5V 3A USB-C PSU (cheap PSUs brownout under WiFi load). |
 | **Already own gigabit switch?** | If decks + Pi are on separate networks (e.g. deck WiFi, Pi ethernet), StageLinQ won't work. Need them on one LAN. Do you have a switch or need to buy one (AU$20)? |
 | **Already own USB-DMX?** | If yes, what chipset (FT232, CH340, PL2303)? If no, buy FT232-based (~AU$30 Ali). |

@@ -1,0 +1,90 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no">
+<title>Rave Cave · Commander</title>
+<style>
+  :root { --bg:#07070c; --panel:#12131d; --line:#262a3d; --text:#e8e9f3; --dim:#8a8fa8; --pink:#ff2fd0; --cyan:#2fe6ff; --good:#3dff8b; --warn:#ffb02e; }
+  * { box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+  body { margin:0; background:var(--bg); color:var(--text); font:15px/1.4 system-ui,-apple-system,sans-serif; padding:14px; }
+  h1 { font-size:14px; letter-spacing:.2em; margin:0 0 12px; } h1 b { color:var(--pink); }
+  .scene { font-size:44px; font-weight:900; letter-spacing:.04em; line-height:1; }
+  .scene.BUILD, .scene.HOLD { color:var(--warn); } .scene.DROP { color:var(--pink); } .scene.PREDROP { color:#fff; }
+  .scene.GROOVE { color:var(--cyan); } .scene.BREAKDOWN { color:#9b8cff; }
+  .card { background:var(--panel); border:1px solid var(--line); border-radius:16px; padding:14px; margin-bottom:12px; }
+  .row { display:flex; gap:10px; flex-wrap:wrap; align-items:baseline; }
+  .dim { color:var(--dim); font-size:13px; }
+  .count { font-size:28px; font-weight:800; color:var(--warn); font-variant-numeric:tabular-nums; }
+  .bar { height:10px; background:#1d2031; border-radius:6px; overflow:hidden; margin-top:8px; }
+  .bar div { height:100%; background:linear-gradient(90deg,var(--warn),#fff); width:0; }
+  .grid { display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+  button { font:inherit; font-weight:800; letter-spacing:.06em; padding:18px 10px; border-radius:14px; border:1px solid var(--line); background:#1b1e2e; color:var(--text); }
+  button:active { transform:scale(.97); }
+  button.big { background:var(--pink); color:#000; border-color:var(--pink); font-size:20px; }
+  button.on { background:var(--cyan); color:#000; border-color:var(--cyan); }
+  .seg { display:flex; gap:6px; } .seg button { flex:1; padding:12px 6px; }
+  input[type=range] { width:100%; }
+  label { display:block; margin:10px 0 4px; color:var(--dim); font-size:13px; }
+</style>
+</head>
+<body>
+<h1>RAVE <b>CAVE</b> · COMMANDER</h1>
+<div class="card">
+  <div class="row"><div id="scene" class="scene">—</div><div id="deck" class="dim"></div></div>
+  <div id="title" class="dim" style="margin-top:6px"></div>
+  <div class="row" style="margin-top:8px"><span id="count" class="count"></span><span id="pos" class="dim"></span></div>
+  <div class="bar"><div id="prog"></div></div>
+</div>
+<div class="card grid">
+  <button class="big" onclick="cmd('drop_now')">DROP NOW</button>
+  <button class="big" style="background:var(--warn);border-color:var(--warn)" onclick="cmd('build',4)">BUILD 4 BARS</button>
+  <button id="hold" onclick="cmd('hold')">HOLD</button>
+  <button onclick="cmd('skip_drop')">SKIP NEXT DROP</button>
+  <button onclick="cmd('mark_drop')">MARK DROP HERE</button>
+  <button onclick="cmd('clear')">CANCEL BUILD</button>
+  <button id="strobe" onpointerdown="cmd('strobe',true)" onpointerup="cmd('strobe',false)" onpointerleave="cmd('strobe',false)">STROBE (hold)</button>
+  <button id="black" onclick="cmd('mode', S.mode==='blackout'?'auto':'blackout')">BLACKOUT</button>
+</div>
+<div class="card">
+  <label>Mode</label>
+  <div class="seg" id="mode"><button data-v="auto">AUTO</button><button data-v="manual">MANUAL</button></div>
+  <label>Follow deck</label>
+  <div class="seg" id="follow"><button data-v="0">AUTO</button><button data-v="1">DECK 1</button><button data-v="2">DECK 2</button></div>
+  <label>Intensity <span id="iv"></span></label>
+  <input id="int" type="range" min="0" max="1" step="0.05" oninput="cmd('intensity',+this.value)">
+  <label>Output latency compensation <span id="lv"></span> ms</label>
+  <input id="lead" type="range" min="0" max="200" step="5" oninput="cmd('lead_ms',+this.value)">
+  <button style="margin-top:12px;width:100%" onclick="cmd('clear')">RESET ALL OVERRIDES</button>
+</div>
+<script>
+let S = {};
+const $ = id => document.getElementById(id);
+async function cmd(c, v) { await fetch('/api/cmd', {method:'POST', body: JSON.stringify({cmd:c, value:v})}); }
+document.querySelectorAll('#mode button').forEach(b => b.onclick = () => cmd('mode', b.dataset.v));
+document.querySelectorAll('#follow button').forEach(b => b.onclick = () => cmd('follow', +b.dataset.v));
+async function poll() {
+  try {
+    S = await (await fetch('/api/state')).json();
+    $('scene').textContent = S.scene; $('scene').className = 'scene ' + S.scene;
+    $('deck').textContent = S.live ? `deck ${S.live} · ${S.bpm ? S.bpm.toFixed(1) : '—'} BPM` : 'no deck playing';
+    $('title').textContent = S.title || '';
+    $('count').textContent = S.beats_to_drop != null ? `DROP in ${Math.ceil(S.beats_to_drop)} beats` : (S.next_drop_bar ? '' : 'no drop ahead');
+    $('pos').textContent = (S.bar ? `bar ${S.bar} · beat ${S.bwb}` + (S.section ? ` · ${S.section}` : '') : '')
+      + (S.drops && S.drops.length ? ` · drops: ${S.drops.map(d => d.bar + (d.manual ? '*' : '')).join(', ')}` : '') + (S.fps ? ` · ${S.fps} fps` : '')
+      + (S.calibration ? ` · calibration: ${S.calibration.marks} marks, predictions ${S.calibration.median_delta_beats > 0 ? '+' : ''}${S.calibration.median_delta_beats} beats` : '');
+    $('prog').style.width = ((S.scene === 'BUILD' || S.scene === 'HOLD') ? S.progress * 100 : S.scene === 'DROP' || S.scene === 'PREDROP' ? 100 : 0) + '%';
+    $('hold').classList.toggle('on', !!S.hold);
+    $('black').classList.toggle('on', S.mode === 'blackout');
+    document.querySelectorAll('#mode button').forEach(b => b.classList.toggle('on', b.dataset.v === S.mode));
+    document.querySelectorAll('#follow button').forEach(b => b.classList.toggle('on', +b.dataset.v === S.follow));
+    if (document.activeElement !== $('int')) $('int').value = S.intensity;
+    if (document.activeElement !== $('lead')) $('lead').value = S.lead_ms;
+    $('iv').textContent = Math.round(S.intensity * 100) + '%'; $('lv').textContent = S.lead_ms;
+  } catch (e) {}
+  setTimeout(poll, 150);
+}
+poll();
+</script>
+</body>
+</html>
