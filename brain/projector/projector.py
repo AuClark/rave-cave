@@ -3,7 +3,7 @@
 
   /                 the output page, opened full-screen in Chrome on the projector
   /edit             the mapping editor, for a phone or laptop
-  /api/events       Server-Sent Events: {"t":"state"} ~20x/s (showbrain state) and
+  /api/events       Server-Sent Events: {"t":"state"} ~25x/s (showbrain state) and
                     {"t":"layout"} whenever the layout changes
   /api/state        showbrain state (one-off)
   /api/layout       GET current layout; POST a new layout (saved and pushed live)
@@ -37,7 +37,7 @@ WEB = HERE / "web"
 LAYOUTS = HERE / "layouts"
 PORT = int(sys.argv[1]) if len(sys.argv) > 1 else 8100
 SHOWBRAIN = "http://127.0.0.1:8090/api/state"
-STATE_HZ = 20
+STATE_HZ = 25
 
 DEFAULT_LAYOUT = {
     "version": 1,
