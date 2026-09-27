@@ -67,6 +67,12 @@
     "takeover_share": 0.7,
     "takeover_s": 2.0,
     "smoothing": 0.15,
-    "silent_db": -60
+    "silent_db": -60,
+    "react": true,
+    "midi": {
+      "fx_on": "",
+      "ch1_filter": "",
+      "ch2_filter": ""
+    }
   }
 }
