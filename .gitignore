@@ -4,3 +4,8 @@ __pycache__/
 .env
 brain/projector/layouts/
 brain/visuals/state/
+brain/sim/logs/
+# s5auth.js links made by brain/sim/run.sh (deploy.sh copies the real file to the brain)
+brain/showbrain/s5auth.js
+brain/projector/web/s5auth.js
+brain/visuals/web/s5auth.js
