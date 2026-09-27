@@ -120,10 +120,12 @@
   const lvl = (v, warn, bad, higherIsWorse = true) => higherIsWorse ? (v >= bad ? "bad" : v >= warn ? "warn" : "ok")
                                                                      : (v <= bad ? "bad" : v <= warn ? "warn" : "ok");
   const kvs = rows => rows.filter(Boolean).map(([k, v, c]) => `<div class="kv"><span>${k}</span><b class="${c || ""}">${v}</b></div>`).join("");
+  // Simulation pauses the mixer service on purpose: not a fault.
+  const simPaused = (d, s) => s.name === "mixer" && d.sim && d.sim.on;
   function sysHealth(d) {
     const t = d.throttle || {}, worst = [];
     if (d.cpu.temp_c >= 80 || t.under_voltage_now || t.throttled_now || d.disk.free_gb < 1 ||
-        (d.services || []).some(s => s.state !== "active")) worst.push("bad");
+        (d.services || []).some(s => s.state !== "active" && !simPaused(d, s))) worst.push("bad");
     if (d.cpu.temp_c >= 70 || t.under_voltage_since_boot || t.throttled_since_boot || t.soft_temp_limit_now ||
         d.disk.free_gb < 3 || d.memory.used_mb / d.memory.total_mb > 0.85 || (d.network.wifi.signal_dbm && d.network.wifi.signal_dbm < -75) ||
         (d.services || []).some(s => s.restarts > 0)) worst.push("warn");
@@ -137,7 +139,7 @@
     const flag = (on, since, label) => on || since ? `<span class="flag ${on ? "bad" : "warn"}">${label}${on ? " NOW" : " SINCE BOOT"}</span>` : "";
     const wifi = d.network.wifi, sig = wifi.signal_dbm, sigC = sig ? lvl(sig, -70, -80, false) : "";
     const card = (n, title, body) => `<section class="card"><h2><i>${String(n).padStart(2, "0")}</i>— ${title}</h2>${body}</section>`;
-    const svcRows = (d.services || []).map(s => `<tr><td>${s.name}</td><td class="${s.state === "active" ? "ok" : "bad"}">${s.state === "active" ? s.sub : s.state}</td>
+    const svcRows = (d.services || []).map(s => `<tr><td>${s.name}</td><td class="${s.state === "active" ? "ok" : simPaused(d, s) ? "warn" : "bad"}">${s.state === "active" ? s.sub : simPaused(d, s) ? "paused (sim)" : s.state}</td>
       <td>${s.cpu_pct >= 0 ? s.cpu_pct.toFixed(1) + "%" : "–"}</td><td>${s.mem_mb >= 0 ? Math.round(s.mem_mb) + " MB" : "–"}</td>
       <td class="${s.restarts ? "warn" : ""}">${s.restarts}</td></tr>`).join("");
     const cl = d.clients || { ports: [] };
