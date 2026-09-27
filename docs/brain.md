@@ -75,6 +75,44 @@ brain/deploy.sh          # copies deckdash + showbrain, compiles, restarts both
 - **showbrain** ([`brain/showbrain/`](../brain/showbrain/)) runs the scenes. See [show-engine.md](show-engine.md). Fixtures are listed in `config.json`, where hosts can use `${VAR:-default}` from `.env`.
 - **tools/prodj_listen.py** is a receive-only Pro DJ Link decoder, useful for checking a new deck setup without joining the network.
 
+## Collaborator access
+
+Collaborators get their own login (in the `rave` group) instead of the `pi` account. The services still run as `pi`, but from shared folders under `/srv/rave` that the `rave` group can write to. Collaborators can then deploy and restart without touching `/home/pi`.
+
+One-time setup, run on the brain by the owner:
+
+```bash
+sudo mkdir -p /srv/rave/deckdash /srv/rave/showbrain
+sudo cp -a /home/pi/deckdash/. /srv/rave/deckdash/
+sudo cp -a /home/pi/showbrain/. /srv/rave/showbrain/
+sudo chown -R pi:rave /srv/rave/deckdash /srv/rave/showbrain
+sudo chmod -R g+rwX /srv/rave/deckdash /srv/rave/showbrain
+sudo find /srv/rave/deckdash /srv/rave/showbrain -type d -exec chmod g+s {} +
+sudo chmod 640 /srv/rave/showbrain/.env      # site settings: pi and the rave group only
+
+# Point both services at the shared folders (drop-in overrides, the unit files stay as they are).
+sudo mkdir -p /etc/systemd/system/deckdash.service.d /etc/systemd/system/showbrain.service.d
+printf '[Service]\nWorkingDirectory=/srv/rave/deckdash\n'  | sudo tee /etc/systemd/system/deckdash.service.d/rave.conf
+printf '[Service]\nWorkingDirectory=/srv/rave/showbrain\n' | sudo tee /etc/systemd/system/showbrain.service.d/rave.conf
+sudo systemctl daemon-reload && sudo systemctl restart deckdash showbrain
+
+# Let the collaborator restart the two services (and nothing else) without a password.
+echo 'richard ALL=(root) NOPASSWD: /usr/bin/systemctl restart deckdash, /usr/bin/systemctl status deckdash, /usr/bin/systemctl restart showbrain, /usr/bin/systemctl status showbrain' \
+  | sudo tee /etc/sudoers.d/rave-richard && sudo chmod 440 /etc/sudoers.d/rave-richard && sudo visudo -c
+```
+
+The collaborator's `.env` (git-ignored) then points `brain/deploy.sh` at those folders:
+
+```bash
+RAVE_BRAIN_USER=richard
+RAVE_DECKDASH_DIR=/srv/rave/deckdash
+RAVE_WEB_DIR=/srv/rave/deckdash-web
+RAVE_SHOWBRAIN_DIR=/srv/rave/showbrain
+RAVE_PUSH_ENV=no            # keep the brain's own .env
+```
+
+`brain/deploy.sh web` updates just the dashboard page (no compile, no restart). `brain/deploy.sh showbrain` updates the lights and Commander.
+
 ## Operations
 
 - Logs: `journalctl -u deckdash -f`, `journalctl -u showbrain -f`.
