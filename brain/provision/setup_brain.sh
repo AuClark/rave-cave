@@ -58,7 +58,9 @@ sudo raspi-config nonint do_i2c 0
 grep -q "^dtoverlay=gpio-ir," /boot/firmware/config.txt || echo "dtoverlay=gpio-ir,gpio_pin=23   # Argon ONE IR receiver" | sudo tee -a /boot/firmware/config.txt >/dev/null
 sudo install -d /usr/local/lib/sektor5 && sudo install -m 755 $S/argon_fan.py /usr/local/lib/sektor5/
 sudo install -m 644 $S/argon-fan.service /etc/systemd/system/
-sudo systemctl daemon-reload && sudo systemctl enable -q argon-fan && sudo systemctl restart argon-fan   # exits quietly without an Argon case
+sudo systemctl daemon-reload
+# Not started automatically: switch it on once the fan is confirmed to respond in the case
+# (docs/brain.md#argon-one-case): sudo systemctl enable --now argon-fan
 
 step "eth0: link-local only for the deck switch (never a default route); applies at the next boot"
 # Later netplan files override cloud-init's 50-cloud-init.yaml (which has eth0 on DHCP).

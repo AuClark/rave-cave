@@ -1,8 +1,10 @@
 #!/usr/bin/env python3
 """Argon ONE case fan: sets the fan speed from the CPU temperature.
 
-The case's microcontroller sits on I2C bus 1 at 0x1a (needs dtparam=i2c_arm=on); a speed of 0-100
-turns the fan. Installed by brain/provision/setup_brain.sh as the argon-fan service. Writes its
+The case's microcontroller sits on I2C bus 1 at 0x1a (needs dtparam=i2c_arm=on). The fan speed is a
+single byte, 0-100 (the original Argon ONE protocol). Only ever send 0-100: other values are
+commands to the case (0xFF, for one, tells it to cut the power), and sending a register address
+first (0x80, as newer Argon scripts do) wasn't understood by our case's firmware. Installed by brain/provision/setup_brain.sh as the argon-fan service. Writes its
 state to /run/argon-fan/status.json for the System view. Exits quietly if there's no Argon case.
 
 Curve: off below 50 °C, then 25 / 50 / 75 / 100 % from 50 / 55 / 60 / 65 °C. It only steps down
@@ -42,10 +44,7 @@ def main():
         return 0
 
     def set_fan(pct):
-        try:
-            bus.write_byte_data(ADDR, 0x80, pct)        # current case firmware
-        except OSError:
-            bus.write_byte(ADDR, pct)                   # older firmware
+        bus.write_byte(ADDR, max(0, min(100, int(pct))))
 
     speed = -1
     while True:
