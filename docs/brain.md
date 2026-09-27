@@ -127,6 +127,14 @@ Anyone can open the pages and watch. **Changing anything needs admin**: loading 
 - **Until a PIN is set, auth is off** and everyone is admin, as before.
 - Code: `brain/common/s5auth.py` (Python services) and `brain/deckdash/Auth.java` (same token format, so the cookie works on every port). `brain/common/web/s5auth.js` is the shared page script. `deploy.sh` copies these into each service.
 
+## Remote access (Tailscale)
+
+The brain is on the owner's tailnet as `ravecave` (MagicDNS `ravecave.<tailnet>.ts.net`; the real name is in the Tailscale admin console, not in git).
+
+- **Public link (Tailscale Funnel):** only the dashboard (port 8080) is published, at `https://ravecave.<tailnet>.ts.net/`. Anyone with the link can watch; changes need the admin PIN (above). Turned on with `sudo tailscale funnel --bg 8080`, which survives reboots. Check with `tailscale funnel status`; turn off with `sudo tailscale funnel --https=443 off`.
+- **Everything else stays private:** the Commander (`:8090`), projector (`:8100`) and visuals (`:8110`) are reachable only on the local network or over the tailnet (`http://ravecave.<tailnet>.ts.net:8090/` etc.). To give a collaborator this, share the `ravecave` machine with them from the admin console (Machines → ravecave → Share) or invite them to the tailnet.
+- Funnel needs HTTPS certificates and the `funnel` node attribute enabled in the tailnet policy (both already on).
+
 ## Operations
 
 - Logs: `journalctl -u deckdash -f`, `journalctl -u showbrain -f`.
