@@ -86,6 +86,20 @@
   .s5logo { display: inline-flex; align-items: center; vertical-align: middle; line-height: 1; }
   .s5logo .s5word { color: var(--text, #f2f2f2); flex: none; display: block; }
   .s5logo .s5five { fill: var(--accent, #ff5a1f); }
+
+  /* ---- Layout: the display is the hero (full-width band), a clean control panel underneath. ---- */
+  main.hl { display: block; padding: 0; gap: 0; max-width: none; }
+  .hero { background: #161616; border-bottom: 1px solid var(--line); padding: 24px 24px 0; }
+  .herobar { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; min-height: 56px; padding: 12px 0; }
+  .herobar .hint { margin: 0; }
+  .herobar .sp { flex: 1; }
+  .panel { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); align-items: stretch; }
+  .panel > .card, .panel > #groups > .card { margin: 0; padding: 22px 28px; border: 0; border-right: 1px solid var(--line); border-bottom: 1px solid var(--line);
+    background: transparent; border-radius: 0; }
+  .panel > #groups { display: contents; }
+  .panel .card h3 { margin: 0 0 14px; font-weight: 500; font-size: 12px; letter-spacing: .16em; text-transform: uppercase; color: var(--dim); }
+  .panel .card select.big { width: 100%; font-size: 16px; padding: 10px 12px; margin-bottom: 12px; }
+  #stage { width: min(100%, calc(62vh * var(--ar, 1.7778))); margin: 0 auto; border: 0; }
 </style>
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;500;600&display=swap" rel="stylesheet">
@@ -95,20 +109,18 @@
 <header class="s5bar">
   <span class="s5home"><span class="s5logo" aria-label="SEKTOR5"><svg class="s5word" viewBox="0 0 568 100" width="79.52" height="14" aria-hidden="true"><path d="M13,0 L70,0 L70,21 L21,21 L21,40 L57,40 L70,53 L70,87 L57,100 L0,100 L0,79 L49,79 L49,61 L13,61 L0,48 L0,13 ZM96,0 L104,0 L104,100 L96,100 L83,87 L83,13 ZM108,0 L153,0 L153,21 L108,21 ZM108,40 L145,40 L145,61 L108,61 ZM108,79 L153,79 L153,100 L108,100 ZM179,0 L187,0 L187,100 L179,100 L166,87 L166,13 ZM191,34 L209,0 L236,0 L215,50 L236,100 L209,100 L191,66 ZM262,0 L306,0 L319,13 L319,21 L249,21 L249,13 ZM273.5,25 L294.5,25 L294.5,100 L273.5,100 ZM365,0 L350,0 L332,18 L332,82 L350,100 L365,100 L365,79 L358,79 L353,74 L353,26 L358,21 L365,21 ZM369,0 L384,0 L402,18 L402,82 L384,100 L369,100 L369,79 L376,79 L381,74 L381,26 L376,21 L369,21 ZM428,0 L436,0 L436,100 L428,100 L415,87 L415,13 ZM440,0 L472,0 L485,13 L485,48 L473,60 L440,60 L440,39 L464,39 L464,21 L440,21 ZM440,64 L463,64 L485,100 L462,100 Z" fill="currentColor"/><path class="s5five" d="M498,0 L568,0 L568,21 L519,21 L519,40 L555,40 L568,53 L568,87 L555,100 L498,100 L498,79 L547,79 L547,61 L498,61 Z"/></svg></span></span>
   <nav class="pages" id="pages"><a data-port="8080" data-path="/">Decks</a><a data-port="8090" data-path="/">Lighting</a><a class="here" data-port="8100" data-path="/edit">Projection</a><a data-port="8110" data-path="/">Visuals</a><a data-port="8100" data-path="/stage.html">Stage</a></nav>
-  <span id="conn" class="pill">connecting</span>
-  <span id="scr" class="pill"></span>
-  <span id="show" class="pill"></span>
-  <span class="grow"></span>
-  <button id="bEdit">Handles on wall</button>
-  <button id="bTest">Test pattern</button>
 </header>
-<main>
-  <div>
+<main class="hl">
+  <section class="hero">
     <div id="stage"><canvas id="gl"></canvas><canvas id="ov"></canvas></div>
-    <p class="hint">Drag corner dots to pin a surface to its real-world shape; drag inside a surface to move it.
-      Arrow keys nudge the selected corner (Shift = 10×). The projector updates live.</p>
-  </div>
-  <div>
+    <div class="herobar">
+      <span id="conn" class="pill">connecting</span><span id="scr" class="pill"></span><span id="show" class="pill"></span>
+      <span class="hint">Drag corner dots to pin a surface to its real-world shape; drag inside a surface to move it. Arrow keys nudge the selected corner (Shift = 10×). The projector updates live.</span>
+      <span class="sp"></span>
+      <button id="bEdit">Handles on wall</button><button id="bTest">Test pattern</button>
+    </div>
+  </section>
+  <section class="panel">
     <div class="card">
       <h3>Surfaces</h3>
       <div class="list" id="surfaces"></div>
@@ -158,7 +170,7 @@
       <div class="row"><input id="presetName" class="grow" placeholder="e.g. workshop-back-wall"><button id="bSave">Save</button></div>
       <div class="row"><select id="presetList" class="grow"></select><button id="bLoad">Load</button></div>
     </div>
-  </div>
+  </section>
 </main>
 <script src="render.js"></script>
 <script>
@@ -183,6 +195,7 @@ function push(immediate) {
 
 // ---------- stage sizing: same aspect as the projector
 function sizeStage() {
+  stage.style.setProperty("--ar", screen.w / screen.h);   // the hero fits the screen height, same aspect as the projector
   const w = stage.clientWidth, h = Math.round(w * screen.h / screen.w);
   stage.style.height = h + "px";
   const d = devicePixelRatio || 1;
