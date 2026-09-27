@@ -1,37 +1,44 @@
 # Par can (DMX uplight)
 
-A battery RGBWA+UV wireless-DMX uplight, driven from the brain through an anyma uDMX USB adapter. It's a `dmx_par` fixture in the show engine. Code: [`brain/showbrain/dmx.py`](../../brain/showbrain/dmx.py) (show output) and [`fixtures/parcan/dmx.py`](../../fixtures/parcan/dmx.py) (one-off command-line sender).
+A battery RGBWA+UV wireless-DMX uplight ("V6 APP Battery Wireless", 6 × 18 W 6-in-1; manual: [manuals/v6-battery-wireless-par-manual.pdf](../manuals/v6-battery-wireless-par-manual.pdf)), driven from the brain through an anyma uDMX USB adapter. It's a `dmx_par` fixture in the show engine. Code: [`brain/showbrain/dmx.py`](../../brain/showbrain/dmx.py) (show output) and [`fixtures/parcan/dmx.py`](../../fixtures/parcan/dmx.py) (one-off command-line sender).
+
+## From the manual (verified 27 Sep 2026)
+
+10-channel mode:
+
+| Ch | Function |
+|---|---|
+| 1 | Master dimmer |
+| 2 | Red |
+| 3 | Green |
+| 4 | Blue |
+| 5 | White |
+| 6 | Yellow (amber) |
+| 7 | Purple (UV) |
+| 8 | Strobe |
+| 9 | Program: 0-8 = shut (manual colour control); 9-255 = built-in colour mixing / jump / pulse / gradual / sound modes |
+| 10 | Program speed |
+
+- **DMX mode:** Menu → `Slnd` → `Sl1` or `Sl2`. The display shows `stby` while it waits for DMX, cable or wireless. (`Nast` is stand-alone mode for the built-in programs.)
+- **Wireless DMX** is 2.4 GHz radio and needs a separate wireless DMX transmitter on a DMX output. Turn on the signal switch; the indicator is red while waiting. Press the black ID button under it until its colour matches the transmitter's code; it blinks green once receiving.
+- **Wi-Fi mode** (Shows → Wifi Mode) is for a phone app joining the light's own access point. It's a proprietary protocol, not DMX, and isn't used here.
+- Battery: 3-4 h to full charge, and it can run while charging.
 
 ## In the show
 
 The uDMX now plugs into the CM4 (`ravecave`) and the par can is a fixture in the show engine.
 - The Pi sees the stick as `16c0:05dc`. `python3-usb` is installed, and a udev rule (`/etc/udev/rules.d/50-udmx.rules`) gives the `plugdev` group access, so the `pi` user can drive it without root.
 - Show engine: `brain/showbrain/dmx.py` (a background sender that tolerates transient USB errors, reconnects, and resends every second as a keep-alive) plus the `par` look in `brain/showbrain/looks.py`.
-- Fixture config (`brain/showbrain/config.json`): `"kind": "dmx_par"`, `"address": 1`, the channel map below, and `"delay_ms": 35`. USB DMX is near-instant, so it's delayed to land with the Wi-Fi fixtures.
+- Fixture config (`brain/showbrain/config.json`): `"kind": "dmx_par"`, `"address": 1`, the channel map above, and `"delay_ms": 35`. USB DMX is near-instant, so it's delayed to land with the Wi-Fi fixtures.
 - Channels 8 (strobe), 9 (program) and 10 (speed) are always sent as 0, so the light never runs its own programs.
-- W / Amber / UV (channels 5-7) stay at 0 until verified. Once tested, list them in `"verified_extra": ["w", "a", "uv"]` for that fixture.
+- W / Amber / UV (channels 5-7) are confirmed by the manual and enabled via `"verified_extra": ["w", "a", "uv"]`.
 - After a power outage the uDMX once dropped off USB with a kernel "disabled by hub (EMI?)" message, and a software reset didn't recover it; replugging did. The show engine reconnects automatically. Keep its cable away from the panel/strip power supplies, or use a powered hub.
 - Only one program can own the uDMX at a time. Stop showbrain (`sudo systemctl stop showbrain`) before using `dmx.py` or the Light Control app against it.
 
 ## The light
 Battery-powered wireless DMX uplight (black box, "WIRELESS DMX CODE" button, IR receiver, colour LCD, buttons MENU / UP / DOWN / ENTER).
 Main menu: Dmx512, Shows, Sound, Color, Set, Help.
-Current setting: **Dmx512 mode, address A001, 10CH mode.** (Wired DMX works; wireless DMX not tested.)
-
-## Channel map (10CH, address 1)
-| Ch | Function | Status |
-|----|----------|--------|
-| 1 | Master dimmer | verified (needed at 255 for output) |
-| 2 | Red | verified |
-| 3 | Green | unverified (assumed) |
-| 4 | Blue | verified |
-| 5 | White | unverified |
-| 6 | Amber | unverified |
-| 7 | UV | unverified |
-| 8 | Strobe | unverified |
-| 9 | Program / macro | unverified |
-| 10 | Program speed | unverified |
-Unverified labels are the typical layout for RGBWA+UV battery uplights; test and correct.
+Current setting: **Dmx512 mode, address A001, 10CH mode.** Wired DMX works; wireless DMX isn't tested yet.
 
 ## uDMX protocol (what works)
 - Control transfer, bmRequestType 0x40 (vendor, device, host-to-device)

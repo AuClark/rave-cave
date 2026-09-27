@@ -99,7 +99,6 @@ Site-specific values (Wi-Fi SSID and password, host overrides) live in a git-ign
 - **Drop detection** is waveform-based and tested on a limited number of tracks. It can be up to a bar out, and psytrance produces many candidates. rekordbox phrase analysis would give exact labels. Commander marks fix individual tracks and are logged for calibration.
 - **No fader data** without a DJM on the link, so the live deck is chosen by rules.
 - **rave-box's Wi-Fi** has dropped several times.
-- **The par can's W / Amber / UV channels** are unverified and kept off.
 - **The Pi has no RTC**, so its clock is wrong until time syncs after boot.
 
 ## Next

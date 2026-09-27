@@ -52,7 +52,11 @@
         "program": 9,
         "speed": 10
       },
-      "verified_extra": []
+      "verified_extra": [
+        "w",
+        "a",
+        "uv"
+      ]
     }
   ]
 }
