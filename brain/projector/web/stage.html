@@ -72,7 +72,9 @@
     .hctl label, #hint { display: none; }
     #hud { left: 12px; right: 12px; bottom: 10px; } #hud .scene { font-size: 26px; }
   }
-  @media (max-width: 900px) { body { display: block; } main { grid-template-columns: 1fr; grid-template-rows: 60vh auto; height: auto; } aside { border-left: 0; } }
+  /* Narrow screens: the 3D view stays in view (under the top bar) while the panels scroll underneath. */
+  @media (max-width: 900px) { body { display: block; } main { grid-template-columns: 1fr; grid-template-rows: auto auto; height: auto; } aside { border-left: 0; }
+    #view { position: sticky; top: 64px; z-index: 30; height: 48vh; } }
   .s5logo { display: inline-flex; align-items: center; vertical-align: middle; line-height: 1; }
   .s5logo .s5word { color: var(--text, #f2f2f2); flex: none; display: block; }
   .s5logo .s5five { fill: var(--accent, #ff5a1f); }
