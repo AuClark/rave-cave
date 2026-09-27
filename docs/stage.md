@@ -12,7 +12,7 @@ The stage in 3D: a 4.8 × 3 m platform, a back wall, a lighting truss, and the D
 | Projector L | Outside the tubes, on a stand | **Live:** the projector's output as mapped (its own `render.js` and layout), onto Screen L |
 | Projector R | Outside the tubes, on a stand | **Live:** the Visuals page's generative sketch (`:8110`), full frame, onto Screen R |
 | Screen L / R | Back wall | Projection surfaces |
-| Laser L / R | Top left and right of the truss | **Simulated** from the show: sweeps on the beat, wide in DROP, converging through BUILD, off in the pre-drop blackout |
+| Laser L / R | Top left and right of the truss | **Simulated** laser shows from the show's beat clock and scene (see [Laser shows](#laser-shows)) |
 | Strobe | Top middle | **Simulated:** Commander strobe, blinder, and the drop hits |
 | Wash | Top middle | **Live:** the par can's DMX colour (`parcan`) |
 
@@ -24,6 +24,41 @@ The stage in 3D: a 4.8 × 3 m platform, a back wall, a lighting truss, and the D
 - **Projectors** each show the projector output (as mapped), the Visuals page (generative), or nothing. To make the *real* projector show the visuals, set its surface content to "generative" on the Projection page.
 - **Simulated fixtures** follow the scene, beat, colour, strobe and blackout.
 - **Linking:** any fixture can be linked to a real fixture from the panel.
+
+## Laser shows
+
+The simulated lasers play full laser shows, locked to the show's beat clock and following its scene. The engine is in `brain/projector/web/lasershow.js`.
+
+- **Looks (LASERS in the top bar, saved with the layout).** They're modelled on the big touring shows, but none of them uses an artist's actual show data.
+  - **Epic:** Prydz-style. Cool white plus the track's colour; liquid skies, tunnels, rippling fans.
+  - **Red & white:** SHM-style. Crossfire, knives, chases and lattices, chopped in drops.
+  - **Trance green:** ASOT-style. Cones, liquid skies, fan waves.
+  - **Dark & cinematic:** Afterlife-style. Sparse white and violet blades, slow sheets.
+  - **Mainstage rainbow:** Garrix-style. Rainbow bursts, scans, zigzags.
+  - **Warehouse techno:** strobing white with amber.
+  - **Classic:** the old simple fan, using the fixture's own colour, beam count and spread.
+  - **Auto** (the default) picks a new look for each track.
+- **Cues:**
+  - **Fan:** a wide fan swinging on the beat.
+  - **Wave:** a dense fan with a ripple travelling across it.
+  - **Tunnel:** a turning cone, drawn as a scanned surface.
+  - **Liquid sky:** a rippling sheet over the crowd's heads.
+  - **Crossfire:** beams from each side shooting across the centre.
+  - **Knives:** a vertical fan slicing sideways.
+  - **Chase:** beams jumping to new spots on every step.
+  - **Audience scan:** a fan tilting from the floor up over the crowd.
+  - **Sunburst:** spokes bursting out once a bar.
+  - **Zigzag lattice:** beams crossing into a diamond mesh.
+  - **Converge:** a fan closing to a point, used in builds.
+- **When cues change:** every 8 bars, or every 4 in a drop, so the show follows the track's phrasing.
+- **Mirroring:** every laser in the rig takes part. Left and right mirror each other.
+- **Sections:**
+  - **Builds** narrow, spin faster and stutter at ¼, then ⅛, then 1/16 as they rise.
+  - **Drops** open after the white hit. The 4th bar of each drop phrase stutters.
+  - The **pre-drop blackout** cuts them.
+- **Physical behaviour:** beams stop at the floor, and **HAZE** sets how visible they are.
+- **Section preview:** the second LASERS menu makes the lasers play one section (GROOVE, BUILD, DROP, BREAKDOWN or INTRO) on the show's clock, or at 128 BPM when no deck is playing. It's for designing and only affects your view. **FOLLOW SHOW** returns to normal.
+- **Laser fixtures:** add more with **Add fixture → Laser** and place them on the truss or the stage front for a fuller field. Each fixture draws up to 72 beams plus a sheet.
 
 ## Designing
 

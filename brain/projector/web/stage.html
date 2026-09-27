@@ -76,6 +76,10 @@
     <button data-cam="audience" class="on">AUDIENCE</button><button data-cam="dj">DJ</button><button data-cam="top">TOP</button><button data-cam="side">SIDE</button>
     <span class="sep"></span>
     <label>HAZE</label><input id="haze" type="range" min="0" max="1" step="0.05" value="0.55" style="width:90px">
+    <label>LASERS</label><select id="laserLook" style="width:150px" title="Laser show look (saved with the layout)"></select>
+    <select id="laserSec" style="width:118px" title="Preview a section: the lasers play it on a 128 BPM clock, whatever the show is doing">
+      <option value="">FOLLOW SHOW</option><option value="GROOVE">GROOVE</option><option value="BUILD">BUILD</option><option value="DROP">DROP</option><option value="BREAKDOWN">BREAKDOWN</option><option value="INTRO">INTRO</option></select>
+    <span class="sep"></span>
     <button id="bloom" class="on" title="Glow (turn off on slow machines)">GLOW</button>
     <span class="sep"></span>
     <button id="design" class="on" title="Show the designer panel">DESIGN</button>
@@ -109,6 +113,7 @@
       <div class="row" id="rowSize"><span>Size</span><div class="xyz" style="grid-template-columns:1fr 1fr"><input id="sw" type="number" step="0.1" min="0.2" max="12"><input id="sh" type="number" step="0.1" min="0.2" max="8"></div></div>
       <div class="row" id="rowBright"><span>Brightness</span><div style="display:flex;gap:8px;align-items:center"><input id="pBright" type="range" min="0" max="1.5" step="0.05" style="flex:1"><span id="vBright" style="width:38px;text-align:right;color:var(--dim);font-size:12px"></span></div></div>
       <div class="row" id="rowColour"><span>Colour</span><input id="pColour" type="color" style="padding:0;height:30px"></div>
+      <div class="note" id="laserNote" style="margin:-2px 0 8px">* Beams, spread and colour are for the CLASSIC look. The other laser looks (LASERS, top bar) draw their own beams, sheets and colours, mirrored left and right.</div>
       <div class="btns">
         <button id="gMove" class="on" title="Drag the arrows to move it">MOVE</button>
         <button id="gAim" title="Drag the orange dot to aim it">AIM</button>
@@ -153,6 +158,7 @@ import { EffectComposer } from "three/addons/postprocessing/EffectComposer.js";
 import { RenderPass } from "three/addons/postprocessing/RenderPass.js";
 import { UnrealBloomPass } from "three/addons/postprocessing/UnrealBloomPass.js";
 import { OutputPass } from "three/addons/postprocessing/OutputPass.js";
+import { LOOKS, laserFrame, strHash } from "./lasershow.js";
 
 const $ = s => document.querySelector(s);
 const PROJ = window.PROJ;
@@ -328,7 +334,7 @@ const hsl = (h, s = 1, l = 0.5) => new THREE.Color().setHSL(((h % 1) + 1) % 1, s
 // LED light is linear in that level, so read it as linear RGB, then apply the "Match real lights"
 // trims: gamma (if the fixture applies its own) and a display gain. Scale the whole colour rather
 // than clipping channels, so hues never shift; the glow shows how bright it is.
-let calib = { led: 2.5, wash: 1.0, gamma: 1.0, proj: 1.0 };
+let calib = { led: 2.5, wash: 1.0, gamma: 1.0, proj: 1.0, laser: "auto" };
 function ledColour(hex, out, gain) {
   const v = parseInt(hex.slice(1), 16);
   let r = (v >> 16 & 255) / 255, g = (v >> 8 & 255) / 255, b = (v & 255) / 255;
@@ -402,6 +408,29 @@ function beamMesh(angleDeg, len) {
     blending: THREE.AdditiveBlending, side: THREE.DoubleSide, uniforms: { color: { value: new THREE.Color() }, amount: { value: 0 }, len: { value: len } } });
   const mesh = new THREE.Mesh(g, m); mesh.renderOrder = 10; return mesh;
 }
+// Laser beams: bright thin cores plus a wider soft glow, fading along their length; colour and
+// level per beam come in through instanceColor. Sheets fade with distance and shimmer like a scan.
+const LASER_MAX = 72, SHEET_MAX = 82, LASER_LEN = 18;
+const laserVS = `varying float vD; varying vec3 vC; varying float vEdge;
+  void main() { vD = position.z;
+  #ifdef USE_INSTANCING_COLOR
+    vC = instanceColor;
+  #else
+    vC = vec3(1.0);
+  #endif
+    vec4 mv = modelViewMatrix * instanceMatrix * vec4(position, 1.0);
+    vec3 n = normalize(normalMatrix * mat3(instanceMatrix) * normal); vEdge = abs(dot(n, normalize(-mv.xyz)));
+    gl_Position = projectionMatrix * mv; }`;
+const laserFS = `uniform float soft; varying float vD; varying vec3 vC; varying float vEdge;
+  void main() { float fall = pow(max(0.0, 1.0 - vD), 0.9); float e = mix(1.0, pow(vEdge, 2.0), soft);
+    gl_FragColor = vec4(vC * fall * e, 1.0); }`;
+const sheetVS = `attribute float aT; attribute float aD; varying float vT; varying float vD;
+  void main() { vT = aT; vD = aD; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }`;
+const sheetFS = `uniform vec3 cA; uniform vec3 cB; uniform float amount; uniform float time; varying float vT; varying float vD;
+  void main() { float fall = pow(max(0.0, 1.0 - vD), 1.3) * smoothstep(0.0, 0.04, vD);
+    float scan = 0.6 + 0.4 * sin(vT * 420.0 + time * 9.0) * sin(vT * 97.0 - time * 3.0);
+    gl_FragColor = vec4(mix(cA, cB, vT) * amount * fall * scan, 1.0); }`;
+const cBlack = new THREE.Color(0);
 function bodyMesh(w, h, d, colour = 0x1a1a1a) {
   const m = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), mat(colour, 0.5, 0.4)); m.castShadow = true; return m;
 }
@@ -450,14 +479,28 @@ function build(fx) {
     const beam = beamMesh(fx.angle || T.angle, 5); beam.position.z = 0.17; g.add(beam);
     parts.spot = spot; parts.beam = beam; parts.hit = [b]; parts.lens = lens;
   } else if (fx.type === "laser") {
+    // Beams: one instanced mesh for the bright cores and one for their soft haze glow; plus a
+    // scanned sheet (a triangle strip) for liquid skies and tunnel cones.
     const b = bodyMesh(0.22, 0.12, 0.28, 0x151515); g.add(b);
-    const n = Math.max(1, fx.count || T.count), beams = [];
-    for (let i = 0; i < n; i++) {
-      const geo = new THREE.CylinderGeometry(0.0025, 0.0025, 1, 6, 1, true); geo.translate(0, 0.5, 0); geo.rotateX(Math.PI / 2);
-      const m = new THREE.Mesh(geo, new THREE.MeshBasicMaterial({ color: fx.colour || T.colour, transparent: true, blending: THREE.AdditiveBlending, depthWrite: false, toneMapped: false }));
-      m.position.z = 0.15; m.scale.z = 14; g.add(m); beams.push(m);
-    }
-    parts.beams = beams; parts.hit = [b];
+    const aperture = new THREE.Mesh(new THREE.PlaneGeometry(0.12, 0.03), new THREE.MeshBasicMaterial({ color: 0x000000, toneMapped: false }));
+    aperture.position.z = 0.141; g.add(aperture);
+    const mk = (r, soft) => {
+      const geo = new THREE.CylinderGeometry(r, r, 1, 6, 1, true); geo.translate(0, 0.5, 0); geo.rotateX(Math.PI / 2);
+      const m = new THREE.InstancedMesh(geo, new THREE.ShaderMaterial({ vertexShader: laserVS, fragmentShader: laserFS, uniforms: { soft: { value: soft } },
+        transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, side: THREE.DoubleSide }), LASER_MAX);
+      for (let i = 0; i < LASER_MAX; i++) m.setColorAt(i, cBlack);
+      m.count = 0; m.frustumCulled = false; m.renderOrder = 11; g.add(m); return m;
+    };
+    const sheetGeo = new THREE.BufferGeometry(), sn = SHEET_MAX;
+    sheetGeo.setAttribute("position", new THREE.BufferAttribute(new Float32Array(sn * 2 * 3), 3));
+    sheetGeo.setAttribute("aT", new THREE.BufferAttribute(new Float32Array(sn * 2), 1));
+    sheetGeo.setAttribute("aD", new THREE.BufferAttribute(new Float32Array(sn * 2).map((_, k) => k % 2), 1));
+    const idx = []; for (let i = 0; i < sn - 1; i++) idx.push(i * 2, i * 2 + 1, i * 2 + 2, i * 2 + 1, i * 2 + 3, i * 2 + 2);
+    sheetGeo.setIndex(idx);
+    const sheet = new THREE.Mesh(sheetGeo, new THREE.ShaderMaterial({ vertexShader: sheetVS, fragmentShader: sheetFS, transparent: true, depthWrite: false,
+      blending: THREE.AdditiveBlending, side: THREE.DoubleSide, uniforms: { cA: { value: new THREE.Color() }, cB: { value: new THREE.Color() }, amount: { value: 0 }, time: { value: 0 } } }));
+    sheet.frustumCulled = false; sheet.renderOrder = 10; sheet.visible = false; g.add(sheet);
+    parts.core = mk(0.0035, 0); parts.glow = mk(0.018, 1); parts.sheet = sheet; parts.aperture = aperture; parts.hit = [b];
   } else {                                                                               // wash, strobe, moving head
     const isStrobe = fx.type === "strobe", isMoving = fx.type === "moving";
     const b = isStrobe ? bodyMesh(0.36, 0.14, 0.1) : bodyMesh(0.22, 0.24, 0.22, isMoving ? 0x222222 : 0x151515);
@@ -508,6 +551,55 @@ function rebuild(fx) {
   if (selected === fx.id) select(fx.id);
 }
 
+// ------------------------------------------------------------------ lasers
+// The look is saved with the layout; the section preview is just for this viewer.
+let laserSec = "", laserIdx = 0, laserCount = 0, laserCue = "", trackSeed = 0;
+for (const [id, l] of Object.entries(LOOKS)) $("#laserLook").add(new Option(l.label.toUpperCase(), id));
+$("#laserLook").onchange = e => { calib.laser = e.target.value; saveRig(); };
+$("#laserSec").onchange = e => { laserSec = e.target.value; };
+// With a section picked, the lasers play it on the show's clock (or 128 BPM with no deck playing):
+// builds rise over 16 bars, and drops restart every 16 bars.
+function laserShowFrame(f, now) {
+  if (!laserSec) return f;
+  const idle = !show || !show.bpm || show.scene === "IDLE", beat = idle ? now / 1000 * 128 / 60 : f.beat;
+  return { ...f, scene: laserSec, beat, frac: ((beat % 1) + 1) % 1, black: false, intensity: Math.max(0.8, f.intensity || 0),
+           progress: laserSec === "BUILD" ? (((beat / 64) % 1) + 1) % 1 : f.progress, since: laserSec === "DROP" ? ((beat % 64) + 64) % 64 : f.since };
+}
+const lq = new THREE.Quaternion(), lq2 = new THREE.Quaternion(), lz = new THREE.Vector3(0, 0, 1), ld = new THREE.Vector3(), lw = new THREE.Vector3(),
+      lo = new THREE.Vector3(), lm = new THREE.Matrix4(), ls = new THREE.Vector3(), lpos = new THREE.Vector3(0, 0, 0.15), lc = new THREE.Color();
+function laserDir(side, yaw, pitch, out) { const y = yaw * -side; return out.set(Math.sin(y) * Math.cos(pitch), Math.sin(pitch), Math.cos(y) * Math.cos(pitch)); }
+function beamLen(d) {                         // stop at the floor (y = 0) rather than going through it
+  lw.copy(d).applyQuaternion(lq2);
+  return lw.y < -1e-3 ? Math.min(LASER_LEN, Math.max(0.2, lo.y / -lw.y)) : LASER_LEN;
+}
+function drawLaser(p, side, out, live, now) {
+  const hz = 0.25 + 0.9 * haze, lvl = Math.max(0, out.level) * hz, n = Math.min(LASER_MAX, out.beams.length);
+  p.group.updateMatrixWorld(); p.group.getWorldQuaternion(lq2); p.group.getWorldPosition(lo);
+  for (let i = 0; i < n; i++) {
+    const b = out.beams[i];
+    laserDir(side, b.yaw, b.pitch, ld); lq.setFromUnitVectors(lz, ld);
+    ls.set(1, 1, beamLen(ld)); lm.compose(lpos, lq, ls);
+    p.core.setMatrixAt(i, lm); p.glow.setMatrixAt(i, lm);
+    if (live) ledColour(live[0], lc, 1); else lc.setRGB(...b.rgb);
+    p.core.setColorAt(i, lc.multiplyScalar(lvl * 0.55)); p.glow.setColorAt(i, lc.multiplyScalar(0.07));
+  }
+  for (const m of [p.core, p.glow]) { m.count = lvl > 0 ? n : 0; m.instanceMatrix.needsUpdate = true; if (m.instanceColor) m.instanceColor.needsUpdate = true; }
+  const sh = out.sheet, u = p.sheet.material.uniforms;
+  p.sheet.visible = !!sh && lvl > 0;
+  if (p.sheet.visible) {
+    const pos = p.sheet.geometry.attributes.position, aT = p.sheet.geometry.attributes.aT, k = Math.min(SHEET_MAX, sh.dirs.length);
+    for (let i = 0; i < k; i++) {
+      laserDir(side, sh.dirs[i][0], sh.dirs[i][1], ld); const len = beamLen(ld);
+      pos.setXYZ(i * 2, ld.x * 0.15, ld.y * 0.15, 0.15 + ld.z * 0.15); pos.setXYZ(i * 2 + 1, ld.x * len, ld.y * len, 0.15 + ld.z * len);
+      aT.setX(i * 2, i / (k - 1)); aT.setX(i * 2 + 1, i / (k - 1));
+    }
+    pos.needsUpdate = aT.needsUpdate = true; p.sheet.geometry.setDrawRange(0, (k - 1) * 6);
+    if (live) { ledColour(live[0], u.cA.value, 1); u.cB.value.copy(u.cA.value); } else { u.cA.value.setRGB(...sh.rgbA); u.cB.value.setRGB(...sh.rgbB); }
+    u.amount.value = sh.amount * lvl * 0.22; u.time.value = now / 1000;
+  }
+  p.aperture.material.color.setRGB(lvl > 0 && n ? 0.6 : 0.02, lvl > 0 && n ? 0.6 : 0.02, lvl > 0 && n ? 0.6 : 0.02);
+}
+
 // ------------------------------------------------------------------ per-frame update
 const cTmp = new THREE.Color();
 function update(now) {
@@ -522,6 +614,8 @@ function update(now) {
   const local = !timedFrames();                     // no timed frames: draw fast effects here
   const fastWhite = !local || black ? 0 : f.blinder || hit ? 1 : f.strobe ? (strobeOn ? 1 : 0) : 0;
   const fastBlack = local && !black && f.strobe && !f.blinder && !strobeOn;
+  laserIdx = 0; laserCount = rig.filter(fx => fx.type === "laser").length; laserCue = "";
+  trackSeed = strHash(show && show.title) + (show && show.live || 0);
   for (const fx of rig) {
     const p = built.get(fx.id); if (!p) continue;
     if (fx.type === "screen") continue;
@@ -557,22 +651,13 @@ function update(now) {
       p.beam.material.uniforms.color.value.setRGB(0.8, 0.85, 1);
       p.lens.material.color.set(on ? 0xdfe8ff : 0x222222);
     } else if (fx.type === "laser") {
-      // Simulated: fans sweep on the beat in GROOVE, fast and wide in DROP, converge through BUILD,
-      // a slow single sheet in BREAKDOWN, off in the pre-drop blackout.
-      const n = p.beams.length, spread = THREE.MathUtils.degToRad(fx.angle || 30);
-      let on = !black && ["GROOVE", "DROP", "BUILD", "HOLD", "BREAKDOWN", "OUTRO", "INTRO"].includes(sc);
-      let sweep = Math.sin(f.beat * Math.PI / 2) * 0.6, width = 1, level = 0.9;
-      if (sc === "DROP") { sweep = Math.sin(f.beat * Math.PI) * 0.9; level = 1; on = on && (f.since > 0.25); }
-      else if (sc === "BUILD" || sc === "HOLD") { width = 1 - 0.85 * f.progress; sweep = 0; level = 0.4 + 0.6 * f.progress; on = on && ((f.beat * (f.progress > 0.5 ? 4 : 2)) % 1) < 0.5; }
-      else if (sc === "BREAKDOWN") { width = 0.15; sweep = Math.sin(f.beat * Math.PI / 8) * 0.3; level = 0.6; }
-      else if (sc === "INTRO" || sc === "OUTRO") { level = 0.4; width = 0.5; }
-      if (fx.source !== "sim" && fx.source) on = on && !!live;                          // linked but not sending: off
-      p.beams.forEach((m, i) => {
-        const k = n === 1 ? 0 : i / (n - 1) - 0.5;
-        m.rotation.set(Math.sin(f.beat * 0.7 + i) * 0.05 * width, k * spread * width + sweep * spread, 0);
-        m.visible = on; m.material.opacity = 0.35 * level * f.intensity;
-        if (live) ledColour(live[0], m.material.color, 1);
-      });
+      const side = fx.pos[0] < -0.05 ? -1 : fx.pos[0] > 0.05 ? 1 : (laserIdx % 2 ? 1 : -1);
+      let out = laserFrame(calib.laser || "auto", laserShowFrame(f, now), {
+        side, idx: laserIdx, count: laserCount, t: now / 1000, seed: trackSeed,
+        classic: { n: Math.min(LASER_MAX, Math.max(1, fx.count || 8)), spread: THREE.MathUtils.degToRad(fx.angle || 30), rgb: new THREE.Color(fx.colour || "#19ff4a").toArray() } });
+      laserIdx++; if (laserIdx === 1) laserCue = out.cue;
+      if (fx.source !== "sim" && fx.source && !live) out = { level: 0, beams: [], sheet: null };   // linked but not sending: off
+      drawLaser(p, side, out, live, now);
     } else {
       // Wash / strobe / moving head.
       let col = new THREE.Color(0), lvl = 0;
@@ -610,6 +695,7 @@ function update(now) {
   const s = show;
   $("#hud").innerHTML = `<span class="scene">${s ? s.scene || "—" : "—"}</span>` +
     (s && s.live ? `deck <b>${s.live}</b> · <b>${(s.bpm || 0).toFixed(1)}</b> BPM · bar ${s.bar || 0}` + (s.title ? ` · ${esc(s.title)}` : "") : "no deck playing") +
+    (laserCue && laserCue !== "off" ? ` · lasers <b>${esc(laserCue)}</b>${laserSec ? " (preview)" : ""}` : "") +
     ` · ${rig.filter(fx => fx.type !== "screen" && fx.source && fx.source !== "sim" && (fx.type === "projector" ? mapRenderer : livePixels(fx.source))).length} live / ${rig.filter(fx => fx.type !== "screen").length} fixtures`;
 }
 const esc = s => String(s).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
@@ -688,14 +774,15 @@ function fillProps(fx) {
   ["px", "py", "pz"].forEach((id, i) => { if (document.activeElement !== $("#" + id)) $("#" + id).value = fx.pos[i].toFixed(2); });
   ["ax", "ay", "az"].forEach((id, i) => { if (document.activeElement !== $("#" + id)) $("#" + id).value = fx.aim[i].toFixed(2); });
   $("#rowAngle").style.display = T.angle ? "" : "none";
-  $("#lAngle").textContent = fx.type === "projector" ? "Throw" : fx.type === "laser" ? "Spread" : "Beam";
+  $("#lAngle").textContent = fx.type === "projector" ? "Throw" : fx.type === "laser" ? "Spread*" : "Beam";
   $("#pAngle").value = fx.angle || T.angle || 20;
   $("#rowCount").style.display = T.count ? "" : "none";
-  $("#lCount").textContent = fx.type === "laser" ? "Beams" : "LEDs";
+  $("#lCount").textContent = fx.type === "laser" ? "Beams*" : "LEDs";
   $("#pCount").value = fx.count || T.count || 1;
   $("#rowSize").style.display = fx.type === "screen" ? "" : "none";
   if (fx.type === "screen") { const [w, h] = fx.size || TYPES.screen.size; $("#sw").value = w; $("#sh").value = h; }
   $("#pSource").closest(".row").style.display = fx.type === "screen" ? "none" : "";
+  $("#laserNote").style.display = fx.type === "laser" ? "" : "none";
   $("#rowColour").style.display = ["laser", "wash", "moving"].includes(fx.type) && fx.source === "sim" ? "" : "none";
   $("#rowBright").style.display = fx.type === "projector" ? "" : "none";
   if (fx.type === "projector") { $("#pBright").value = fx.brightness ?? 1; $("#vBright").textContent = Math.round((fx.brightness ?? 1) * 100) + "%"; }
@@ -731,7 +818,7 @@ addEventListener("keydown", e => {
   else if (e.key.toLowerCase() === "a") $("#gAim").click();
 });
 
-function showCalib() { $("#cLed").value = calib.led; $("#cWash").value = calib.wash; $("#cGamma").value = String(calib.gamma); $("#cProj").value = calib.proj ?? 1; }
+function showCalib() { $("#laserLook").value = LOOKS[calib.laser] ? calib.laser : "auto"; $("#cLed").value = calib.led; $("#cWash").value = calib.wash; $("#cGamma").value = String(calib.gamma); $("#cProj").value = calib.proj ?? 1; }
 $("#cProj").oninput = e => { calib.proj = +e.target.value; saveRig(); };
 $("#pBright").oninput = e => { const fx = cur(); if (fx) { fx.brightness = +e.target.value; $("#vBright").textContent = Math.round(fx.brightness * 100) + "%"; saveRig(); } };
 $("#cLed").oninput = e => { calib.led = +e.target.value; saveRig(); };
