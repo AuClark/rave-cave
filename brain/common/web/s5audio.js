@@ -14,7 +14,8 @@
   let ctx = null, master = null, music = null, musicLP = null, noiseBuf = null, pollTimer = null, schedTimer = null;
   let clock = null;          // { a0: audio time, b0: beat at a0, bpm }
   let show = { scene: "GROOVE", bpm: 126, beats_to_drop: 999, energy: 0.6, section: "groove" };
-  let nextStep = null;       // next 16th to schedule, in beats (multiples of 0.25)
+  let nextStep = null;
+  let vol = +(localStorage.getItem("s5simVol") || 0.8);       // next 16th to schedule, in beats (multiples of 0.25)
   const LOOKAHEAD = 0.15, STEP = 0.25;
   const KEY = 55;            // A1: bassline root (A minor)
   const BASS = [0, 0, 12, 0, 7, 0, 10, 12];   // semitones, one per 8th note of the bar
@@ -26,7 +27,7 @@
     ctx = new (window.AudioContext || window.webkitAudioContext)();
     const comp = ctx.createDynamicsCompressor();
     comp.threshold.value = -14; comp.ratio.value = 4; comp.attack.value = 0.003; comp.release.value = 0.2;
-    master = ctx.createGain(); master.gain.value = 0.8;
+    master = ctx.createGain(); master.gain.value = vol;
     master.connect(comp).connect(ctx.destination);
     musicLP = ctx.createBiquadFilter(); musicLP.type = "lowpass"; musicLP.frequency.value = 18000; musicLP.Q.value = 0.8;
     music = ctx.createGain(); music.gain.value = 1;
@@ -153,7 +154,7 @@
   async function start() {
     if (!ctx) build();
     await ctx.resume();
-    master.gain.setTargetAtTime(0.8, ctx.currentTime, 0.05);
+    master.gain.setTargetAtTime(vol, ctx.currentTime, 0.05);
     await poll();
     clearInterval(pollTimer); clearInterval(schedTimer);
     pollTimer = setInterval(poll, 250);
@@ -164,5 +165,9 @@
     if (ctx) { master.gain.setTargetAtTime(0, ctx.currentTime, 0.05); setTimeout(() => ctx && ctx.suspend(), 300); }
     clock = null;
   }
-  window.S5AUDIO = { start, stop, get playing() { return !!(ctx && ctx.state === "running" && schedTimer); } };
+  function volume(v) {
+    vol = Math.max(0, Math.min(1, v));
+    if (ctx && schedTimer) master.gain.setTargetAtTime(vol, ctx.currentTime, 0.05);
+  }
+  window.S5AUDIO = { start, stop, volume, get playing() { return !!(ctx && ctx.state === "running" && schedTimer); } };
 })();

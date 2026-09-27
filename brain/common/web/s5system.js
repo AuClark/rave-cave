@@ -17,19 +17,21 @@
   #sys *, #sys *::before { box-sizing: border-box; }
   .s5logo { display: flex; align-items: center; line-height: 1; } .s5logo .s5word { color: #f2f2f2; display: block; flex: none; }
   .s5logo .s5five { fill: #ff5a1f; }
-  #simbar { position: fixed; left: 50%; bottom: 14px; transform: translateX(-50%); z-index: 9991; display: none; align-items: center; gap: 14px;
-    padding: 8px 8px 8px 16px; background: rgba(30,30,30,.96); border: 1px solid #555; color: #f2f2f2;
-    font: 500 12px/1 "Montserrat", ui-sans-serif, system-ui, sans-serif; letter-spacing: .04em; animation: s5in .35s ease; }
-  #simbar.show { display: flex; }
-  #simbar.on { border-color: #f2b84b; }
-  #simbar b { font-weight: 600; letter-spacing: .14em; text-transform: uppercase; font-size: 11px; }
-  #simbar.on b { color: #f2b84b; }
-  #simbar span { color: #9a9a9a; }
-  #simbar button { font: 600 11px/1 "Montserrat", ui-sans-serif, system-ui, sans-serif; letter-spacing: .12em; text-transform: uppercase;
-    padding: 9px 12px; cursor: pointer; background: transparent; color: #f2f2f2; border: 1px solid #555; }
-  #simbar button:hover { border-color: #ff5a1f; }
-  #simbar button.go { background: #ff5a1f; border-color: #ff5a1f; color: #111; }
-  #simbar button:disabled { opacity: .5; cursor: wait; }
+  #simpop { position: fixed; top: 72px; right: 12px; z-index: 9992; width: min(340px, calc(100vw - 24px)); display: none; padding: 20px;
+    background: #2b2b2b; border: 1px solid #555; color: #f2f2f2; font: 400 13px/1.45 "Montserrat", ui-sans-serif, system-ui, sans-serif;
+    box-shadow: 0 12px 40px rgba(0,0,0,.5); animation: s5in .2s ease; }
+  #simpop.open { display: block; }
+  #simpop h4 { margin: 0 0 6px; font: 600 11px/1 "Montserrat", ui-sans-serif, system-ui, sans-serif; letter-spacing: .16em; text-transform: uppercase; color: #f2b84b; }
+  #simpop.offer h4 { color: #9a9a9a; }
+  #simpop p { margin: 0 0 14px; color: #9a9a9a; }
+  #simpop .row { display: flex; gap: 10px; align-items: center; margin-top: 10px; }
+  #simpop button { flex: none; font: 600 11px/1 "Montserrat", ui-sans-serif, system-ui, sans-serif; letter-spacing: .12em; text-transform: uppercase;
+    padding: 11px 12px; cursor: pointer; background: transparent; color: #f2f2f2; border: 1px solid #555; }
+  #simpop button.wide { flex: 1; }
+  #simpop button:hover { border-color: #ff5a1f; }
+  #simpop button.go { background: #ff5a1f; border-color: #ff5a1f; color: #111; }
+  #simpop button:disabled { opacity: .5; cursor: wait; }
+  #simpop input[type=range] { flex: 1; min-width: 0; accent-color: #ff5a1f; }
   #sys.open { animation: s5in .25s ease; }
   #sys.open { display: block; }
     #sys .sys-title { animation: s5in .3s ease; font-weight: 500; font-size: 13px; letter-spacing: .16em; text-transform: uppercase; color: var(--text);
@@ -69,6 +71,16 @@
   #sys .acts button:disabled { opacity: .4; cursor: wait; }
   #sys a { color: var(--accent2); }`;
   const dotCss = `
+  .s5bar > .s5sim { flex: none; display: none; align-items: center; gap: 7px; height: 30px; padding: 0 11px; margin-left: auto; cursor: pointer;
+    position: sticky; right: 48px; background: #242424; color: #9a9a9a; border: 1px solid #555;
+    font: 600 11px/1 "Montserrat", ui-sans-serif, system-ui, sans-serif; letter-spacing: .14em; text-transform: uppercase; }
+  .s5bar > .s5sim.on, .s5bar > .s5sim.offer { display: flex; }
+  .s5bar > .s5sim.on { color: #f2b84b; border-color: #f2b84b; }
+  .s5bar > .s5sim i { width: 7px; height: 7px; border-radius: 50%; background: currentColor; }
+  .s5bar > .s5sim.on i { animation: s5pulse 1.2s ease-in-out infinite; }
+  .s5bar > .s5sim.on + .s5who, .s5bar > .s5sim.offer + .s5who { margin-left: 0; }
+  html.s5-sim #conn { display: none !important; }   /* the page's LIVE pill: it's the simulator, not the decks */
+  @keyframes s5pulse { 50% { opacity: .35; } }
   .s5home .hdot { position: absolute; left: 88px; top: 50%; width: 7px; height: 7px; margin-top: -3.5px; border-radius: 50%; background: #555;
     opacity: 0; transition: opacity .4s, background .4s; }
   .s5home .hdot.ok, .s5home .hdot.warn, .s5home .hdot.bad { opacity: 1; }
@@ -81,7 +93,7 @@
   root.innerHTML = `<style>:host { all: initial; } ${(window.S5AUTH && S5AUTH.barCss) || ""} ${css}</style>` +
     `<div id="sys" aria-hidden="true"><div class="s5bar sys-top"><div class="s5home" id="sysLogo" title="Back to the app"></div>` +
     `<span class="sys-title">System</span><span class="muted" id="sysHost"></span><span class="sp"></span><span class="muted" id="sysAge"></span></div>` +
-    `<div class="sys-grid" id="sysGrid"></div></div><div id="simbar"></div>`;
+    `<div class="sys-grid" id="sysGrid"></div></div><div id="simpop" role="dialog" aria-label="Simulation"></div>`;
   document.body.appendChild(hostEl);
   const sysEl = root.getElementById("sys");
   // The health dot sits beside the page's own logo (outside the shadow root).
@@ -217,43 +229,68 @@
     sysTimer = setInterval(sysPoll, on ? 2000 : 10000);
     if (on) { if (sysLast) sysRender(sysLast); sysPoll(); }
   }
-  // Simulation mode (deckdash Sim.java): with no decks found, offer the synthetic rig; while it runs,
-  // say so on every page and offer the way back. Fixed at the bottom, so nothing on the page moves.
-  const simEl = root.getElementById("simbar");
+  // Simulation mode (deckdash Sim.java). A pill in the top bar, next to the lock: SIM while the
+  // synthetic rig runs (the page's LIVE pill hides: it isn't the decks), NO DECKS when none are found.
+  // Tapping it opens a small panel: sound and volume, back to real decks / start simulation.
+  const pop = root.getElementById("simpop");
+  let simState = null;
+  const pill = document.createElement("button");
+  pill.type = "button";
+  pill.className = "s5sim";
+  const bar = document.querySelector(".s5bar");
+  if (bar) bar.insertBefore(pill, bar.querySelector(".s5who"));
   function simRender(sim) {
     if (!sim) return;
+    simState = sim;
     const dismissed = sessionStorage.getItem("s5simDismissed") === "1";
-    if (sim.on) {
-      simEl.className = "show on";
-      simEl.innerHTML = `<b>Simulation</b><span>synthetic set at ${Math.round(sim.bpm)} BPM · the lights follow it</span>` +
-        `<button data-sim="sound" class="${window.S5AUDIO && S5AUDIO.playing ? "go" : ""}">${window.S5AUDIO && S5AUDIO.playing ? "Sound on" : "Play sound"}</button>` +
-        `<button data-sim="off">Back to real decks</button>`;
-    } else if (sim.available && !sim.djlink && sim.uptime_s > 20 && !dismissed) {
-      simEl.className = "show";
-      simEl.innerHTML = `<b>No decks found</b><span>run a synthetic DJ set to try the rig</span>` +
-        `<button class="go" data-sim="on">Start simulation</button><button data-sim="x" title="Hide for now">×</button>`;
-    } else {
-      simEl.className = "";
-    }
+    const offer = !sim.on && sim.available && !sim.djlink && sim.uptime_s > 20 && !dismissed;
+    document.documentElement.classList.toggle("s5-sim", !!sim.on);
+    pill.className = "s5sim" + (sim.on ? " on" : offer ? " offer" : "");
+    pill.innerHTML = sim.on ? "<i></i>Sim" : "No decks";
+    pill.title = sim.on ? "Simulation: a synthetic DJ set. Tap for sound or to go back to the real decks." : "No decks found. Tap to run a simulation.";
+    if (!sim.on && !offer) pop.classList.remove("open");
+    if (pop.classList.contains("open")) popRender();
   }
+  function popRender() {
+    const sim = simState || {}, playing = window.S5AUDIO && S5AUDIO.playing, vol = +(localStorage.getItem("s5simVol") || 0.8);
+    pop.className = "open" + (sim.on ? "" : " offer");
+    pop.innerHTML = sim.on
+      ? `<h4>Simulation</h4><p>A synthetic DJ set at ${Math.round(sim.bpm || 126)} BPM. The lights, projection and visuals follow it.</p>` +
+        `<div class="row"><button data-sim="sound" class="${playing ? "go" : ""}">${playing ? "Sound on" : "Sound off"}</button>` +
+        `<input type="range" min="0" max="1" step="0.05" value="${vol}" data-sim="vol" aria-label="Volume"></div>` +
+        `<div class="row"><button data-sim="off" class="wide">Back to real decks</button></div>`
+      : `<h4>No decks found</h4><p>Run a synthetic DJ set to try the rig. Everything else is real, including the lights.</p>` +
+        `<div class="row"><button data-sim="on" class="go wide">Start simulation</button><button data-sim="x">Not now</button></div>`;
+  }
+  pill.addEventListener("click", e => {
+    e.stopPropagation();
+    if (pop.classList.contains("open")) pop.classList.remove("open"); else popRender();
+  });
+  document.addEventListener("click", e => { if (!e.composedPath().includes(hostEl) && e.target !== pill) pop.classList.remove("open"); });
+  addEventListener("keydown", e => { if (e.key === "Escape") pop.classList.remove("open"); });
   // Simulation audio (s5audio.js, from the dashboard): a synth that follows the show, in this browser.
   function loadAudio() {
     if (window.S5AUDIO) return Promise.resolve();
     return new Promise((ok, fail) => { const sc = document.createElement("script"); sc.src = API + "/s5audio.js"; sc.onload = ok; sc.onerror = fail; document.head.appendChild(sc); });
   }
-  async function toggleSound(b) {
-    try {
-      await loadAudio();
-      if (S5AUDIO.playing) S5AUDIO.stop(); else await S5AUDIO.start();   // the click is the gesture browsers need for sound
-    } catch (e) { alert("Couldn't start the sound."); }
-    b.classList.toggle("go", S5AUDIO && S5AUDIO.playing);
-    b.textContent = S5AUDIO && S5AUDIO.playing ? "Sound on" : "Play sound";
-  }
-  simEl.addEventListener("click", async e => {
+  pop.addEventListener("input", async e => {
+    if (e.target.dataset.sim !== "vol") return;
+    localStorage.setItem("s5simVol", e.target.value);
+    if (window.S5AUDIO) S5AUDIO.volume(+e.target.value);
+  });
+  pop.addEventListener("click", async e => {
     const b = e.target.closest("button[data-sim]");
     if (!b) return;
-    if (b.dataset.sim === "x") { sessionStorage.setItem("s5simDismissed", "1"); simEl.className = ""; return; }
-    if (b.dataset.sim === "sound") { toggleSound(b); return; }
+    if (b.dataset.sim === "x") { sessionStorage.setItem("s5simDismissed", "1"); pop.classList.remove("open"); simRender(simState); return; }
+    if (b.dataset.sim === "sound") {
+      try {
+        await loadAudio();
+        S5AUDIO.volume(+(localStorage.getItem("s5simVol") || 0.8));
+        if (S5AUDIO.playing) S5AUDIO.stop(); else await S5AUDIO.start();   // the tap is the gesture browsers need for sound
+      } catch (e2) { alert("Couldn't start the sound."); }
+      popRender();
+      return;
+    }
     b.disabled = true; b.textContent = b.dataset.sim === "on" ? "Starting…" : "Stopping…";
     try {
       const r = await fetch(API + "/api/sim", { method: "POST", credentials: "include", headers: { "Content-Type": "text/plain" },
@@ -262,6 +299,7 @@
       const d = await r.json().catch(() => ({}));
       if (r.status !== 401) alert(d.error || "Couldn't switch simulation.");
     } catch (e2) { /* brain unreachable */ }
+    popRender();
     sysPoll();
   });
 
