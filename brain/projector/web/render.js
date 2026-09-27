@@ -14,8 +14,11 @@ const SCENES = { IDLE: 0, INTRO: 1, GROOVE: 2, BREAKDOWN: 3, BUILD: 4, HOLD: 5, 
 
 // ---------------------------------------------------------------- live show state
 
+// Updates arrive ~20x/s with network jitter, so the displayed beat doesn't snap to each one:
+// it runs at the track's tempo and eases towards the reported position (at most 10% faster
+// or slower), only jumping on a seek or track change.
 class ShowClock {
-  constructor() { this.s = null; this.at = 0; this.lead = 60; this.titleVer = 0; this.title = ""; }
+  constructor() { this.s = null; this.at = 0; this.lead = 60; this.titleVer = 0; this.title = ""; this.b = null; this.last = 0; }
   update(s) {
     this.s = s; this.at = performance.now();
     const t = s && s.title ? s.title : "";
@@ -26,11 +29,20 @@ class ShowClock {
     const s = this.s;
     const dtBeats = s && s.bpm ? ((now - this.at + this.lead) / 1000) * s.bpm / 60 : 0;
     if (!s || !s.live || !s.bpm) {
+      this.b = null;
       const b = now / 500;                                  // 120 BPM idle clock
       return { scene: SCENES.IDLE, beat: b, frac: b % 1, bwb: 1 + (Math.floor(b) % 4), bar: 0, hue: (now / 60000) % 1,
                progress: 0, since: 0, energy: 0.3, sp: 0 };
     }
-    const beat = (s.beat || 0) + dtBeats;
+    const target = (s.beat || 0) + dtBeats, rate = s.bpm / 60;
+    const dt = Math.min(0.1, Math.max(0, (now - this.last) / 1000));
+    this.last = now;
+    if (this.b === null || Math.abs(target - this.b) > 4) this.b = target;
+    else {
+      const pred = this.b + dt * rate, lim = 0.1 * rate * dt;
+      this.b = pred + Math.max(-lim, Math.min(lim, (target - pred) * Math.min(1, dt / 0.4)));
+    }
+    const beat = this.b;
     const bwb = ((((s.bwb || 1) - 1) + Math.floor(beat) - Math.floor(s.beat || 0)) % 4 + 4) % 4 + 1;
     const scene = SCENES[s.scene] ?? SCENES.GROOVE;
     return { scene, beat, frac: ((beat % 1) + 1) % 1, bwb, bar: s.bar || 0, hue: s.hue || 0,
@@ -69,9 +81,12 @@ function invert3(m) {
 // Row-major 3x3 -> column-major Float32Array for uniformMatrix3fv.
 const colMajor = m => new Float32Array([m[0], m[3], m[6], m[1], m[4], m[7], m[2], m[5], m[8]]);
 
-function quadAspect(c, W, H) {
+function quadSize(c, W, H) {
   const d = (p, q) => Math.hypot((p[0] - q[0]) * W, (p[1] - q[1]) * H);
-  const w = (d(c[0], c[1]) + d(c[3], c[2])) / 2, h = (d(c[0], c[3]) + d(c[1], c[2])) / 2;
+  return [(d(c[0], c[1]) + d(c[3], c[2])) / 2, (d(c[0], c[3]) + d(c[1], c[2])) / 2];
+}
+function quadAspect(c, W, H) {
+  const [w, h] = quadSize(c, W, H);
   return h > 1 ? w / h : 1;
 }
 
@@ -89,6 +104,7 @@ uniform vec2 u_res; uniform mat3 u_Hinv; uniform float u_aspect;
 uniform float u_beat, u_frac, u_bwb, u_bar, u_hue, u_scene, u_progress, u_since, u_energy, u_sp;
 uniform float u_opacity, u_bright, u_sel, u_time;
 uniform float u_radius, u_border, u_bbright, u_bsat, u_bpulse;
+uniform float u_px;   // one output pixel in surface units (surface height = 1), for anti-aliasing
 uniform sampler2D u_tex;
 vec3 hsv(float h, float s, float v) {
   vec3 k = clamp(abs(mod(h * 6.0 + vec3(0.0, 4.0, 2.0), 6.0) - 3.0) - 1.0, 0.0, 1.0);
@@ -107,10 +123,10 @@ void main() {
   float rad = min(u_radius, min(hs.x, hs.y));
   vec2 qd = abs(sp) - hs + rad;
   float sd = length(max(qd, 0.0)) + min(max(qd.x, qd.y), 0.0) - rad;
-  float a = smoothstep(0.0, 0.003, -sd) * u_opacity;
+  float a = smoothstep(0.0, 1.5 * u_px, -sd) * u_opacity;
   vec3 c = content(uv) * u_bright;
   if (u_border > 0.0) {
-    float band = smoothstep(-u_border - 0.003, -u_border, sd);
+    float band = smoothstep(-u_border - 1.5 * u_px, -u_border, sd);
     vec3 bc = mix(vec3(1.0), hsv(u_hue, 1.0, 1.0), u_bsat) * u_bbright * mix(1.0, kick(), u_bpulse);
     c = mix(c, bc * u_bright, band);
   }
@@ -258,7 +274,7 @@ class MapRenderer {
     const u = {};
     for (const n of ["u_res", "u_Hinv", "u_aspect", "u_beat", "u_frac", "u_bwb", "u_bar", "u_hue", "u_scene", "u_progress",
                      "u_since", "u_energy", "u_sp", "u_opacity", "u_bright", "u_sel", "u_time", "u_tex",
-                     "u_radius", "u_border", "u_bbright", "u_bsat", "u_bpulse", ...extra])
+                     "u_radius", "u_border", "u_bbright", "u_bsat", "u_bpulse", "u_px", ...extra])
       u[n] = gl.getUniformLocation(p, n);
     return { p, u, a: gl.getAttribLocation(p, "a") };
   }
@@ -304,7 +320,9 @@ class MapRenderer {
       const u = pr.u;
       gl.uniform2f(u.u_res, W, H);
       gl.uniformMatrix3fv(u.u_Hinv, false, colMajor(invert3(squareToQuad(s.corners))));
-      gl.uniform1f(u.u_aspect, quadAspect(s.corners, W, H));
+      const [qw, qh] = quadSize(s.corners, W, H);
+      gl.uniform1f(u.u_aspect, qh > 1 ? qw / qh : 1);
+      gl.uniform1f(u.u_px, 1 / Math.max(qh, 1));
       gl.uniform1f(u.u_beat, f.beat); gl.uniform1f(u.u_frac, f.frac); gl.uniform1f(u.u_bwb, f.bwb);
       gl.uniform1f(u.u_bar, f.bar); gl.uniform1f(u.u_hue, (f.hue + (s.hue_shift || 0) + 1) % 1);
       gl.uniform1f(u.u_scene, f.scene); gl.uniform1f(u.u_progress, f.progress); gl.uniform1f(u.u_since, f.since);
@@ -370,7 +388,7 @@ class MapRenderer {
 }
 
 // Connect to an event stream (the projector host's by default); calls the handlers as messages arrive.
-function connectEvents(renderer, { onLayout, onScreen, onStatus, onSketch, onParams, url = "/api/events" } = {}) {
+function connectEvents(renderer, { onLayout, onScreen, onStatus, onSketch, onParams, url = "/api/events", state = true } = {}) {
   let es;
   const open = () => {
     es = new EventSource(url);
@@ -378,7 +396,7 @@ function connectEvents(renderer, { onLayout, onScreen, onStatus, onSketch, onPar
     es.onerror = () => onStatus && onStatus(false);
     es.onmessage = e => {
       const m = JSON.parse(e.data);
-      if (m.t === "state") renderer.clock.update(m.s);
+      if (m.t === "state") { if (state) renderer.clock.update(m.s); }
       else if (m.t === "layout") onLayout ? onLayout(m.layout) : (renderer.layout = m.layout);
       else if (m.t === "screen" && onScreen) onScreen(m.screen);
       else if (m.t === "sketch") { renderer.setSketch(m.sketch); onSketch && onSketch(m.sketch); }
@@ -390,6 +408,7 @@ function connectEvents(renderer, { onLayout, onScreen, onStatus, onSketch, onPar
 }
 
 // The visuals service (:8110, same host) feeds content "gen": its sketch and live params.
+// The beat clock comes from the projector's own stream, so this one's state is ignored.
 function connectVisuals(renderer, opts = {}) {
-  return connectEvents(renderer, { ...opts, url: `${location.protocol}//${location.hostname}:8110/api/events` });
+  return connectEvents(renderer, { state: false, ...opts, url: `${location.protocol}//${location.hostname}:8110/api/events` });
 }
