@@ -67,9 +67,15 @@
           <option value="title">title — track name</option>
           <option value="solid">solid colour</option>
           <option value="test">test grid</option>
+          <option value="gen">generative — live sketch from :8110</option>
         </select></div>
       <label>Opacity <span id="vOp"></span></label><input id="pOp" type="range" min="0" max="1" step="0.05">
       <label>Hue shift <span id="vHue"></span></label><input id="pHue" type="range" min="-0.5" max="0.5" step="0.01">
+      <label>Corner radius <span id="vRad"></span></label><input id="pRad" type="range" min="0" max="0.5" step="0.005">
+      <label>Border width <span id="vBw"></span></label><input id="pBw" type="range" min="0" max="0.15" step="0.002">
+      <label>Border brightness <span id="vBb"></span></label><input id="pBb" type="range" min="0" max="2" step="0.05">
+      <label>Border colour <span id="vBs"></span></label><input id="pBs" type="range" min="0" max="1" step="0.05">
+      <label>Border beat pulse <span id="vBp"></span></label><input id="pBp" type="range" min="0" max="1" step="0.05">
       <div class="row" style="margin-top:6px"><button id="bFill">Fill screen</button><button id="bReset">Reset corners</button><button id="bSel">Next corner ↻</button></div>
     </div>
     <div class="card">
@@ -103,6 +109,7 @@ connectEvents(R, {
   onScreen: s => { screen = s; sizeStage(); },
   onStatus: ok => { $("conn").textContent = ok ? "live" : "reconnecting"; $("conn").className = "pill" + (ok ? " ok" : ""); },
 });
+connectVisuals(R);   // generative sketch + live params for "gen" surfaces
 function push(immediate) {
   R.layout = L;
   clearTimeout(pushTimer);
@@ -214,6 +221,14 @@ $("pName").oninput = e => { const s = sel(); if (s) { s.name = e.target.value; p
 $("pContent").onchange = e => { const s = sel(); if (s) { s.content = e.target.value; push(true); renderLists(); } };
 $("pOp").oninput = e => { const s = sel(); if (s) { s.opacity = +e.target.value; $("vOp").textContent = Math.round(s.opacity * 100) + "%"; push(); } };
 $("pHue").oninput = e => { const s = sel(); if (s) { s.hue_shift = +e.target.value; $("vHue").textContent = s.hue_shift.toFixed(2); push(); } };
+// Corner radius and border: [slider, surface key, default, label]
+const SHAPE = [["pRad", "radius", 0, v => v.toFixed(3)], ["pBw", "border", 0, v => v.toFixed(3)],
+               ["pBb", "border_bright", 1, v => Math.round(v * 100) + "%"],
+               ["pBs", "border_sat", 0, v => v < 0.05 ? "white" : v > 0.95 ? "show colour" : Math.round(v * 100) + "% colour"],
+               ["pBp", "border_pulse", 0, v => Math.round(v * 100) + "%"]];
+const shapeLabel = (sl, v) => { const d = SHAPE.find(x => x[0] === sl); $("v" + sl.slice(1)).textContent = d[3](v); };
+for (const [sl, key] of SHAPE)
+  $(sl).oninput = e => { const s = sel(); if (s) { s[key] = +e.target.value; shapeLabel(sl, s[key]); push(); } };
 $("pLead").oninput = e => { L.lead_ms = +e.target.value; $("vLead").textContent = L.lead_ms; push(); };
 $("pBr").oninput = e => { L.brightness = +e.target.value; $("vBr").textContent = Math.round(L.brightness * 100) + "%"; push(); };
 
@@ -256,6 +271,7 @@ function ui() {
     if (document.activeElement !== $("pName")) $("pName").value = s.name || "";
     $("pContent").value = s.content; $("pOp").value = s.opacity; $("pHue").value = s.hue_shift || 0;
     $("vOp").textContent = Math.round(s.opacity * 100) + "%"; $("vHue").textContent = (s.hue_shift || 0).toFixed(2);
+    for (const [sl, key, dflt] of SHAPE) { const v = s[key] ?? dflt; $(sl).value = v; shapeLabel(sl, v); }
   }
   $("pLead").value = L.lead_ms; $("vLead").textContent = L.lead_ms;
   $("pBr").value = L.brightness; $("vBr").textContent = Math.round(L.brightness * 100) + "%";

@@ -31,6 +31,7 @@ let localTest = q.get("test") === "1", online = false;
 
 const R = new MapRenderer(document.getElementById("gl"), document.getElementById("ov"));
 connectEvents(R, { onStatus: ok => (online = ok) });
+connectVisuals(R);   // generative sketch + live params for "gen" surfaces
 
 function resize() {
   const d = devicePixelRatio || 1, w = Math.round(innerWidth * d), h = Math.round(innerHeight * d);

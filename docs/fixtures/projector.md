@@ -33,8 +33,11 @@ Layouts are saved on the brain in `~/projector/layouts/`: `current.json` plus pr
 | `title` | Current track title, glowing on the beat |
 | `solid` | Key colour |
 | `test` | Alignment grid for that surface |
+| `gen` (generative) | The live sketch from the [visuals service](../visuals.md) on :8110, reshaped live from its control page |
 
 Every surface has its own opacity and hue shift, so neighbouring surfaces can use complementary colours.
+
+**Corners and borders:** each surface also has a **corner radius** (0 = square, up to fully round) and an optional **border**: a bright band just inside the edge, with the content inside it. Border controls: width, brightness (up to 200%), colour (white through to the show's colour) and beat pulse (0 = steady, 1 = flashes on the beat).
 
 ## How it works
 

@@ -47,7 +47,7 @@ DEFAULT_LAYOUT = {
     ],
     "masks": [],
 }
-CONTENTS = {"show", "pulse", "tunnel", "bars", "title", "solid", "test"}
+CONTENTS = {"show", "pulse", "tunnel", "bars", "title", "solid", "test", "gen"}   # gen: sketch from visuals :8110
 
 lock = threading.Lock()
 clients = []            # queue.Queue per connected page
@@ -84,6 +84,11 @@ def clean_layout(d):
             "content": s.get("content") if s.get("content") in CONTENTS else "show",
             "opacity": float(max(0.0, min(1.0, s.get("opacity", 1.0)))),
             "hue_shift": float(max(-1.0, min(1.0, s.get("hue_shift", 0.0)))),
+            "radius": float(max(0.0, min(0.5, s.get("radius", 0.0)))),              # corner radius, surface heights
+            "border": float(max(0.0, min(0.15, s.get("border", 0.0)))),             # border band width
+            "border_bright": float(max(0.0, min(2.0, s.get("border_bright", 1.0)))),
+            "border_sat": float(max(0.0, min(1.0, s.get("border_sat", 0.0)))),      # 0 white .. 1 show colour
+            "border_pulse": float(max(0.0, min(1.0, s.get("border_pulse", 0.0)))),  # beat flash on the border
             "corners": [[coord(x), coord(y)] for x, y in c],
         })
     out["surfaces"] = surfaces
