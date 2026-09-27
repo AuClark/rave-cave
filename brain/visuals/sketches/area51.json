@@ -1,0 +1,24 @@
+{
+  "title": "Area 51",
+  "about": "Things in the sky: 0 radar scope with a beat-locked sweep and blips (one moves wrong), 1 saucer with a tractor beam that grows through the build and blazes on the drop, 2 a glowing crop circle.",
+  "groups": [
+    {"name": "Scene", "params": [
+      {"id": "mode",   "label": "Mode (0 radar, 1 tractor beam, 2 crop circle)", "min": 0, "max": 2, "step": 1, "default": 0},
+      {"id": "size",   "label": "Size",                  "min": 0.3,   "max": 2.5,  "step": 0.01,  "default": 1},
+      {"id": "speed",  "label": "Speed (sweep turns per 4 beats / beam rings / rotation)", "min": -2, "max": 4, "step": 0.05, "default": 1},
+      {"id": "rings",  "label": "Rings",                 "min": 0,     "max": 12,   "step": 1,     "default": 4},
+      {"id": "count",  "label": "Blips / saucer lights / satellites", "min": 1, "max": 16, "step": 1, "default": 8}
+    ]},
+    {"name": "Beam", "params": [
+      {"id": "beam",   "label": "Beam level",            "min": 0,     "max": 1,    "step": 0.01,  "default": 0.5},
+      {"id": "build",  "label": "Beam grows in build",   "min": 0,     "max": 1,    "step": 0.01,  "default": 1},
+      {"id": "glow",   "label": "Glow",                  "min": 0,     "max": 1,    "step": 0.01,  "default": 0.6},
+      {"id": "beat",   "label": "Beat punch",            "min": 0,     "max": 1,    "step": 0.01,  "default": 0.5}
+    ]},
+    {"name": "Colour", "params": [
+      {"id": "hue",    "label": "Hue",                   "min": 0,     "max": 1,    "step": 0.005, "default": 0.33},
+      {"id": "sat",    "label": "Saturation",            "min": 0,     "max": 1,    "step": 0.01,  "default": 0.8},
+      {"id": "follow", "label": "Follow show hue",       "min": 0,     "max": 1,    "step": 1,     "default": 0}
+    ]}
+  ]
+}

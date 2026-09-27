@@ -16,7 +16,8 @@ change to the projector and to the control page.
   /api/presets      GET preset names for the active sketch
   /api/presets/NAME GET a preset; POST saves current values as NAME; POST .../NAME/load
 
-Live values and presets live in state/ next to this file (not in git).
+Live values and presets live in state/ next to this file (not in git). Presets can also ship
+with a sketch in sketches/presets/NAME/ (in git); one saved on the brain with the same name wins.
 
     python3 visuals.py [port]
 """
@@ -144,6 +145,18 @@ def preset_dir():
     return d
 
 
+def preset_names():
+    """Saved presets plus the ones shipped with the sketch in git (sketches/presets/NAME/)."""
+    shipped = SKETCHES / "presets" / sketch["name"]
+    return sorted({p.stem for d in (preset_dir(), shipped) for p in d.glob("*.json")})
+
+
+def preset_file(name):
+    """A preset saved on the brain wins over a shipped one of the same name."""
+    f = preset_dir() / f"{name}.json"
+    return f if f.is_file() else SKETCHES / "presets" / sketch["name"] / f"{name}.json"
+
+
 class H(SimpleHTTPRequestHandler):
     def __init__(self, *a, **kw):
         super().__init__(*a, directory=str(WEB), **kw)
@@ -188,11 +201,11 @@ class H(SimpleHTTPRequestHandler):
             if path == "/api/params":
                 return self._json(200, values)
             if path == "/api/presets":
-                return self._json(200, {"presets": sorted(p.stem for p in preset_dir().glob("*.json"))})
+                return self._json(200, {"presets": preset_names()})
             m = re.match(r"^/api/presets/([^/]+)$", path)
             if m:
                 name = urllib.parse.unquote(m.group(1))
-                f = preset_dir() / f"{name}.json"
+                f = preset_file(name)
                 if SAFE_NAME.match(name) and f.is_file():
                     return self._json(200, json.loads(f.read_text()))
                 return self._json(404, {"error": "no such preset"})
@@ -226,15 +239,15 @@ class H(SimpleHTTPRequestHandler):
                 if not SAFE_NAME.match(name):
                     return self._json(400, {"error": "bad name"})
                 with lock:
-                    f = preset_dir() / f"{name}.json"
                     if m.group(2):
+                        f = preset_file(name)
                         if not f.is_file():
                             return self._json(404, {"error": "no such preset"})
                         values = clamp_values(sketch, json.loads(f.read_text()), defaults(sketch))
                         save_values()
                         snap = dict(values)
                     else:
-                        f.write_text(json.dumps(values, indent=1))
+                        (preset_dir() / f"{name}.json").write_text(json.dumps(values, indent=1))
                         snap = None
                 if snap is not None:
                     broadcast({"t": "params", "params": snap})

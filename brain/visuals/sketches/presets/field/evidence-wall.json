@@ -1,0 +1,16 @@
+{
+ "density": 5,
+ "size": 0.5,
+ "square": 1,
+ "ring": 0.8,
+ "links": 1,
+ "lwidth": 0.015,
+ "wander": 0.3,
+ "wspeed": 0.05,
+ "flow": 0,
+ "wave": 0,
+ "hue": 0.02,
+ "spread": 0,
+ "sat": 0.8,
+ "follow": 0
+}
