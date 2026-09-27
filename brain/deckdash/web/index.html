@@ -167,7 +167,113 @@
            font-weight:700; opacity:0; transition:opacity .25s; pointer-events:none; z-index:20; max-width:90vw; }
   .toast.on { opacity:1; } .toast.err { border-color:var(--bad); color:var(--bad); }
   @media (max-width: 800px) { .libbody { grid-template-columns:1fr; } .crates { max-height:200px; border-right:0; border-bottom:1px solid var(--line); } }
+
+  /* ------------------------------------------------------------------ design system
+     Charcoal, hairline grid, one orange accent, light geometric type (Montserrat).
+     Shared with the Commander, projection editor and visuals pages. */
+  :root {
+    --bg: #242424; --panel: #2b2b2b; --panel2: #2b2b2b; --line: #3e3e3e; --line2: #555;
+    --text: #f2f2f2; --dim: #9a9a9a; --accent: #ff5a1f; --accent2: #ff5a1f;
+    --good: #7ccf8a; --warn: #f2b84b; --bad: #ef5b5b; --well: #1f1f1f;
+    --font: "Montserrat", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+  }
+  html, body { background: var(--bg); }
+  body { font: 400 14px/1.45 var(--font); letter-spacing: .01em; }
+  button, input, select { font-family: var(--font); }
+  /* Top bar: nav-style, hairline under it, active item underlined in orange. */
+  header { background: rgba(36,36,36,.92); border-bottom: 1px solid var(--line); padding: 0 24px; min-height: 64px; gap: 20px; }
+  .logo { font-weight: 600; letter-spacing: .22em; font-size: 14px; }
+  .logo b { color: var(--accent); font-weight: 600; }
+  .pill { border-radius: 0; font-weight: 600; font-size: 11px; letter-spacing: .12em; padding: 4px 10px; background: transparent; }
+  .pill.live { background: transparent; color: var(--good); border-color: var(--good); }
+  .pill.down { background: transparent; color: var(--bad); border-color: var(--bad); }
+  .viewctl { gap: 2px; }
+  .viewctl button { border: 0; border-radius: 0; background: transparent; color: var(--dim); font-weight: 500; font-size: 13px;
+                    letter-spacing: .02em; padding: 22px 10px 19px; border-bottom: 3px solid transparent; }
+  .viewctl button:hover { color: var(--text); }
+  .viewctl button.on { background: transparent; color: var(--text); border-bottom-color: var(--accent); }
+  .viewctl #zOut, .viewctl #zIn { border: 1px solid var(--line2); padding: 4px 10px; }
+  .viewctl .sep { background: var(--line); height: 28px; margin: 0 8px; }
+  .masterbox .big { font-weight: 300; font-size: 40px; letter-spacing: -.01em; }
+  .masterbox .lbl { letter-spacing: .18em; }
+  main { padding: 0; gap: 0; border-left: 1px solid var(--line); border-right: 1px solid var(--line); max-width: 1680px; margin: 0 auto; }
+  /* Panels: square, flat, hairline borders; h2 numbered like "01 — Mixer". */
+  main { counter-reset: sec; }
+  section.panel, .card { border-radius: 0; background: var(--panel); border: 0; border-bottom: 1px solid var(--line); box-shadow: none; }
+  section.panel { padding: 22px 28px; }
+  section.panel h2 { counter-increment: sec; font-weight: 500; font-size: 12px; letter-spacing: .16em; color: var(--dim); margin-bottom: 16px; }
+  section.panel h2::before { content: counter(sec, decimal-leading-zero) "  —  "; color: var(--accent); }
+  .players { gap: 0; } .players > .card + .card { border-left: 1px solid var(--line); }
+  .row2, .row3 { gap: 0; } .row2 > * + *, .row3 > * + * { border-left: 1px solid var(--line); }
+  .card { padding: 26px 28px; }
+  .card.playing { background: #2e2e2e; box-shadow: inset 3px 0 0 var(--accent); border-color: var(--line); }
+  .card.master::before { background: var(--accent); color: #fff; font-weight: 600; }
+  .flash { background: radial-gradient(circle at 50% 0%, rgba(255,90,31,.18), transparent 70%); }
+  .pnum { font-weight: 300; font-size: 48px; color: var(--accent); }
+  .pmodel { font-weight: 600; }
+  .title { font-weight: 600; font-size: 22px; letter-spacing: -.005em; }
+  .artist { color: var(--text); opacity: .75; font-weight: 400; }
+  .tempo .bpm { font-weight: 300; font-size: 52px; letter-spacing: -.02em; }
+  .art { border-radius: 0; background-color: var(--well); color: #555; }
+  .badge { border-radius: 0; background: transparent; color: #666; border-color: var(--line); font-weight: 600; letter-spacing: .12em; }
+  .badge.on { color: #fff; }
+  .badge.on.play { background: transparent; color: var(--good); border-color: var(--good); }
+  .badge.on.pause, .badge.on.cue { background: transparent; color: var(--warn); border-color: var(--warn); }
+  .badge.on.loop, .badge.on.sync, .badge.on.master, .badge.on.air { background: var(--accent); border-color: var(--accent); color: #fff; }
+  .badge.on.end, .badge.on.search { background: var(--text); color: #222; }
+  .beats { gap: 4px; }
+  .beats div { border-radius: 0; background: var(--well); border-color: var(--line); }
+  .beats div.on { background: var(--text); border-color: var(--text); box-shadow: none; }
+  .beats div.on.one { background: var(--accent); border-color: var(--accent); box-shadow: none; }
+  canvas.wave, section.stack canvas, pre { border-radius: 0; background: var(--well); }
+  section.stack { padding: 0; background: var(--well); }
+  .times .rem { color: var(--accent); font-weight: 600; }
+  .kv { border-bottom: 1px solid #333; }
+  .cue { border-radius: 0; background: var(--well); }
+  table th { font-weight: 500; letter-spacing: .14em; }
+  th, td { border-bottom-color: #333; }
+  .meter .bar, .sharebar { border-radius: 0; background: var(--well); }
+  .meter .fill { background: linear-gradient(0deg, #8a8a8a 0%, #cfcfcf 65%, var(--accent) 88%, var(--bad) 100%); }
+  .meter.live .bar { border-color: var(--accent); box-shadow: none; }
+  .showscene { font-weight: 300; font-size: 44px; letter-spacing: .02em; }
+  .showscene.GROOVE { color: var(--text); } .showscene.BREAKDOWN { color: #bdbdbd; }
+  /* Controls: outlined rectangles; orange edge on hover; orange fill when on. */
+  .lbtn { border-radius: 0; background: transparent; border-color: var(--line2); font-weight: 600; letter-spacing: .1em; padding: 7px 12px; }
+  .lbtn:hover { border-color: var(--accent); color: #fff; }
+  .lbtn.on, .lbtn.play.on { background: var(--accent); border-color: var(--accent); color: #fff; }
+  .lbtn.amon { background: transparent; color: var(--good); border-color: var(--good); box-shadow: none; }
+  select, input[type=search], .crates select, .ltools select, .automix select, .ltools input[type=search] {
+    border-radius: 0; background: var(--well); border-color: var(--line2); color: var(--text); }
+  .ltools input[type=search]:focus { border-color: var(--accent); }
+  .libdecks, .automix, .crates { background: var(--panel); }
+  .automix { border-bottom: 1px solid var(--line); }
+  .ldeck { border-radius: 0; background: var(--well); }
+  .crates li > span, .crates summary { border-radius: 0; }
+  .crates li > span.on { background: transparent; color: var(--text); box-shadow: inset 3px 0 0 var(--accent); font-weight: 600; }
+  .crates .on .cnt { color: var(--accent); }
+  table.tt thead th { background: var(--panel); }
+  table.tt thead th.sorted { color: var(--accent); }
+  table.tt tbody tr:hover { background: #313131; }
+  table.tt tbody tr.sel { background: #353535; box-shadow: inset 3px 0 0 var(--accent); }
+  table.tt tbody tr.played td:not(.ld) { color: #6b6b6b; }
+  .onDeck { border-radius: 0; }
+  .droptarget { outline-color: var(--accent); }
+  .toast { border-radius: 0; background: #2f2f2f; border-color: var(--line2); border-left: 3px solid var(--accent); font-weight: 500; }
+  /* Bottom tiles: the other control pages, big arrows (the current one lit). */
+  nav.apps { display: grid; grid-template-columns: repeat(4, 1fr); border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); max-width: 1680px; margin: 0 auto; }
+  nav.apps a { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 30px 32px; color: var(--dim);
+               text-decoration: none; font-size: 18px; font-weight: 400; line-height: 1.3; border-left: 1px solid var(--line); }
+  nav.apps a:first-child { border-left: 0; }
+  nav.apps a:hover { color: var(--text); background: #2e2e2e; }
+  nav.apps a .arr { font-size: 28px; font-weight: 300; color: var(--text); }
+  nav.apps a small { display: block; font-size: 11px; letter-spacing: .16em; color: #6b6b6b; margin-bottom: 4px; }
+  nav.apps a.here { background: var(--text); color: #222; }
+  nav.apps a.here small { color: #777; }
+  nav.apps a.here .arr { background: var(--accent); color: #fff; align-self: stretch; display: grid; place-items: center; width: 84px; margin: -30px -32px -30px 0; }
+  @media (max-width: 900px) { nav.apps { grid-template-columns: 1fr 1fr; } nav.apps a:nth-child(3) { border-left: 0; } }
 </style>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;500;600&display=swap" rel="stylesheet">
 </head>
 <body>
 <header>
@@ -249,8 +355,16 @@
   </div>
   <section class="panel"><details><summary>Raw data (everything the Pi receives, live)</summary><pre id="raw"></pre></details></section>
 </main>
+<nav class="apps" id="apps">
+  <a class="here" data-port="8080" data-path="/"><span><small>01</small>Deck link<br>and library</span><span class="arr">→</span></a>
+  <a data-port="8090" data-path="/"><span><small>02</small>Commander<br>lights</span><span class="arr">→</span></a>
+  <a data-port="8100" data-path="/edit"><span><small>03</small>Projection<br>mapping</span><span class="arr">→</span></a>
+  <a data-port="8110" data-path="/"><span><small>04</small>Generative<br>visuals</span><span class="arr">→</span></a>
+</nav>
 <div id="toast" class="toast"></div>
 <script>
+// Bottom tiles link to the other control pages on this same host.
+document.querySelectorAll("#apps a").forEach(a => a.href = `${location.protocol}//${location.hostname}:${a.dataset.port}${a.dataset.path}`);
 const $ = (s, r = document) => r.querySelector(s);
 const cards = {}, waves = {}, artRefs = {}, timelines = {};
 const details = {}, posModel = {};
@@ -295,7 +409,7 @@ async function loadDetail(n, key) {
 // Scrolling deck waveforms, Pioneer style. Every deck is centred on its own playhead and
 // drawn at the same ms-per-pixel, so a tempo or phase mismatch shows as grids drifting apart.
 // OVERLAY puts all decks in one lane for beat matching; LANES gives each deck its own.
-const DECK_RGB = { 1: [47, 230, 255], 2: [255, 47, 208], 3: [255, 176, 46], 4: [61, 255, 139] };
+const DECK_RGB = { 1: [255, 90, 31], 2: [230, 230, 230], 3: [242, 184, 75], 4: [124, 207, 138] };
 const deckRgb = n => DECK_RGB[n] || [200, 200, 220];
 const rgba = (c, a) => `rgba(${c[0]},${c[1]},${c[2]},${a})`;
 
@@ -394,7 +508,7 @@ function drawGrid(g, tl, t0, winMs, msPerPx, y0, LH, dpr, rgb, edge, full) {
     const ms = tl.beatMs[dr.beat - 1];
     if (ms < t0 || ms > t0 + winMs) continue;
     const x = (ms - t0) / msPerPx;
-    g.fillStyle = full ? rgba(rgb, 0.9) : "#ff2fd0";
+    g.fillStyle = full ? rgba(rgb, 0.9) : "#ff5a1f";
     g.fillRect(x - 1.5 * dpr, y0, 3 * dpr, LH);
     g.font = `bold ${12 * dpr}px system-ui`;
     g.fillText("DROP", x + 5 * dpr, edge === "bottom" ? y0 + LH - 30 * dpr : y0 + 40 * dpr);
@@ -436,16 +550,16 @@ function drawDropHint(g, dpr, W) {
   if (!dropTarget || !dragging || performance.now() - dropTarget.at > 400) return;
   const h = laneHits.find(l => l.n === dropTarget.n); if (!h) return;
   const y0 = h.y0 * dpr, y1 = h.y1 * dpr, warn = dropTarget.playing;
-  g.fillStyle = warn ? "rgba(255,77,94,.22)" : "rgba(47,230,255,.18)"; g.fillRect(0, y0, W, y1 - y0);
-  g.strokeStyle = warn ? "#ff4d5e" : "#2fe6ff"; g.lineWidth = 2 * dpr; g.setLineDash([8 * dpr, 6 * dpr]);
+  g.fillStyle = warn ? "rgba(239,91,91,.22)" : "rgba(255,90,31,.16)"; g.fillRect(0, y0, W, y1 - y0);
+  g.strokeStyle = warn ? "#ef5b5b" : "#e6e6e6"; g.lineWidth = 2 * dpr; g.setLineDash([8 * dpr, 6 * dpr]);
   g.strokeRect(dpr, y0 + dpr, W - 2 * dpr, y1 - y0 - 2 * dpr); g.setLineDash([]);
   const txt = `${warn ? `Deck ${dropTarget.n} is PLAYING · ` : ""}${dropTarget.shift ? "Load + play" : "Load"} "${dragging.title}" on deck ${dropTarget.n}`;
   const sub = dropTarget.shift ? "" : "hold Shift to load and play";
   g.font = `800 ${16 * dpr}px system-ui`;
   const w = Math.max(g.measureText(txt).width, 10), cy = (y0 + y1) / 2;
-  g.fillStyle = "rgba(7,7,12,.88)"; g.fillRect((W - w) / 2 - 14 * dpr, cy - (sub ? 26 : 18) * dpr, w + 28 * dpr, (sub ? 48 : 32) * dpr);
-  g.fillStyle = warn ? "#ff4d5e" : "#fff"; g.fillText(txt, (W - w) / 2, cy + (sub ? -4 : 4) * dpr);
-  if (sub) { g.font = `600 ${12 * dpr}px system-ui`; g.fillStyle = "#8a8fa8"; const sw = g.measureText(sub).width; g.fillText(sub, (W - sw) / 2, cy + 14 * dpr); }
+  g.fillStyle = "rgba(28,28,28,.9)"; g.fillRect((W - w) / 2 - 14 * dpr, cy - (sub ? 26 : 18) * dpr, w + 28 * dpr, (sub ? 48 : 32) * dpr);
+  g.fillStyle = warn ? "#ef5b5b" : "#fff"; g.fillText(txt, (W - w) / 2, cy + (sub ? -4 : 4) * dpr);
+  if (sub) { g.font = `600 ${12 * dpr}px system-ui`; g.fillStyle = "#9a9a9a"; const sw = g.measureText(sub).width; g.fillText(sub, (W - sw) / 2, cy + 14 * dpr); }
 }
 
 function drawStack() {
@@ -478,7 +592,7 @@ function drawStack() {
   if (overlay) {
     const mid = LH / 2, half = LH / 2 - 26 * dpr;
     if (!decks.length) {
-      g.fillStyle = "#3c415a"; g.font = `${14 * dpr}px system-ui`; g.fillText("No tracks loaded", 12 * dpr, mid);
+      g.fillStyle = "#6b6b6b"; g.font = `${14 * dpr}px system-ui`; g.fillText("No tracks loaded", 12 * dpr, mid);
     }
     g.globalCompositeOperation = "lighter";   // overlapping peaks add up to white
     for (const p of decks) {
@@ -503,8 +617,8 @@ function drawStack() {
     phaseReadout(decks, pos).forEach((r, i) => {
       g.font = `800 ${13 * dpr}px system-ui`;
       const w = g.measureText(r.txt).width + 16 * dpr, y = 46 * dpr + i * 22 * dpr;
-      g.fillStyle = "rgba(7,7,12,.75)"; g.fillRect(W - w - 8 * dpr, y - 15 * dpr, w, 20 * dpr);
-      g.fillStyle = r.ok ? "#3dff8b" : rgba(r.rgb, 1); g.fillText(r.txt, W - w, y);
+      g.fillStyle = "rgba(28,28,28,.8)"; g.fillRect(W - w - 8 * dpr, y - 15 * dpr, w, 20 * dpr);
+      g.fillStyle = r.ok ? "#7ccf8a" : rgba(r.rgb, 1); g.fillText(r.txt, W - w, y);
     });
     // One lane holds every deck: split it into a drop band per deck (top = first deck).
     const bands = players.length ? players : [];
@@ -514,7 +628,7 @@ function drawStack() {
   }
 
   if (!players.length) {
-    g.fillStyle = "#3c415a"; g.font = `${14 * dpr}px system-ui`; g.fillText("Waiting for decks…", 12 * dpr, LH / 2);
+    g.fillStyle = "#6b6b6b"; g.font = `${14 * dpr}px system-ui`; g.fillText("Waiting for decks…", 12 * dpr, LH / 2);
     return;
   }
   const MH = meterCss * dpr, HEAD = 22 * dpr;
@@ -523,13 +637,13 @@ function drawStack() {
   players.forEach((p, li) => {
     const y0 = laneY(li), s = p.status, t0 = t0q[p.number], rgb = deckRgb(p.number);
     const wy = y0 + HEAD, wh = LH - HEAD - 4 * dpr, mid = wy + wh / 2;
-    g.fillStyle = "#0e1019"; g.fillRect(0, y0, W, HEAD);
+    g.fillStyle = "#262626"; g.fillRect(0, y0, W, HEAD);
     g.fillStyle = rgba(rgb, 1); g.fillRect(0, y0, 4 * dpr, LH);
-    g.fillStyle = "#171a28"; g.fillRect(0, mid, W, dpr);
+    g.fillStyle = "#2e2e2e"; g.fillRect(0, mid, W, dpr);
     const d = details[p.number] && details[p.number].data;
     if (d) drawDetail(g, d, pos[p.number], t0, msPerPx, W, mid, wh / 2 - 2 * dpr, null);
     else {
-      g.fillStyle = "#3c415a"; g.font = `${14 * dpr}px system-ui`;
+      g.fillStyle = "#6b6b6b"; g.font = `${14 * dpr}px system-ui`;
       g.fillText(s.trackLoaded ? "loading waveform…" : "no track", 14 * dpr, mid + 5 * dpr);
     }
     const tl = timelines[p.number] && timelines[p.number].data;
@@ -540,27 +654,27 @@ function drawStack() {
     // Header: deck, title, then tempo / key / remaining / countdown on the right.
     const t = p.track, yT = y0 + 16 * dpr;
     g.font = `900 ${15 * dpr}px system-ui`; g.fillStyle = rgba(rgb, 1); g.fillText(p.number, 12 * dpr, yT);
-    g.font = `700 ${12 * dpr}px system-ui`; g.fillStyle = "#e8e9f3";
+    g.font = `700 ${12 * dpr}px system-ui`; g.fillStyle = "#f2f2f2";
     const title = t ? `${t.title || "Untitled"}${t.artist ? "  —  " + t.artist : ""}` : (s.trackLoaded ? `Track #${s.rekordboxId}` : "empty");
     const right = [];
-    if (s.looping) right.push(["LOOP", "#2fe6ff"]);
-    if (s.tempoMaster) right.push(["MASTER", "#ff2fd0"]);
-    if (!s.playing && s.trackLoaded) right.push([s.cued ? "CUE" : "PAUSED", "#ffb02e"]);
+    if (s.looping) right.push(["LOOP", "#e6e6e6"]);
+    if (s.tempoMaster) right.push(["MASTER", "#ff5a1f"]);
+    if (!s.playing && s.trackLoaded) right.push([s.cued ? "CUE" : "PAUSED", "#f2b84b"]);
     if (tl && s.playing) {
       const ph = beatPhase(tl, pos[p.number]), nxt = ph && tl.drops.find(dr => dr.beat > ph.beat);
-      if (nxt) right.push([`DROP ${Math.ceil(nxt.beat - ph.beat - ph.frac)}`, "#ff2fd0"]);
+      if (nxt) right.push([`DROP ${Math.ceil(nxt.beat - ph.beat - ph.frac)}`, "#ff5a1f"]);
     }
-    if (t && t.key) right.push([t.key, "#9b8cff"]);
+    if (t && t.key) right.push([t.key, "#bdbdbd"]);
     const pc = s.pitchPct || 0;
-    right.push([`${s.effectiveBpm ? s.effectiveBpm.toFixed(2) : "—"} BPM  ${pc > 0 ? "+" : ""}${pc.toFixed(2)}%`, "#e8e9f3"]);
-    if (t) right.push(["-" + fmt(t.durationSec * 1000 - pos[p.number]), "#ff2fd0"]);
+    right.push([`${s.effectiveBpm ? s.effectiveBpm.toFixed(2) : "—"} BPM  ${pc > 0 ? "+" : ""}${pc.toFixed(2)}%`, "#f2f2f2"]);
+    if (t) right.push(["-" + fmt(t.durationSec * 1000 - pos[p.number]), "#ff5a1f"]);
     let rx = W - 10 * dpr;
     g.font = `800 ${12 * dpr}px system-ui`;
     for (const [txt, col] of right.reverse()) {
       const w = g.measureText(txt).width;
       rx -= w; g.fillStyle = col; g.fillText(txt, rx, yT); rx -= 14 * dpr;
     }
-    g.font = `700 ${12 * dpr}px system-ui`; g.fillStyle = "#e8e9f3";
+    g.font = `700 ${12 * dpr}px system-ui`; g.fillStyle = "#f2f2f2";
     let tt = title; const maxW = rx - 34 * dpr;
     while (tt.length > 3 && g.measureText(tt).width > maxW) tt = tt.slice(0, -2);
     g.fillText(tt === title ? tt : tt + "…", 32 * dpr, yT);
@@ -568,26 +682,26 @@ function drawStack() {
 
   // Phase meter (rekordbox style): each deck's beat in the bar, and its phase against the master.
   const my = LH, rows = loaded, rh = rows.length ? (MH - 6 * dpr) / rows.length : 0;
-  g.fillStyle = "#0e1019"; g.fillRect(0, my, W, MH);
+  g.fillStyle = "#262626"; g.fillRect(0, my, W, MH);
   const phases = Object.fromEntries(phaseReadout(rows, pos).map(r => [r.num, r]));
   const gx = 34 * dpr, cw = 26 * dpr, gap = 4 * dpr, gaugeX = gx + 4 * (cw + gap) + 20 * dpr, gaugeW = Math.min(360 * dpr, W * 0.3);
   rows.forEach((p, i) => {
     const y = my + 3 * dpr + i * rh, rgb = deckRgb(p.number), bwb = p.status.beatWithinBar, h = rh - 4 * dpr;
     g.font = `900 ${11 * dpr}px system-ui`; g.fillStyle = rgba(rgb, 1); g.fillText(p.number, 14 * dpr, y + h - 1 * dpr);
     for (let k = 0; k < 4; k++) {
-      g.fillStyle = bwb === k + 1 ? (k === 0 ? "#fff" : rgba(rgb, 1)) : "#1d2031";
+      g.fillStyle = bwb === k + 1 ? (k === 0 ? "#fff" : rgba(rgb, 1)) : "#3a3a3a";
       g.fillRect(gx + k * (cw + gap), y, cw, h);
     }
     // Gauge: centre = in phase with the master; left = behind, right = ahead (±half a beat).
-    g.fillStyle = "#1d2031"; g.fillRect(gaugeX, y + h / 2 - dpr, gaugeW, 2 * dpr);
-    g.fillStyle = "#3c415a"; g.fillRect(gaugeX + gaugeW / 2 - dpr, y, 2 * dpr, h);
+    g.fillStyle = "#3a3a3a"; g.fillRect(gaugeX, y + h / 2 - dpr, gaugeW, 2 * dpr);
+    g.fillStyle = "#6b6b6b"; g.fillRect(gaugeX + gaugeW / 2 - dpr, y, 2 * dpr, h);
     const r = phases[p.number];
     if (r && r.phase != null) {
-      g.fillStyle = r.ok ? "#3dff8b" : rgba(rgb, 1);
+      g.fillStyle = r.ok ? "#7ccf8a" : rgba(rgb, 1);
       g.fillRect(gaugeX + gaugeW / 2 + r.phase * gaugeW - 3 * dpr, y, 6 * dpr, h);
     }
     g.font = `800 ${11 * dpr}px system-ui`;
-    g.fillStyle = r ? (r.ok ? "#3dff8b" : rgba(rgb, 1)) : "#8a8fa8";
+    g.fillStyle = r ? (r.ok ? "#7ccf8a" : rgba(rgb, 1)) : "#9a9a9a";
     g.fillText(r ? r.txt : (p.status.tempoMaster ? "MASTER" : ""), gaugeX + gaugeW + 16 * dpr, y + h - 1 * dpr);
   });
   drawDropHint(g, dpr, W);
@@ -665,7 +779,7 @@ async function loadTimeline(n, key) {
     if (!timelines[n].data) await new Promise(r => setTimeout(r, 1500));
   }
 }
-const SECTION_COLOURS = { intro: "#3c415a", groove: "#2fe6ff", breakdown: "#9b8cff", build: "#ffb02e", drop: "#ff2fd0", outro: "#3c415a" };
+const SECTION_COLOURS = { intro: "#555555", groove: "#bdbdbd", breakdown: "#7a7a7a", build: "#f2b84b", drop: "#ff5a1f", outro: "#555555" };
 
 function drawWave(n, p) {
   const cv = $("canvas.wave", cards[n]); const g = cv.getContext("2d");
@@ -680,18 +794,18 @@ function drawWave(n, p) {
     for (let i = 0; i < wf.segments; i++) {
       const h = (wf.heights[i] / wf.peak) * (H - 8);
       const played = i / wf.segments < frac;
-      g.fillStyle = wf.color ? wf.colors[i] : "#2fe6ff";
+      g.fillStyle = wf.color ? wf.colors[i] : "#e6e6e6";
       g.globalAlpha = played ? 0.35 : 1;
       g.fillRect(i * bw, (H - h) / 2, Math.max(1, bw), h);
     }
     g.globalAlpha = 1;
   } else {
-    g.fillStyle = "#3c415a"; g.font = "22px system-ui"; g.fillText(p.status.trackLoaded ? "Waveform loading…" : "No track", 16, H / 2 + 8);
+    g.fillStyle = "#6b6b6b"; g.font = "22px system-ui"; g.fillText(p.status.trackLoaded ? "Waveform loading…" : "No track", 16, H / 2 + 8);
   }
   if (p.track && dur > 0) {
     for (const c of p.track.cues || []) {
       const x = (c.ms / dur) * W;
-      g.fillStyle = c.color || (c.hotCue ? "#3dff8b" : "#ff4d5e");
+      g.fillStyle = c.color || (c.hotCue ? "#7ccf8a" : "#ef5b5b");
       g.fillRect(x - 1, 0, 3, 16);
       if (c.loop && c.loopMs) { g.globalAlpha = .18; g.fillRect(x, 0, ((c.loopMs - c.ms) / dur) * W, H); g.globalAlpha = 1; }
       if (c.hotCue) { g.font = "bold 14px system-ui"; g.fillText(String.fromCharCode(64 + c.hotCue), x + 4, 14); }
@@ -707,7 +821,7 @@ function drawWave(n, p) {
       g.globalAlpha = 1;
       for (const d of tl.drops) {
         const x = msOf(d.beat) / dur * W;
-        g.fillStyle = "#ff2fd0"; g.fillRect(x - 2, 0, 4, H);
+        g.fillStyle = "#ff5a1f"; g.fillRect(x - 2, 0, 4, H);
         g.font = "bold 20px system-ui"; g.fillText("DROP", x + 6, 38);
       }
       const beat = p.status.beatNumber;
@@ -778,7 +892,7 @@ function render(st) {
       + (p._countdown != null ? ` · <b style="color:var(--accent)">DROP in ${p._countdown} beats</b>` : "");
 
     $(".cues", el).innerHTML = t && t.cues ? t.cues.filter(c => c.hotCue || c.comment).map(c =>
-      `<span class="cue" style="border-left-color:${c.color || "#8a8fa8"}">${c.hotCue ? String.fromCharCode(64 + c.hotCue) : "MEM"} ${fmt(c.ms)}${c.loop ? " ⟳" : ""}${c.comment ? " · " + esc(c.comment) : ""}</span>`).join("") : "";
+      `<span class="cue" style="border-left-color:${c.color || "#9a9a9a"}">${c.hotCue ? String.fromCharCode(64 + c.hotCue) : "MEM"} ${fmt(c.ms)}${c.loop ? " ⟳" : ""}${c.comment ? " · " + esc(c.comment) : ""}</span>`).join("") : "";
 
     const kv = (k, v) => v == null || v === "" || v === 0 ? "" : `<div class="kv"><span>${k}</span><b title="${esc(v)}">${esc(v)}</b></div>`;
     $(".grid2", el).innerHTML = [
