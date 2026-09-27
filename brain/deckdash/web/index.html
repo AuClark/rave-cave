@@ -575,7 +575,7 @@ function drawDropHint(g, dpr, W) {
   g.strokeStyle = warn ? "#ef5b5b" : "#e6e6e6"; g.lineWidth = 2 * dpr; g.setLineDash([8 * dpr, 6 * dpr]);
   g.strokeRect(dpr, y0 + dpr, W - 2 * dpr, y1 - y0 - 2 * dpr); g.setLineDash([]);
   const txt = `${warn ? `Deck ${dropTarget.n} is PLAYING · ` : ""}${dropTarget.shift ? "Load + play" : "Load"} "${dragging.title}" on deck ${dropTarget.n}`;
-  const sub = dropTarget.shift ? "" : "hold Shift to load and play";
+  const sub = dropTarget.shift || dropTarget.touch ? "" : "hold Shift to load and play";
   g.font = `800 ${16 * dpr}px system-ui`;
   const w = Math.max(g.measureText(txt).width, 10), cy = (y0 + y1) / 2;
   g.fillStyle = "rgba(28,28,28,.9)"; g.fillRect((W - w) / 2 - 14 * dpr, cy - (sub ? 26 : 18) * dpr, w + 28 * dpr, (sub ? 48 : 32) * dpr);
@@ -1507,7 +1507,7 @@ addEventListener("dragend", endDrag);
   const move = (x, y) => {
     ghost.style.transform = `translate(${x}px, ${y}px)`;
     const n = laneFromPoint(x, y);
-    dropTarget = n && n !== dragging.from ? { n, playing: isPlaying(n), shift: false, at: Infinity } : null;
+    dropTarget = n && n !== dragging.from ? { n, playing: isPlaying(n), shift: false, touch: true, at: Infinity } : null;
   };
   const stop = () => { if (hold) clearTimeout(hold.timer); hold = null; if (ghost) ghost.remove(); ghost = null; };
   document.addEventListener("touchstart", e => {
