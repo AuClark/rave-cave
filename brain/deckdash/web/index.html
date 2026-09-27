@@ -749,29 +749,35 @@ function drawStack() {
     }
   });
 
-  // Phase meter (rekordbox style): each deck's beat in the bar, and its phase against the master.
+  // Phase meter (rekordbox style): each deck's beat in the bar, and a marker sweeping left to right
+  // through each beat on every deck that's playing. When two decks play, their markers move together
+  // if they're in phase; the text gives the offset against the master.
   const my = LH, rows = loaded, rh = rows.length ? (MH - 6 * dpr) / rows.length : 0;
   g.fillStyle = "#262626"; g.fillRect(0, my, W, MH);
-  const phases = Object.fromEntries(phaseReadout(rows, pos).map(r => [r.num, r]));
+  const playingRows = rows.filter(p => p.status.playing);
+  const phases = playingRows.length > 1 ? Object.fromEntries(phaseReadout(playingRows, pos).map(r => [r.num, r])) : {};
   const gx = 34 * dpr, cw = 26 * dpr, gap = 4 * dpr, gaugeX = gx + 4 * (cw + gap) + 20 * dpr, gaugeW = Math.min(360 * dpr, W * 0.3);
   rows.forEach((p, i) => {
     const y = my + 3 * dpr + i * rh, rgb = deckRgb(p.number), bwb = liveBeatInBar(p, performance.now()), h = rh - 4 * dpr;
-    g.font = `900 ${11 * dpr}px system-ui`; g.fillStyle = rgba(rgb, 1); g.fillText(p.number, 14 * dpr, y + h - 1 * dpr);
+    g.font = `600 ${11 * dpr}px ${CANVAS_FONT}`; g.fillStyle = rgba(rgb, 1); g.fillText(p.number, 14 * dpr, y + h - 1 * dpr);
     for (let k = 0; k < 4; k++) {
       g.fillStyle = bwb === k + 1 ? (k === 0 ? "#fff" : rgba(rgb, 1)) : "#3a3a3a";
       g.fillRect(gx + k * (cw + gap), y, cw, h);
     }
-    // Gauge: centre = in phase with the master; left = behind, right = ahead (±half a beat).
+    // Track for the sweep: the beat starts at the left edge.
     g.fillStyle = "#3a3a3a"; g.fillRect(gaugeX, y + h / 2 - dpr, gaugeW, 2 * dpr);
-    g.fillStyle = "#6b6b6b"; g.fillRect(gaugeX + gaugeW / 2 - dpr, y, 2 * dpr, h);
-    const r = phases[p.number];
-    if (r && r.phase != null) {
-      g.fillStyle = r.ok ? "#7ccf8a" : rgba(rgb, 1);
-      g.fillRect(gaugeX + gaugeW / 2 + r.phase * gaugeW - 3 * dpr, y, 6 * dpr, h);
+    g.fillStyle = "#6b6b6b"; g.fillRect(gaugeX, y, 2 * dpr, h); g.fillRect(gaugeX + gaugeW - 2 * dpr, y, 2 * dpr, h);
+    const tl = timelines[p.number] && timelines[p.number].data, ph = tl && beatPhase(tl, pos[p.number]);
+    if (p.status.playing && ph) {
+      g.fillStyle = rgba(rgb, 1);
+      g.fillRect(gaugeX + ph.frac * (gaugeW - 6 * dpr), y, 6 * dpr, h);
     }
-    g.font = `800 ${11 * dpr}px system-ui`;
+    const r = phases[p.number];
+    g.font = `600 ${11 * dpr}px ${CANVAS_FONT}`;
     g.fillStyle = r ? (r.ok ? "#7ccf8a" : rgba(rgb, 1)) : "#9a9a9a";
-    g.fillText(r ? r.txt : (p.status.tempoMaster ? "MASTER" : ""), gaugeX + gaugeW + 16 * dpr, y + h - 1 * dpr);
+    const txt = !p.status.playing ? (p.status.cued ? "CUED" : "PAUSED")
+      : r ? r.txt : (p.status.tempoMaster ? "MASTER" : playingRows.length > 1 ? "" : "PLAYING");
+    g.fillText(txt, gaugeX + gaugeW + 16 * dpr, y + h - 1 * dpr);
   });
   drawDropHint(g, dpr, W);
 }
