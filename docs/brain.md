@@ -1,13 +1,55 @@
-# The brain (CM4 `sektor5`)
+# The brain (`sektor5`)
 
 The computer that reads the decks and runs the show. Code: [`brain/`](../brain/).
 
-- **Hardware:** Raspberry Pi Compute Module 4 (4 GB RAM, 32 GB eMMC, Wi-Fi) on a carrier board, with heatsink and fan. Powered from a solid USB-C supply; a bad cable caused brownouts. The fan runs flat out from 5 V: at full load the CPU stays under 40 °C.
+- **Hardware:** a Raspberry Pi with 4 GB RAM and Wi-Fi. `sektor5` is a Compute Module 4 (32 GB eMMC) on a carrier board with heatsink and fan; `sektor5-2` is a Raspberry Pi 4 Model B on a microSD card. Power either from a solid 5 V / 3 A USB-C supply: a bad cable caused brownouts. The CM4's fan runs flat out from 5 V: at full load the CPU stays under 40 °C.
 - **OS:** Raspberry Pi OS Lite 64-bit (Debian 13), user `pi`, SSH key login only.
 - **Network:** Ethernet to the deck switch (link-local only, never the default route), Wi-Fi to the fixtures and the rest of the network.
 - **Services:** `deckdash` (dashboard :8080), `showbrain` (Commander :8090), `mixer` (DJM-450 USB bridge) `projector` (projection mapping :8100, opened in Chrome on the projector) and `visuals` (generative visuals control :8110, see [visuals.md](visuals.md)). All start on boot and restart on failure.
 
-## Build it from scratch
+## Set up a new brain
+
+From a blank card to a working brain in about 30 minutes, mostly waiting. Everything runs from the Mac, in this repo, on a clean `main`.
+
+**You need:** a Pi 4 (4 GB) and a microSD card of 32 GB or more in a card reader, or a CM4 with eMMC on its carrier; a 5 V / 3 A USB-C supply; [Raspberry Pi Imager](https://www.raspberrypi.com/software/); Raspberry Pi OS Lite 64-bit (`.img.xz`) in `~/tools/rpi/`; your SSH key in `~/.ssh/id_ed25519.pub`. The Mac must be on the same Wi-Fi as the brain for the `.local` names to work.
+
+1. **Write the first-boot config.** Pick a name that isn't already on the network (`sektor5` is taken):
+   ```bash
+   S5_HOSTNAME=sektor5-2 python3 brain/provision/make_cloudinit.py
+   ```
+   It asks for every Wi-Fi network the brain should know (workshop, home…) and joins whichever is in range. Passwords are typed hidden and stay in `~/tools/rpi/cloudinit/`, outside the repo. Forgot one? `python3 brain/provision/make_cloudinit.py --add-wifi`.
+2. **Flash it.** Pi 4: put the card in the reader. CM4: set the boot jumper and run `rpiboot` first (see step 1 below).
+   ```bash
+   brain/provision/flash_card.sh
+   ```
+   It only offers external, removable disks, shows the disk, image, hostname and Wi-Fi networks, and asks you to type `yes`. Imager ejects the card when it's done.
+3. **Boot it.** Card in the Pi (or remove the CM4's jumper), power on, wait 2–3 minutes, then `ssh pi@sektor5-2.local`.
+4. **Set it up** (packages, accounts, folders, services, deck Ethernet):
+   ```bash
+   brain/provision/setup_brain.sh sektor5-2.local
+   ```
+5. **Deploy the code** and reboot:
+   ```bash
+   S5_BRAIN_HOST=sektor5-2.local brain/deploy.sh
+   ssh pi@sektor5-2.local 'sudo reboot'
+   ```
+6. **Set the admin PIN** (typed hidden): `ssh -t pi@sektor5-2.local 'python3 ~/tools/set_pin.py'`
+7. **Check it.** Open `http://sektor5-2.local:8080/` and click the logo: the System view should show every service running and no under-voltage. With no decks connected, the strip at the bottom offers **Start simulation**, which runs the whole rig on a synthetic DJ set ([sim.md](sim.md#on-the-brain)).
+8. **Optional:** [Tailscale](#remote-access-tailscale) for remote access and a public link (set the PIN first), and [accounts for collaborators](#access-for-collaborators).
+
+To work on it from the Mac, put `S5_BRAIN_HOST=sektor5-2.local` in front of `brain/deploy.sh …`, or in `.env`.
+
+### If something goes wrong
+
+- **The card doesn't show up on the Mac.** Card readers behind USB hubs and docks drop out (the hub's USB 3 side disconnects). Plug the reader straight into the Mac and push the card fully in; `diskutil list external` should list it.
+- **A card with only `recovery.bin`, `pieeprom.bin` and `vl805.bin` on it** is the Pi 4 bootloader recovery image, not an OS. It's fine for updating a new Pi 4's firmware (boot it once: the green LED blinks fast when done), then flash the card properly.
+- **The brain never appears on the network.** It only knows the networks you gave `make_cloudinit.py`, and it reads them on the first boot only: changing the file on the card afterwards does nothing. Either reflash, or plug the Pi into your router with a network cable (Ethernet uses DHCP until `setup_brain.sh` runs) and add the network: `ssh -t pi@sektor5-2.local '~/tools/add_wifi.sh "Home Wi-Fi"'`.
+- **Nothing on USB when the Pi is plugged into the Mac.** Normal: the Pi 4's USB-C port only takes power. A Mac port may not supply enough for a Pi 4; check `vcgencmd get_throttled` is `0x0`.
+- **`ssh` warns the host key changed** after reflashing a card with the same name: `ssh-keygen -R sektor5-2.local`.
+
+## What the setup does, step by step
+
+The scripts above do all of this. It's here for reference, and for building a brain by hand.
 
 ### 1. Flash the eMMC (from a Mac)
 
@@ -28,7 +70,6 @@ The computer that reads the decks and runs the show. Code: [`brain/`](../brain/)
    ```
 5. Remove the boot jumper and power-cycle. First boot takes 2–3 minutes. Then `ssh pi@sektor5.local`.
 
-**On a Raspberry Pi 4 (microSD instead of eMMC):** skip the jumper and `rpiboot`. Put the card in a reader, write the cloud-init files with a different name so it doesn't clash with the running brain (`S5_HOSTNAME=sektor5-2 python3 brain/provision/make_cloudinit.py`), and flash the card the same way (`diskutil list external` shows its `/dev/diskN`; check the size before writing). Imager ejects the card when it's done. Boot the Pi from it and `ssh pi@sektor5-2.local`, then carry on from step 2; deploy to it with `S5_BRAIN_HOST=sektor5-2.local brain/deploy.sh …`. A card that only holds `recovery.bin` / `pieeprom.bin` is the bootloader recovery image, not an OS.
 
 ### 2. Network: Ethernet to the decks
 
