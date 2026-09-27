@@ -535,6 +535,22 @@ function drawStack() {
     if (tl) drawGrid(g, tl, t0, winMs, msPerPx, wy, wh, dpr, [255, 255, 255], "both", false);
     g.fillStyle = "#fff"; g.fillRect(W / 2 - dpr, wy, 2 * dpr, wh);
     g.beginPath(); g.moveTo(W / 2 - 6 * dpr, wy); g.lineTo(W / 2 + 6 * dpr, wy); g.lineTo(W / 2, wy + 7 * dpr); g.fill();
+    // Automix asking for a cue on this deck: a green line where to cue, or an arrow toward it.
+    const ct = typeof am !== "undefined" && am.cueTarget;
+    if (ct && ct.deck === p.number && tl && tl.beatMs[ct.beat - 1] != null) {
+      const x = (tl.beatMs[ct.beat - 1] - t0) / msPerPx, ph = beatPhase(tl, pos[p.number]);
+      const togo = ct.beat - (ph ? ph.beat + ph.frac : 0), onIt = Math.abs(togo) <= 0.5;
+      g.fillStyle = onIt ? "#3dff8b" : "rgba(61,255,139,.9)";
+      g.font = `900 ${12 * dpr}px system-ui`;
+      if (x >= 0 && x <= W) {
+        g.fillRect(x - 2 * dpr, wy, 4 * dpr, wh);
+        g.fillText(onIt ? "CUED ✓" : `CUE HERE · ${ct.want} before drop`, Math.min(x + 6 * dpr, W - 180 * dpr), wy + wh - 8 * dpr);
+      } else {
+        const txt = togo > 0 ? `CUE ${Math.round(togo)} beats ahead ▶` : `◀ CUE ${Math.round(-togo)} beats back`;
+        const w = g.measureText(txt).width;
+        g.fillText(txt, togo > 0 ? W - w - 10 * dpr : 10 * dpr, wy + wh - 8 * dpr);
+      }
+    }
 
     // Header: deck, title, then tempo / key / remaining / countdown on the right.
     const t = p.track, yT = y0 + 16 * dpr;
@@ -1018,7 +1034,7 @@ function leadToDrop(B) {
   if (!tlB || !tlB.drops || !tlB.drops.length) return null;
   const ph = beatPhase(tlB, playheadMs(B, performance.now()));
   const cue = ph.beat + ph.frac, d = tlB.drops.find(d => d.beat > cue + 4);
-  return d ? { beats: Math.round(d.beat - cue), bar: d.bar } : null;
+  return d ? { beats: Math.round(d.beat - cue), exact: d.beat - cue, bar: d.bar, dropBeat: d.beat, tl: tlB } : null;
 }
 const tempoState = () => lastState && lastState.tempo;
 async function tempoCmd(body) {
@@ -1056,7 +1072,7 @@ function amPickNext(currentId) {
 
 function amStop(reason) {
   clearTimeout(am.startTimer); clearTimeout(am.stopTimer);
-  am.startTimer = am.stopTimer = null; am.forceStart = null; am.plan = null;
+  am.startTimer = am.stopTimer = null; am.forceStart = null; am.plan = null; am.cueTarget = null;
   am.phase = am.on ? "prep" : "off";
   if (reason) amSay(reason);
 }
@@ -1110,9 +1126,23 @@ function amTick() {
                  `(<b>${Math.max(0, Math.ceil(am.plan.start - cur))}</b> beats) · ${am.plan.how}`);
   }
   // Drop on outro end: start B early enough that its first drop lands on the beat after A's outro.
+  // The lead-in should be the chosen 16/32/64 beats, so B has to sit that far before its drop. The
+  // Pi can't move a deck's playhead, so if it isn't there, ask for a cue (green CUE line on B's
+  // waveform) and wait while there's still time; after that, fall back as before.
   let start, stop, how, note = "";
   const lead = am.style === "drop" && !am.forceStart ? leadToDrop(B) : null;
-  if (lead && lead.beats <= AM_MAX_LEAD && outroEndBeat(tl) - lead.beats > cur + 1) {
+  const want = am.overlap, endA = outroEndBeat(tl);
+  am.cueTarget = null;
+  if (lead && Math.abs(lead.exact - want) <= 0.5 && endA - want > cur + 1) {
+    stop = endA; start = endA - want;
+    how = `cued ${want} beats before its drop (bar ${lead.bar}), which lands as deck ${A.number}'s outro ends ✓`;
+  } else if (lead && !bs.playing && endA - want - cur > 20) {
+    const target = lead.dropBeat - want, off = lead.exact - want;
+    am.cueTarget = { deck: B.number, beat: target, want };
+    return amSay(`Next: ${nextTitle} on deck ${B.number} · <b>cue it at bar ${barNumber(lead.tl, target)}</b>, ${want} beats before its drop ` +
+      `(green CUE line on its waveform; turn QUANTIZE on) · it's ${Math.abs(off).toFixed(0)} beats ${off > 0 ? "early" : "late"} now · ` +
+      `mix starts at bar ${barNumber(tl, endA - want)} of deck ${A.number} (<b>${Math.ceil(endA - want - cur)}</b> beats)`);
+  } else if (lead && lead.beats <= AM_MAX_LEAD && endA - lead.beats > cur + 1) {
     stop = outroEndBeat(tl); start = stop - lead.beats;
     how = `its drop (bar ${lead.bar}) lands as deck ${A.number}'s outro ends · ${lead.beats}-beat lead-in`;
   } else {

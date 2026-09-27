@@ -181,7 +181,9 @@ A deck that is tempo master can't be retimed remotely: nothing can move its pitc
 **Automix:**
 - **Drop on outro end** (default): the incoming track starts early enough that its **first drop lands on the beat after the outgoing track's outro**, and the outgoing deck stops on that beat.
   - The Pi can load a track but can't move its playhead, so the lead-in is the distance from where the track loads to its drop.
-  - If that's more than 128 beats, or it's already too late, automix uses the fixed overlap and says why.
+  - The lead-in should be the chosen 16, 32 or 64 beats, which means the track has to sit that far before its drop. The Pi can't move a deck's playhead, so when it isn't there, automix asks you to cue it. The status line gives the bar, and a green **CUE HERE** line (or an arrow toward it) appears on that deck's waveform. Jog there with **QUANTIZE** on and press CUE. Automix waits while there's time, then times the mix from your cue.
+  - To skip the jogging: in rekordbox, put a memory cue 16 or 32 beats before each drop and set the XDJ's Auto Cue to memory. Tracks then load on that cue.
+  - If there's no time left to cue, automix uses the track's natural lead-in (up to 128 beats) or the fixed overlap, and says which.
 - **Fixed overlap:** 16, 32 or 64 beats, starting where the outgoing track's outro begins.
 - **TEMPO RAMP** (needs `-Dtempo=on`): the Pi holds master, both decks get SYNC on, and during each mix the tempo glides to the incoming track's original BPM, arriving as the outgoing deck stops.
 
