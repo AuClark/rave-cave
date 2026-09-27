@@ -9,13 +9,18 @@ The stage in 3D: a 4.8 × 3 m platform, a back wall, a lighting truss, and the D
 | Fixture | Default position | Driven by |
 |---|---|---|
 | Tube L / Tube R | Either side of the DJ | **Live:** each tube's real 60 LEDs (`tube1`, `tube2`) |
-| Projector L / R | Outside the tubes, on stands | **Live:** the real projection (the projector's own `render.js`, same layout), thrown onto Screen L / R |
+| Projector L | Outside the tubes, on a stand | **Live:** the projector's output as mapped (its own `render.js` and layout), onto Screen L |
+| Projector R | Outside the tubes, on a stand | **Live:** the Visuals page's generative sketch (`:8110`), full frame, onto Screen R |
 | Screen L / R | Back wall | Projection surfaces |
 | Laser L / R | Top left and right of the truss | **Simulated** from the show: sweeps on the beat, wide in DROP, converging through BUILD, off in the pre-drop blackout |
 | Strobe | Top middle | **Simulated:** Commander strobe, blinder, and the drop hits |
 | Wash | Top middle | **Live:** the par can's DMX colour (`parcan`) |
 
-- **Live fixtures** use the colours the show engine is actually sending: `preview` in its state, via the projector's `/api/events` feed.
+- **Live fixtures** use what the show engine actually sends each light: `preview` in its state (every LED of a strip, with the fixture's brightness applied; the par can's emitters mixed into one colour), 25 times a second via the projector's `/api/events` feed.
+  - Drive levels are linear light, so they're read as linear RGB and scaled as a whole (never clipped per channel), which keeps hues exact.
+  - Strobe, blinder and the drop's white hit are drawn by the page on the same beat clock, frame-exact, so they can't fall between updates.
+  - **Match real lights** (saved with the layout): an LED display gain, a wash gain, and gamma (1.0 = as sent, WLED's realtime default; 2.8 if the fixture applies its own gamma). Set these by eye against the real rig.
+- **Projectors** each show the projector output (as mapped), the Visuals page (generative), or nothing. To make the *real* projector show the visuals, set its surface content to "generative" on the Projection page.
 - **Simulated fixtures** follow the scene, beat, colour, strobe and blackout.
 - **Linking:** any fixture can be linked to a real fixture from the panel.
 

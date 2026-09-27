@@ -756,16 +756,29 @@ class Fixture:
             frame = self.queue[0][1]
         self._send(frame)
 
+    # Light each DMX emitter adds, as linear RGB (roughly what the eye sees from the par can's LEDs).
+    EMITTERS = {"r": (1, 0, 0), "g": (0, 1, 0), "b": (0, 0, 1), "w": (1, 0.93, 0.82), "a": (1, 0.55, 0.04), "uv": (0.3, 0.02, 0.85)}
+
     def _preview(self, frame):
-        """A few hex colours for the Commander's live view (before brightness and delay)."""
+        """What this fixture is actually being sent, as hex: linear drive levels 0..255 per LED
+        (after the fixture's brightness, before the delay). Strips: every LED (max 300); the
+        panel: 40 column averages; the par can: its emitters mixed into one colour."""
         if self.kind == "dmx_par":
-            c = {name: frame[off - 1] for name, off in self.chans.items()}
-            w, uv = c.get("w", 0) * 0.8, c.get("uv", 0) * 0.35
-            rgb = [c.get("r", 0) + w + uv * 0.5, c.get("g", 0) + w + c.get("a", 0) * 0.5, c.get("b", 0) + w + uv]
-            return ["#%02x%02x%02x" % tuple(int(min(255, x)) for x in rgb)]
+            c = {name: frame[off - 1] / 255 for name, off in self.chans.items()}
+            if "dimmer" in c:
+                d = c["dimmer"]
+                c = {k: v * d for k, v in c.items()}
+            rgb = np.zeros(3)
+            for name, tint in self.EMITTERS.items():
+                rgb += np.array(tint) * c.get(name, 0.0)
+            peak = rgb.max()
+            if peak > 1:                            # keep the hue, don't clip channels
+                rgb /= peak
+            return ["#%02x%02x%02x" % tuple(int(round(x * 255)) for x in rgb)]
         a = frame if self.kind == "strip" else frame.mean(axis=0)
-        a = a[np.linspace(0, len(a) - 1, min(len(a), 40)).astype(int)]
-        return ["#%02x%02x%02x" % tuple(px) for px in (np.clip(a, 0, 1) * 255).astype(int).tolist()]
+        n = min(len(a), 300 if self.kind == "strip" else 40)
+        a = a[np.linspace(0, len(a) - 1, n).astype(int)] * self.out.brightness
+        return ["#%02x%02x%02x" % tuple(px) for px in (np.clip(a, 0, 1) * 255).round().astype(int).tolist()]
 
     def _par_frame(self, ctx, intensity, fx):
         v = looks.par(ctx, self.role, self.state)
@@ -862,6 +875,7 @@ def main():
             "look": engine.look, "palette": {"mode": engine.palette_mode, "hue": engine.palette_hue},
             "speed": engine.speed, "tap_bpm": round(engine.tap_bpm, 1),
             "forced": engine.forced, "fixtures": [f.name for f in fixtures],
+            "fixture_info": {f.name: {"kind": f.kind, "leds": f.cfg.get("leds"), "reverse": bool(f.cfg.get("reverse"))} for f in fixtures},
             "fixture_ctl": engine.fixture_ctl,
             "preview": {f.name: f.preview for f in fixtures},
             "fps": round(fps_meas, 1),
@@ -879,7 +893,7 @@ def main():
         else:
             idle_since = None
         streaming = idle_since is None or t0 - idle_since < 0.5
-        preview = n % 5 == 0                 # the Commander polls at ~7 Hz; 10 Hz previews are plenty
+        preview = n % 2 == 0                 # 25 Hz: the Stage view follows the lights closely
         for f in fixtures:
             if streaming or f.always:
                 f.render(ctx, fx, engine.fixture_ctl[f.name], preview)
