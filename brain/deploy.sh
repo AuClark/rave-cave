@@ -16,9 +16,9 @@ BOX=${BOX:-raver@${RAVE_BOX_HOST:-rave-box.local}}
 what=${1:-all}
 
 if [[ $what == all || $what == deckdash ]]; then
-  rsync -a brain/deckdash/DeckDash.java brain/deckdash/Timeline.java "$BRAIN":deckdash/
+  rsync -a brain/deckdash/DeckDash.java brain/deckdash/Timeline.java brain/deckdash/Library.java "$BRAIN":deckdash/
   rsync -a brain/deckdash/web/ "$BRAIN":deckdash/web/
-  ssh "$BRAIN" 'cd ~/deckdash && rm -rf classes && javac -cp "lib/*" -d classes DeckDash.java Timeline.java && sudo systemctl restart deckdash && echo "deckdash restarted"'
+  ssh "$BRAIN" 'cd ~/deckdash && rm -rf classes.new && javac -cp "lib/*" -d classes.new DeckDash.java Timeline.java Library.java && rm -rf classes && mv classes.new classes && sudo systemctl restart deckdash && echo "deckdash restarted"'
 fi
 
 if [[ $what == all || $what == showbrain ]]; then

@@ -25,6 +25,8 @@ import urllib.request
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 
+import numpy as np
+
 from ddp import DDPOutput
 from dmx import UDMX
 import looks
@@ -129,6 +131,21 @@ class Engine:
         self.hold = False
         self.strobe = False
         self.forced = None              # {"kind": "build"|"drop", "player", "start", "drop"} in beats
+        # Performance layer (Commander pads), applied on top of the auto show.
+        self.strobe_div = 2             # strobe flashes per beat; 0 = free-running 12 Hz
+        self.blinder = False            # hold: everything full white
+        self.black_hold = False         # hold: momentary blackout
+        self.flash_t = 0.0              # tap: white hit decaying over about a beat
+        self.look = None                # latched scene: INTRO | GROOVE | BREAKDOWN | DROP
+        self.look_t = 0.0
+        self.palette_mode = "auto"      # auto (track key) | lock | cycle
+        self.palette_hue = 0.83
+        self.speed = 1.0                # 0.5 half-time, 1, 2 double-time
+        self.fixture_ctl = {}           # fixture name -> {"on": bool, "level": 0..1}
+        # Tap clock: drives the lights when no deck is playing (looks or forced events only).
+        self.tap_bpm = 128.0
+        self.tap_anchor = self.tap_first = time.time()
+        self.taps = []
         self.overrides_path = HERE / "overrides.json"
         try:
             self.overrides = json.loads(self.overrides_path.read_text())
@@ -239,6 +256,8 @@ class Engine:
                "section_progress": 0.0, "energy": 0.5}
         if live is None:
             self.last_live = None
+            if self.look or (self.forced and self.forced["player"] is None):
+                return self._free(ctx, t)
             return ctx
         if live != self.last_live:
             if self.last_live is not None:
@@ -355,6 +374,53 @@ class Engine:
         ctx["since_drop"] = since
         return ctx
 
+    # --- tap clock (no deck playing) --------------------------------------
+    def free_beat(self, t):
+        """1-based fractional beat on the tap clock; beat 1 is the anchor (a downbeat)."""
+        return (t - self.tap_anchor) * self.tap_bpm / 60 + 1
+
+    def _free(self, ctx, t):
+        beat = self.free_beat(t + self.lead_ms / 1000)
+        ctx.update(scene="GROOVE", beat=beat, frac=beat % 1.0, bar=int((beat - 1) // 4) + 1,
+                   bwb=int(beat - 1) % 4 + 1, bpm=self.tap_bpm, title="Tap clock", free=True,
+                   energy=0.6, section_progress=0.5)
+        f = self.forced
+        if f and f["player"] is None:
+            if f["kind"] == "build" and beat < f["drop"]:
+                return self._build(ctx, beat, f["start"], f["drop"], {})
+            if beat - f["drop"] < CONFIG.get("drop_bars", 16) * 4:
+                return self._drop(ctx, beat - f["drop"])
+            self.forced = None
+        return ctx
+
+    # --- performance layer -------------------------------------------------
+    def shape(self, ctx, t):
+        """Apply the Commander's latched look, speed and palette to the auto show's ctx."""
+        if self.look and not self.forced:
+            ctx["scene"] = self.look
+            if self.look == "DROP":
+                ctx["since_drop"] = (t - self.look_t) * max(60.0, ctx.get("bpm") or self.tap_bpm) / 60
+        if self.speed != 1.0 and ctx["bar"] > 0:
+            b = (ctx["beat"] - 1) * self.speed + 1
+            ctx.update(beat=b, frac=b % 1.0, bwb=int(b - 1) % 4 + 1)
+        if self.palette_mode == "lock":
+            ctx["hue"] = self.palette_hue
+        elif self.palette_mode == "cycle":
+            step = (ctx["bar"] - 1) // 4 if ctx["bar"] > 0 else int(t / 8)
+            ctx["hue"] = (ctx["hue"] + 0.125 * step) % 1.0
+        return ctx
+
+    def output_fx(self, ctx, t):
+        """Post-look effects every fixture applies: strobe, white (blinder / flash), blackout."""
+        strobe = None
+        if self.strobe:
+            if self.strobe_div:
+                strobe = ((ctx["frac"] * self.strobe_div) % 1.0) < 0.5
+            else:
+                strobe = (t * 12) % 1.0 < 0.5
+        white = 1.0 if self.blinder else (math.exp(-(t - self.flash_t) * 4) if t - self.flash_t < 1.5 else 0.0)
+        return {"intensity": self.intensity, "strobe": strobe, "white": white, "black": self.black_hold}
+
     # --- commands --------------------------------------------------------
     def command(self, c):
         cmd = c.get("cmd")
@@ -373,6 +439,60 @@ class Engine:
             self.hold = not self.hold
         elif cmd == "strobe":
             self.strobe = bool(c.get("value", not self.strobe))
+        elif cmd == "strobe_div":
+            self.strobe_div = int(c.get("value", 2))
+        elif cmd == "blinder":
+            self.blinder = bool(c.get("value", False))
+        elif cmd == "black_hold":
+            self.black_hold = bool(c.get("value", False))
+        elif cmd == "flash":
+            self.flash_t = t
+        elif cmd == "look":
+            v = c.get("value")
+            if v not in (None, "AUTO", "INTRO", "GROOVE", "BREAKDOWN", "DROP"):
+                return {"ok": False, "error": f"unknown look {v}"}
+            self.look = None if v in (None, "AUTO") else v
+            self.look_t = t
+        elif cmd == "palette":
+            v = c.get("value") or {}
+            if v.get("mode") in ("auto", "lock", "cycle"):
+                self.palette_mode = v["mode"]
+            if v.get("hue") is not None:
+                self.palette_hue = float(v["hue"]) % 1.0
+        elif cmd == "speed":
+            self.speed = float(c.get("value", 1.0)) if float(c.get("value", 1.0)) in (0.5, 1.0, 2.0) else 1.0
+        elif cmd == "fixture":
+            v = c.get("value") or {}
+            ctl = self.fixture_ctl.get(v.get("name"))
+            if ctl is None:
+                return {"ok": False, "error": "unknown fixture"}
+            if "on" in v:
+                ctl["on"] = bool(v["on"])
+            if "level" in v:
+                ctl["level"] = max(0.0, min(1.0, float(v["level"])))
+        elif cmd == "tap":
+            # Taps more than 2 s apart start a new sequence; the first tap is the downbeat.
+            if not self.taps or t - self.taps[-1] >= 2:
+                self.taps, self.tap_first = [], t
+            self.taps = self.taps[-7:] + [t]
+            if len(self.taps) >= 2:
+                self.tap_bpm = max(60.0, min(200.0, 60 * (len(self.taps) - 1) / (self.taps[-1] - self.taps[0])))
+                # Phase-lock to the latest tap, keeping the first tap of the sequence as beat 1 of a bar.
+                period = 60 / self.tap_bpm
+                self.tap_anchor = t - round((t - self.tap_first) / period) * period
+        elif cmd == "tap_bpm":
+            self.tap_bpm = max(60.0, min(200.0, float(c.get("value", 128))))
+        elif cmd == "tap_sync":
+            self.tap_anchor = t
+        elif cmd in ("drop_now", "build") and not live:
+            # No deck playing: run the event on the tap clock.
+            beat = self.free_beat(t)
+            if cmd == "drop_now":
+                self.forced = {"kind": "drop", "player": None, "start": beat, "drop": beat}
+            else:
+                bar = int((beat - 1) // 4) + 1
+                self.forced = {"kind": "build", "player": None, "start": beat,
+                               "drop": (bar + int(c.get("value", 4)) - 1) * 4 + 1}
         elif cmd in ("drop_now", "build") and live:
             p = status[live]
             tl = timelines.get(p.get("ref"))
@@ -424,6 +544,8 @@ class Engine:
             self.save_overrides()
         elif cmd == "clear":
             self.forced, self.hold, self.strobe, self.mode = None, False, False, "auto"
+            self.blinder = self.black_hold = False
+            self.look, self.palette_mode, self.speed = None, "auto", 1.0
         log(f"command {c}")
         return {"ok": True}
 
@@ -441,6 +563,8 @@ class Fixture:
         self.state = {}
         self.delay = cfg.get("delay_ms", 0) / 1000.0
         self.queue = []                      # (time, frame) for delay compensation
+        self.name = cfg.get("name") or f"{self.kind}{index}"
+        self.preview = []
         if self.kind == "dmx_par":
             self.dmx = UDMX_DEVICES.setdefault("udmx", UDMX())
             self.addr = cfg.get("address", 1)
@@ -458,21 +582,25 @@ class Fixture:
         """DMX holds its last value, so keep rendering it even when the show is idle."""
         return self.kind == "dmx_par"
 
-    def render(self, ctx, intensity, strobe):
+    def render(self, ctx, fx, ctl, preview=False):
+        """fx: Engine.output_fx(); ctl: this fixture's {"on", "level"} from the Commander."""
+        level = 0.0 if (fx["black"] or not ctl["on"]) else fx["intensity"] * ctl["level"]
         if self.kind == "dmx_par":
-            frame = self._par_frame(ctx, intensity, strobe)
-        elif self.kind == "strip":
-            px = looks.strip(ctx, self.cfg["leds"], self.role, self.state)
-            if self.cfg.get("reverse"):
-                px = px[::-1]
-            if strobe:
-                px = px * 0 + (1.0 if (ctx["t"] * 12) % 1.0 < 0.5 else 0.0)
-            frame = px * intensity
+            frame = self._par_frame(ctx, level, fx)
         else:
-            px = looks.panel(ctx, self.w, self.h, self.role, self.state)
-            if strobe:
-                px = px * 0 + (1.0 if (ctx["t"] * 12) % 1.0 < 0.5 else 0.0)
-            frame = px * intensity
+            if self.kind == "strip":
+                px = looks.strip(ctx, self.cfg["leds"], self.role, self.state)
+                if self.cfg.get("reverse"):
+                    px = px[::-1]
+            else:
+                px = looks.panel(ctx, self.w, self.h, self.role, self.state)
+            if fx["strobe"] is not None:
+                px = px * 0 + (1.0 if fx["strobe"] else 0.0)
+            if fx["white"] > 0:
+                px = px + (1.0 - px) * fx["white"]
+            frame = px * level
+        if preview:
+            self.preview = self._preview(frame)
         # Delay compensation: fast outputs (USB DMX) wait so they land with the Wi-Fi fixtures.
         now = time.time()
         if self.delay > 0:
@@ -484,11 +612,24 @@ class Fixture:
             frame = self.queue[0][1]
         self._send(frame)
 
-    def _par_frame(self, ctx, intensity, strobe):
+    def _preview(self, frame):
+        """A few hex colours for the Commander's live view (before brightness and delay)."""
+        if self.kind == "dmx_par":
+            c = {name: frame[off - 1] for name, off in self.chans.items()}
+            w, uv = c.get("w", 0) * 0.8, c.get("uv", 0) * 0.35
+            rgb = [c.get("r", 0) + w + uv * 0.5, c.get("g", 0) + w + c.get("a", 0) * 0.5, c.get("b", 0) + w + uv]
+            return ["#%02x%02x%02x" % tuple(int(min(255, x)) for x in rgb)]
+        a = frame if self.kind == "strip" else frame.mean(axis=0)
+        a = a[np.linspace(0, len(a) - 1, min(len(a), 40)).astype(int)]
+        return ["#%02x%02x%02x" % tuple(px) for px in (np.clip(a, 0, 1) * 255).astype(int).tolist()]
+
+    def _par_frame(self, ctx, intensity, fx):
         v = looks.par(ctx, self.role, self.state)
-        if strobe:
-            on = 1.0 if (ctx["t"] * 12) % 1.0 < 0.5 else 0.0
+        if fx["strobe"] is not None:
+            on = 1.0 if fx["strobe"] else 0.0
             v = dict(dimmer=1.0, r=on, g=on, b=on, w=on if "w" in self.extra else 0.0, a=0.0, uv=0.0)
+        if fx["white"] > 0:
+            v = {k: (x + (1.0 - x) * fx["white"] if k in ("r", "g", "b", "w") else x) for k, x in v.items()}
         k = intensity * self.cfg.get("brightness", 1.0)
         n = max(self.chans.values())
         ch = [0] * n
@@ -549,6 +690,7 @@ def main():
     engine = Engine(decks)
     strips = [c for c in CONFIG["fixtures"] if c["kind"] == "strip"]
     fixtures = [Fixture(c, strips.index(c) if c in strips else 0, len(strips)) for c in CONFIG["fixtures"]]
+    engine.fixture_ctl = {f.name: {"on": True, "level": 1.0} for f in fixtures}
     port = CONFIG.get("commander_port", 8090)
     threading.Thread(target=ThreadingHTTPServer(("0.0.0.0", port), make_handler(engine)).serve_forever,
                      daemon=True).start()
@@ -557,18 +699,26 @@ def main():
     last_scene = None
     idle_since = None
     fps_meas, frames, fps_t = 0.0, 0, time.time()
+    n = 0
     while True:
         t0 = time.time()
         frames += 1
+        n += 1
         if t0 - fps_t >= 2:
             fps_meas, frames, fps_t = frames / (t0 - fps_t), 0, t0
-        ctx = engine.decide(t0)
+        ctx = engine.shape(engine.decide(t0), t0)
         if engine.mode == "blackout":
             ctx["scene"] = "PREDROP"
+        fx = engine.output_fx(ctx, t0)
         engine.state = {k: v for k, v in ctx.items()} | {
             "mode": engine.mode, "follow": engine.follow, "lead_ms": engine.lead_ms,
             "intensity": engine.intensity, "hold": engine.hold, "strobe": engine.strobe,
-            "forced": engine.forced, "fixtures": [f.cfg.get("name") for f in fixtures],
+            "strobe_div": engine.strobe_div, "blinder": engine.blinder, "black_hold": engine.black_hold,
+            "look": engine.look, "palette": {"mode": engine.palette_mode, "hue": engine.palette_hue},
+            "speed": engine.speed, "tap_bpm": round(engine.tap_bpm, 1),
+            "forced": engine.forced, "fixtures": [f.name for f in fixtures],
+            "fixture_ctl": engine.fixture_ctl,
+            "preview": {f.name: f.preview for f in fixtures},
             "fps": round(fps_meas, 1),
             "dmx": {k: d.status for k, d in UDMX_DEVICES.items()}}
         if ctx["scene"] != last_scene:
@@ -581,9 +731,12 @@ def main():
         else:
             idle_since = None
         streaming = idle_since is None or t0 - idle_since < 0.5
-        for fx in fixtures:
-            if streaming or fx.always:
-                fx.render(ctx, engine.intensity, engine.strobe)
+        preview = n % 5 == 0                 # the Commander polls at ~7 Hz; 10 Hz previews are plenty
+        for f in fixtures:
+            if streaming or f.always:
+                f.render(ctx, fx, engine.fixture_ctl[f.name], preview)
+            elif preview:
+                f.preview = []
         time.sleep(max(0.0, 1 / fps - (time.time() - t0)))
 
 

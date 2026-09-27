@@ -5,79 +5,248 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no">
 <title>Rave Cave · Commander</title>
 <style>
-  :root { --bg:#07070c; --panel:#12131d; --line:#262a3d; --text:#e8e9f3; --dim:#8a8fa8; --pink:#ff2fd0; --cyan:#2fe6ff; --good:#3dff8b; --warn:#ffb02e; }
+  :root { --bg:#07070c; --panel:#12131d; --line:#262a3d; --text:#e8e9f3; --dim:#8a8fa8; --pink:#ff2fd0; --cyan:#2fe6ff; --good:#3dff8b; --warn:#ffb02e; --violet:#9b8cff; }
   * { box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
-  body { margin:0; background:var(--bg); color:var(--text); font:15px/1.4 system-ui,-apple-system,sans-serif; padding:14px; }
-  h1 { font-size:14px; letter-spacing:.2em; margin:0 0 12px; } h1 b { color:var(--pink); }
+  body { margin:0; background:var(--bg); color:var(--text); font:15px/1.4 system-ui,-apple-system,sans-serif; padding:14px; -webkit-user-select:none; user-select:none; }
+  h1 { font-size:14px; letter-spacing:.2em; margin:0 0 12px; display:flex; gap:12px; align-items:baseline; } h1 b { color:var(--pink); }
+  h1 .keys { margin-left:auto; font-size:11px; letter-spacing:.04em; color:var(--dim); font-weight:500; }
+  h2 { font-size:11px; letter-spacing:.16em; text-transform:uppercase; color:var(--dim); margin:0 0 10px; }
+  .wrap { display:grid; gap:12px; grid-template-columns:repeat(auto-fit, minmax(320px, 1fr)); align-items:start; }
   .scene { font-size:44px; font-weight:900; letter-spacing:.04em; line-height:1; }
   .scene.BUILD, .scene.HOLD { color:var(--warn); } .scene.DROP { color:var(--pink); } .scene.PREDROP { color:#fff; }
-  .scene.GROOVE { color:var(--cyan); } .scene.BREAKDOWN { color:#9b8cff; }
-  .card { background:var(--panel); border:1px solid var(--line); border-radius:16px; padding:14px; margin-bottom:12px; }
+  .scene.GROOVE { color:var(--cyan); } .scene.BREAKDOWN { color:var(--violet); }
+  .card { background:var(--panel); border:1px solid var(--line); border-radius:16px; padding:14px; }
+  .card.span { grid-column:1 / -1; }
   .row { display:flex; gap:10px; flex-wrap:wrap; align-items:baseline; }
   .dim { color:var(--dim); font-size:13px; }
+  .tag { font-size:11px; font-weight:800; letter-spacing:.08em; padding:2px 8px; border-radius:6px; background:var(--warn); color:#000; }
   .count { font-size:28px; font-weight:800; color:var(--warn); font-variant-numeric:tabular-nums; }
   .bar { height:10px; background:#1d2031; border-radius:6px; overflow:hidden; margin-top:8px; }
   .bar div { height:100%; background:linear-gradient(90deg,var(--warn),#fff); width:0; }
+  .beats { display:grid; grid-template-columns:repeat(4,1fr); gap:6px; margin-top:10px; }
+  .beats div { height:10px; border-radius:4px; background:#1d2031; }
+  .beats div.on { background:var(--pink); box-shadow:0 0 12px var(--pink); } .beats div.on.one { background:var(--cyan); box-shadow:0 0 12px var(--cyan); }
+  #viz { width:100%; height:22px; display:block; margin-top:12px; }
   .grid { display:grid; grid-template-columns:1fr 1fr; gap:10px; }
-  button { font:inherit; font-weight:800; letter-spacing:.06em; padding:18px 10px; border-radius:14px; border:1px solid var(--line); background:#1b1e2e; color:var(--text); }
-  button:active { transform:scale(.97); }
-  button.big { background:var(--pink); color:#000; border-color:var(--pink); font-size:20px; }
+  .grid4 { display:grid; grid-template-columns:repeat(4,1fr); gap:8px; }
+  .grid5 { display:grid; grid-template-columns:repeat(auto-fill, minmax(86px, 1fr)); gap:8px; }
+  button { font:inherit; font-weight:800; letter-spacing:.06em; padding:18px 10px; border-radius:14px; border:1px solid var(--line); background:#1b1e2e; color:var(--text); touch-action:manipulation; }
+  button small { display:block; font-size:10px; font-weight:600; color:var(--dim); letter-spacing:.04em; margin-top:2px; }
+  button:active, button.held { transform:scale(.97); }
+  button.big { background:var(--pink); color:#000; border-color:var(--pink); font-size:18px; }
+  button.big small, button.on small, button.held small { color:rgba(0,0,0,.6); }
   button.on { background:var(--cyan); color:#000; border-color:var(--cyan); }
+  .pad { padding:26px 6px; font-size:15px; }
+  .pad.held { background:#fff; color:#000; border-color:#fff; box-shadow:0 0 24px rgba(255,255,255,.5); }
+  .pad.look.on { background:var(--c, var(--cyan)); border-color:var(--c, var(--cyan)); box-shadow:0 0 18px var(--c, var(--cyan)); }
   .seg { display:flex; gap:6px; } .seg button { flex:1; padding:12px 6px; }
-  input[type=range] { width:100%; }
-  label { display:block; margin:10px 0 4px; color:var(--dim); font-size:13px; }
+  .swatches { display:grid; grid-template-columns:repeat(6,1fr); gap:8px; margin-top:10px; }
+  .swatches button { padding:0; height:40px; border-radius:10px; border:2px solid transparent; }
+  .swatches button.on { border-color:#fff; box-shadow:0 0 14px rgba(255,255,255,.4); }
+  input[type=range] { width:100%; accent-color:var(--cyan); }
+  label { display:block; margin:12px 0 4px; color:var(--dim); font-size:13px; }
+  .fx { display:grid; grid-template-columns:auto 1fr 44px; gap:10px; align-items:center; margin-top:8px; }
+  .fx button { padding:10px 12px; min-width:92px; }
+  .fx .lv { text-align:right; font-variant-numeric:tabular-nums; color:var(--dim); font-size:13px; }
+  .tapbpm { font-size:34px; font-weight:900; font-variant-numeric:tabular-nums; text-align:center; }
 </style>
 </head>
 <body>
-<h1>RAVE <b>CAVE</b> · COMMANDER</h1>
-<div class="card">
-  <div class="row"><div id="scene" class="scene">—</div><div id="deck" class="dim"></div></div>
+<h1>RAVE <b>CAVE</b> · COMMANDER <span class="keys">keys: space flash · S strobe · W blinder · B blackout · T tap · 0–4 looks · D drop</span></h1>
+<div class="wrap">
+
+<div class="card span">
+  <div class="row"><div id="scene" class="scene">—</div><div id="deck" class="dim"></div><span id="override" class="tag" hidden></span></div>
   <div id="title" class="dim" style="margin-top:6px"></div>
   <div class="row" style="margin-top:8px"><span id="count" class="count"></span><span id="pos" class="dim"></span></div>
   <div class="bar"><div id="prog"></div></div>
+  <div class="beats" id="beats"><div class="one"></div><div></div><div></div><div></div></div>
+  <canvas id="viz"></canvas>
 </div>
-<div class="card grid">
-  <button class="big" onclick="cmd('drop_now')">DROP NOW</button>
-  <button class="big" style="background:var(--warn);border-color:var(--warn)" onclick="cmd('build',4)">BUILD 4 BARS</button>
-  <button id="hold" onclick="cmd('hold')">HOLD</button>
-  <button onclick="cmd('skip_drop')">SKIP NEXT DROP</button>
-  <button onclick="cmd('mark_drop')">MARK DROP HERE</button>
-  <button onclick="cmd('clear')">CANCEL BUILD</button>
-  <button id="strobe" onpointerdown="cmd('strobe',true)" onpointerup="cmd('strobe',false)" onpointerleave="cmd('strobe',false)">STROBE (hold)</button>
-  <button id="black" onclick="cmd('mode', S.mode==='blackout'?'auto':'blackout')">BLACKOUT</button>
-</div>
+
 <div class="card">
+  <h2>Performance · hold</h2>
+  <div class="grid">
+    <button class="pad" data-hold="strobe">STROBE<small>hold · S</small></button>
+    <button class="pad" data-hold="blinder">BLINDER<small>hold · W</small></button>
+    <button class="pad" data-hold="black_hold">BLACKOUT<small>hold · B</small></button>
+    <button class="pad" id="flash">FLASH<small>tap · space</small></button>
+  </div>
+  <label>Strobe rate (locked to the beat)</label>
+  <div class="seg" id="sdiv"><button data-v="1">1/4</button><button data-v="2">1/8</button><button data-v="4">1/16</button><button data-v="0">FREE</button></div>
+  <label>Motion speed</label>
+  <div class="seg" id="speed"><button data-v="0.5">½× HALF</button><button data-v="1">1×</button><button data-v="2">2× DOUBLE</button></div>
+</div>
+
+<div class="card">
+  <h2>Scenes · latch</h2>
+  <div class="grid5">
+    <button class="pad look" data-look="AUTO" style="--c:var(--good)">AUTO<small>0</small></button>
+    <button class="pad look" data-look="INTRO" style="--c:#8a8fa8">AMBIENT<small>1</small></button>
+    <button class="pad look" data-look="GROOVE" style="--c:var(--cyan)">GROOVE<small>2</small></button>
+    <button class="pad look" data-look="BREAKDOWN" style="--c:var(--violet)">BREAK<small>3</small></button>
+    <button class="pad look" data-look="DROP" style="--c:var(--pink)">DROP<small>4</small></button>
+  </div>
+  <h2 style="margin-top:14px">Drop control</h2>
+  <div class="grid">
+    <button class="big" onclick="cmd('drop_now')">DROP NOW<small>D</small></button>
+    <button class="big" style="background:var(--warn);border-color:var(--warn)" onclick="cmd('build', +$('bbars').dataset.v)">BUILD <span id="bbl">4</span> BARS</button>
+  </div>
+  <div class="seg" id="bbars" data-v="4" style="margin-top:8px"><button data-v="2">2</button><button data-v="4">4</button><button data-v="8">8</button><button data-v="16">16</button></div>
+  <div class="grid" style="margin-top:10px">
+    <button id="hold" onclick="cmd('hold')">HOLD</button>
+    <button onclick="cmd('clear')">CANCEL BUILD</button>
+    <button onclick="cmd('skip_drop')">SKIP NEXT DROP</button>
+    <button onclick="cmd('mark_drop')">MARK DROP HERE</button>
+  </div>
+</div>
+
+<div class="card">
+  <h2>Colour</h2>
+  <div class="seg" id="pmode"><button data-v="auto">AUTO · KEY</button><button data-v="lock">LOCK</button><button data-v="cycle">CYCLE</button></div>
+  <div class="swatches" id="swatches"></div>
+</div>
+
+<div class="card">
+  <h2>Fixtures</h2>
+  <div id="fixtures"></div>
+  <label>Master intensity <span id="iv"></span></label>
+  <input id="int" type="range" min="0" max="1" step="0.05" oninput="cmd('intensity',+this.value)">
+  <button id="black" style="margin-top:12px;width:100%" onclick="cmd('mode', S.mode==='blackout'?'auto':'blackout')">BLACKOUT (latch)</button>
+</div>
+
+<div class="card">
+  <h2>Tap clock · used when no deck is playing</h2>
+  <div class="tapbpm"><span id="tbpm">128.0</span> <span class="dim">BPM</span></div>
+  <div class="grid4" style="margin-top:10px">
+    <button onclick="cmd('tap_bpm', (S.tap_bpm||128) - 1)">−1</button>
+    <button id="tap" style="grid-column:span 2" class="big">TAP<small>T</small></button>
+    <button onclick="cmd('tap_bpm', (S.tap_bpm||128) + 1)">+1</button>
+  </div>
+  <button style="margin-top:8px;width:100%" onclick="cmd('tap_sync')">SYNC · downbeat now</button>
+</div>
+
+<div class="card">
+  <h2>Setup</h2>
   <label>Mode</label>
   <div class="seg" id="mode"><button data-v="auto">AUTO</button><button data-v="manual">MANUAL</button></div>
   <label>Follow deck</label>
   <div class="seg" id="follow"><button data-v="0">AUTO</button><button data-v="1">DECK 1</button><button data-v="2">DECK 2</button></div>
-  <label>Intensity <span id="iv"></span></label>
-  <input id="int" type="range" min="0" max="1" step="0.05" oninput="cmd('intensity',+this.value)">
   <label>Output latency compensation <span id="lv"></span> ms</label>
   <input id="lead" type="range" min="0" max="200" step="5" oninput="cmd('lead_ms',+this.value)">
   <button style="margin-top:12px;width:100%" onclick="cmd('clear')">RESET ALL OVERRIDES</button>
 </div>
+
+</div>
 <script>
 let S = {};
 const $ = id => document.getElementById(id);
-async function cmd(c, v) { await fetch('/api/cmd', {method:'POST', body: JSON.stringify({cmd:c, value:v})}); }
-document.querySelectorAll('#mode button').forEach(b => b.onclick = () => cmd('mode', b.dataset.v));
-document.querySelectorAll('#follow button').forEach(b => b.onclick = () => cmd('follow', +b.dataset.v));
+async function cmd(c, v) {
+  try { await fetch('/api/cmd', {method:'POST', body: JSON.stringify({cmd:c, value:v})}); } catch (e) {}
+}
+const segs = (id, fn) => document.querySelectorAll(`#${id} button`).forEach(b => b.onclick = () => fn(b.dataset.v, b));
+const segOn = (id, v) => document.querySelectorAll(`#${id} button`).forEach(b => b.classList.toggle('on', b.dataset.v === String(v)));
+segs('mode', v => cmd('mode', v));
+segs('follow', v => cmd('follow', +v));
+segs('sdiv', v => cmd('strobe_div', +v));
+segs('speed', v => cmd('speed', +v));
+segs('pmode', v => cmd('palette', {mode: v}));
+segs('bbars', v => { $('bbars').dataset.v = v; $('bbl').textContent = v; segOn('bbars', v); });
+segOn('bbars', 4);
+document.querySelectorAll('[data-look]').forEach(b => b.onclick = () => cmd('look', b.dataset.look));
+
+// Hold pads: on while pressed (pointer capture keeps them on if the finger slides off).
+function holdPad(el, name) {
+  const set = on => { el.classList.toggle('held', on); cmd(name, on); };
+  el.addEventListener('pointerdown', e => { el.setPointerCapture(e.pointerId); set(true); });
+  for (const ev of ['pointerup', 'pointercancel', 'lostpointercapture']) el.addEventListener(ev, () => el.classList.contains('held') && set(false));
+  return set;
+}
+const holds = {};
+document.querySelectorAll('[data-hold]').forEach(b => holds[b.dataset.hold] = holdPad(b, b.dataset.hold));
+const flash = () => { cmd('flash'); $('flash').classList.add('held'); setTimeout(() => $('flash').classList.remove('held'), 120); };
+$('flash').addEventListener('pointerdown', flash);
+const tap = () => { cmd('tap'); $('tap').classList.add('held'); setTimeout(() => $('tap').classList.remove('held'), 90); };
+$('tap').addEventListener('pointerdown', tap);
+
+// 12 hues around the wheel, plus white-ish pastel at the end.
+const HUES = [0, 0.04, 0.09, 0.15, 0.3, 0.45, 0.5, 0.55, 0.62, 0.72, 0.8, 0.9];
+$('swatches').innerHTML = HUES.map(h => `<button data-h="${h}" style="background:hsl(${h * 360},100%,55%)"></button>`).join('');
+document.querySelectorAll('#swatches button').forEach(b => b.onclick = () => cmd('palette', {mode: 'lock', hue: +b.dataset.h}));
+
+// Keyboard: space flash, S/W/B hold, T tap, 0-4 looks, D drop now.
+const KEY_HOLD = { s: 'strobe', w: 'blinder', b: 'black_hold' };
+const KEY_LOOK = { '0': 'AUTO', '1': 'INTRO', '2': 'GROOVE', '3': 'BREAKDOWN', '4': 'DROP' };
+addEventListener('keydown', e => {
+  if (e.repeat || e.metaKey || e.ctrlKey || e.target.tagName === 'INPUT') return;
+  const k = e.key.toLowerCase();
+  if (k === ' ') { e.preventDefault(); flash(); }
+  else if (KEY_HOLD[k]) { holds[KEY_HOLD[k]](true); document.querySelector(`[data-hold=${KEY_HOLD[k]}]`).classList.add('held'); }
+  else if (k === 't') tap();
+  else if (k === 'd') cmd('drop_now');
+  else if (KEY_LOOK[k]) cmd('look', KEY_LOOK[k]);
+});
+addEventListener('keyup', e => { const n = KEY_HOLD[e.key.toLowerCase()]; if (n) holds[n](false); });
+
+// Fixture strips: mute toggle + level fader, built once per fixture list.
+let fxNames = '';
+function buildFixtures(ctl) {
+  const names = Object.keys(ctl || {});
+  if (names.join() === fxNames) return;
+  fxNames = names.join();
+  $('fixtures').innerHTML = names.map(n => `<div class="fx"><button data-fx="${n}">${n.toUpperCase()}</button>
+    <input type="range" min="0" max="1" step="0.05" data-fxl="${n}"><span class="lv" data-fxv="${n}"></span></div>`).join('');
+  document.querySelectorAll('[data-fx]').forEach(b => b.onclick = () => cmd('fixture', {name: b.dataset.fx, on: !S.fixture_ctl[b.dataset.fx].on}));
+  document.querySelectorAll('[data-fxl]').forEach(i => i.oninput = () => cmd('fixture', {name: i.dataset.fxl, level: +i.value}));
+}
+
+// Live view of what each fixture is outputting.
+function drawViz(preview) {
+  const cv = $('viz'), dpr = devicePixelRatio || 1, names = Object.keys(preview || {});
+  const rowH = 22, W = cv.clientWidth, H = Math.max(1, names.length) * rowH;
+  if (cv.width !== Math.round(W * dpr) || cv.height !== Math.round(H * dpr)) { cv.width = Math.round(W * dpr); cv.height = Math.round(H * dpr); cv.style.height = H + 'px'; }
+  const g = cv.getContext('2d'); g.setTransform(dpr, 0, 0, dpr, 0, 0); g.clearRect(0, 0, W, H);
+  const lw = 64;
+  names.forEach((n, i) => {
+    const y = i * rowH, px = preview[n] || [];
+    g.fillStyle = '#8a8fa8'; g.font = '700 11px system-ui'; g.fillText(n.toUpperCase(), 0, y + 15);
+    g.fillStyle = '#0b0c13'; g.fillRect(lw, y + 3, W - lw, rowH - 6);
+    const cw = (W - lw) / Math.max(1, px.length);
+    px.forEach((c, k) => { g.fillStyle = c; g.fillRect(lw + k * cw, y + 3, Math.ceil(cw) - (px.length > 1 ? 1 : 0), rowH - 6); });
+    if (!px.length) { g.fillStyle = '#3c415a'; g.fillText('idle / not streaming', lw + 8, y + 15); }
+  });
+}
+
 async function poll() {
   try {
     S = await (await fetch('/api/state')).json();
     $('scene').textContent = S.scene; $('scene').className = 'scene ' + S.scene;
-    $('deck').textContent = S.live ? `deck ${S.live} · ${S.bpm ? S.bpm.toFixed(1) : '—'} BPM` : 'no deck playing';
+    $('deck').textContent = S.free ? `tap clock · ${S.bpm.toFixed(1)} BPM` : S.live ? `deck ${S.live} · ${S.bpm ? S.bpm.toFixed(1) : '—'} BPM` : 'no deck playing';
+    const ov = [S.look && `LOOK ${S.look === 'INTRO' ? 'AMBIENT' : S.look}`, S.palette && S.palette.mode !== 'auto' && `COLOUR ${S.palette.mode.toUpperCase()}`,
+                S.speed !== 1 && `${S.speed}×`, S.mode === 'blackout' && 'BLACKOUT'].filter(Boolean).join(' · ');
+    $('override').hidden = !ov; $('override').textContent = ov;
     $('title').textContent = S.title || '';
-    $('count').textContent = S.beats_to_drop != null ? `DROP in ${Math.ceil(S.beats_to_drop)} beats` : (S.next_drop_bar ? '' : 'no drop ahead');
+    $('count').textContent = S.beats_to_drop != null ? `DROP in ${Math.ceil(S.beats_to_drop)} beats` : (S.next_drop_bar || S.free || !S.live ? '' : 'no drop ahead');
     $('pos').textContent = (S.bar ? `bar ${S.bar} · beat ${S.bwb}` + (S.section ? ` · ${S.section}` : '') : '')
       + (S.drops && S.drops.length ? ` · drops: ${S.drops.map(d => d.bar + (d.manual ? '*' : '')).join(', ')}` : '') + (S.fps ? ` · ${S.fps} fps` : '')
       + (S.calibration ? ` · calibration: ${S.calibration.marks} marks, predictions ${S.calibration.median_delta_beats > 0 ? '+' : ''}${S.calibration.median_delta_beats} beats` : '');
     $('prog').style.width = ((S.scene === 'BUILD' || S.scene === 'HOLD') ? S.progress * 100 : S.scene === 'DROP' || S.scene === 'PREDROP' ? 100 : 0) + '%';
+    document.querySelectorAll('#beats div').forEach((b, i) => b.classList.toggle('on', S.bwb === i + 1 && S.scene !== 'IDLE'));
     $('hold').classList.toggle('on', !!S.hold);
     $('black').classList.toggle('on', S.mode === 'blackout');
-    document.querySelectorAll('#mode button').forEach(b => b.classList.toggle('on', b.dataset.v === S.mode));
-    document.querySelectorAll('#follow button').forEach(b => b.classList.toggle('on', +b.dataset.v === S.follow));
+    segOn('mode', S.mode); segOn('follow', S.follow); segOn('sdiv', S.strobe_div); segOn('speed', S.speed);
+    segOn('pmode', S.palette ? S.palette.mode : 'auto');
+    document.querySelectorAll('#swatches button').forEach(b => b.classList.toggle('on', S.palette && S.palette.mode === 'lock' && Math.abs(+b.dataset.h - S.palette.hue) < 0.001));
+    document.querySelectorAll('[data-look]').forEach(b => b.classList.toggle('on', (S.look || 'AUTO') === b.dataset.look));
+    $('tbpm').textContent = (S.tap_bpm || 128).toFixed(1);
+    buildFixtures(S.fixture_ctl);
+    for (const [n, c] of Object.entries(S.fixture_ctl || {})) {
+      document.querySelector(`[data-fx="${n}"]`).classList.toggle('on', c.on);
+      const i = document.querySelector(`[data-fxl="${n}"]`);
+      if (document.activeElement !== i) i.value = c.level;
+      document.querySelector(`[data-fxv="${n}"]`).textContent = Math.round(c.level * 100) + '%';
+    }
+    drawViz(S.preview);
     if (document.activeElement !== $('int')) $('int').value = S.intensity;
     if (document.activeElement !== $('lead')) $('lead').value = S.lead_ms;
     $('iv').textContent = Math.round(S.intensity * 100) + '%'; $('lv').textContent = S.lead_ms;

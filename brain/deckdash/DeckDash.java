@@ -25,6 +25,7 @@ import java.util.concurrent.*;
  *   GET /api/events       Server-Sent Events, state pushed ~10x per second
  *   GET /api/art/N        album art for player N (JPEG)
  *   GET /api/waveform/N   waveform preview for player N (JSON)
+ *   /api/library..., /api/deck   library browser and deck commands (Library.java)
  */
 public class DeckDash {
     static final int PORT = Integer.getInteger("port", 8080);
@@ -92,6 +93,7 @@ public class DeckDash {
             if (t == null) send(ex, 404, "application/json", "{}".getBytes());
             else send(ex, 200, "application/json", t.getBytes(StandardCharsets.UTF_8));
         });
+        Library.register(http);
         http.start();
         log("dashboard on http://0.0.0.0:" + PORT + "/");
 
@@ -395,6 +397,8 @@ public class DeckDash {
             return this;
         }
         Json bool(String k, boolean v) { key(k); afterKey = false; b.append(v); return this; }
+        /** A bare number inside an array. */
+        Json item(long v) { sep(); b.append(v); return this; }
         /** Write a pre-serialised JSON value (e.g. a number array) under key k. */
         Json raw(String k, String json) { key(k); afterKey = false; b.append(json); return this; }
         void quote(String s) {
