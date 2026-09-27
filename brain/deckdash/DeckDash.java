@@ -58,6 +58,7 @@ public class DeckDash {
         vcdj.setDeviceName("RaveCave");
         // Stay off the real players' numbers; metadata comes from the USB export via CrateDigger.
         vcdj.setUseStandardPlayerNumber(false);
+        TempoMaster.configure(vcdj);            // -Dtempo=on: a standard number, so the Pi can be master
         log("waiting for DJ Link devices...");
         while (!vcdj.start()) {
             log("no DJ Link network yet, retrying in 5 s");
@@ -101,6 +102,7 @@ public class DeckDash {
             else send(ex, 200, "application/json", t.getBytes(StandardCharsets.UTF_8));
         });
         Library.register(http);
+        TempoMaster.start(http);
         http.start();
         log("dashboard on http://0.0.0.0:" + PORT + "/");
 
@@ -305,6 +307,7 @@ public class DeckDash {
         j.raw("mixer", mixerFresh ? mixerJson : "{\"connected\":false}");
         String show = showState();
         j.raw("show", show != null ? show : "null");
+        j.raw("tempo", TempoMaster.json());
 
         j.key("players").arr();
         for (DeviceAnnouncement d : devs) {

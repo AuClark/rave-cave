@@ -188,10 +188,20 @@
     <div class="automix">
       <button class="lbtn" id="amOn" title="Mixes from deck to deck on its own. Keep both channel faders up.">AUTOMIX</button>
       <select id="amMode" title="How the next track is chosen"><option value="queue">Next in this list</option><option value="harmonic">Best match (BPM + key)</option></select>
-      <select id="amOverlap" title="How long both tracks play together"><option value="16">4-bar mix</option><option value="32">8-bar mix</option><option value="64">16-bar mix</option></select>
+      <select id="amStyle" title="Where the mix lands"><option value="drop">Drop on outro end</option><option value="overlap">Fixed overlap</option></select>
+      <select id="amOverlap" title="Fixed overlap: how long both tracks play together"><option value="16">16 beats</option><option value="32">32 beats</option><option value="64">64 beats</option></select>
+      <button class="lbtn" id="amTempo" title="The Pi takes tempo master and glides to each new track's original BPM during the mix (needs deckdash -Dtempo=on)">TEMPO RAMP</button>
       <span class="amstatus" id="amStatus">Automix is off.</span>
       <button class="lbtn" id="amSkip" title="Choose a different next track">SKIP</button>
       <button class="lbtn" id="amNow" title="Start the mix at the next bar">MIX NOW</button>
+    </div>
+    <div class="automix" id="tempoRow">
+      <b style="font-size:12px;letter-spacing:.1em">TEMPO</b>
+      <span class="amstatus" id="tempoStatus">—</span>
+      <select id="tempoDeck" title="Whose original BPM to go back to, and who gets master"></select>
+      <select id="tempoBeats" title="How long the glide takes"><option value="16">over 16 beats</option><option value="32">over 32 beats</option><option value="64" selected>over 64 beats</option><option value="128">over 128 beats</option></select>
+      <button class="lbtn" id="tempoReset" title="The Pi takes master (if it hasn't) and glides every synced deck back to this deck's original BPM">RESET BPM</button>
+      <button class="lbtn" id="tempoHand" title="Give tempo master to this deck">MAKE MASTER</button>
     </div>
     <div class="libdecks" id="libdecks"></div>
     <div class="libbody">
@@ -987,7 +997,9 @@ async function playWhenLoaded(deck, t) {
 // track starts on the bar where the playing one's outro begins, both play for the overlap, then the old
 // deck stops on a bar line and the new one becomes master. Then it repeats the other way round.
 const AM_LEAD_MS = 25;                                  // network + deck start latency to send early
+const AM_MAX_LEAD = 128;                                // drop-aligned: longest lead-in before we fall back to an overlap
 const am = { on: false, mode: view.amMode || "queue", overlap: +(view.amOverlap || 32), phase: "off",
+             style: view.amStyle || "drop", tempo: false, takeSent: 0,
              next: null, skipped: new Set(), loadSent: 0, syncSent: 0, masterSent: 0, startTimer: null,
              stopTimer: null, forceStart: null, said: "" };
 
@@ -995,6 +1007,27 @@ function amSay(html) { if (html !== am.said) { am.said = html; $("#amStatus").in
 function barFirstAtOrBefore(tl, b) { let r = tl.barFirstBeat[0]; for (const x of tl.barFirstBeat) { if (x <= b) r = x; else break; } return r; }
 function barFirstAtOrAfter(tl, b) { const x = tl.barFirstBeat.find(x => x >= b); return x || tl.beatMs.length; }
 function barNumber(tl, beat) { return tl.barFirstBeat.filter(x => x <= beat).length; }
+// The beat after deck A's outro (or its last beat): where a drop-aligned mix puts B's drop.
+function outroEndBeat(tl) {
+  const outro = tl.sections.filter(s => s.type === "outro").pop();
+  return Math.min(tl.beatMs.length, outro ? outro.endBeat + 1 : tl.beatMs.length);
+}
+// How many beats B plays before its first drop, from where it sits now.
+function leadToDrop(B) {
+  const tlB = timelines[B.number] && timelines[B.number].data;
+  if (!tlB || !tlB.drops || !tlB.drops.length) return null;
+  const ph = beatPhase(tlB, playheadMs(B, performance.now()));
+  const cue = ph.beat + ph.frac, d = tlB.drops.find(d => d.beat > cue + 4);
+  return d ? { beats: Math.round(d.beat - cue), bar: d.bar } : null;
+}
+const tempoState = () => lastState && lastState.tempo;
+async function tempoCmd(body) {
+  try {
+    const r = await fetch("/api/tempo", { method: "POST", body: JSON.stringify(body) }), j = await r.json();
+    if (!j.ok) throw new Error(j.error || "failed");
+    return true;
+  } catch (e) { toast("Tempo: " + e.message, true); return false; }
+}
 function mixStartBeat(tl, overlap) {
   const last = tl.beatMs.length, outro = tl.sections.filter(s => s.type === "outro").pop();
   const b = outro ? outro.startBeat : last - overlap;
@@ -1023,7 +1056,7 @@ function amPickNext(currentId) {
 
 function amStop(reason) {
   clearTimeout(am.startTimer); clearTimeout(am.stopTimer);
-  am.startTimer = am.stopTimer = null; am.forceStart = null;
+  am.startTimer = am.stopTimer = null; am.forceStart = null; am.plan = null;
   am.phase = am.on ? "prep" : "off";
   if (reason) amSay(reason);
 }
@@ -1058,24 +1091,49 @@ function amTick() {
   // Retry a few times (a deck can miss a command), then leave it: the mix still starts on the bar.
   const tries = am.next.tries || (am.next.tries = { sync: 0, master: 0 });
   if (!bs.synced && tries.sync < 3 && now - am.syncSent > 3000) { am.syncSent = now; tries.sync++; deckCmd(B.number, "sync_on"); }
-  if (!A.status.tempoMaster && tries.master < 3 && now - am.masterSent > 3000) { am.masterSent = now; tries.master++; deckCmd(A.number, "master"); }
+  const ts = tempoState(), piMaster = !!(ts && ts.master);
+  if (am.tempo && ts && ts.enabled) {
+    // Tempo ramps: the Pi holds master and both decks follow it with SYNC on.
+    if (!piMaster && now - am.takeSent > 3000) { am.takeSent = now; tempoCmd({ action: "take" }); }
+    if (!A.status.synced && tries.syncA === undefined) { tries.syncA = 1; deckCmd(A.number, "sync_on"); }
+  } else if (!A.status.tempoMaster && !piMaster && tries.master < 3 && now - am.masterSent > 3000) {
+    am.masterSent = now; tries.master++; deckCmd(A.number, "master");
+  }
 
   // 2. When to start it: the bar where deck A's outro begins (or MIX NOW's bar).
   const tl = timelines[A.number] && timelines[A.number].data;
   if (!tl) return amSay(`Next: ${nextTitle} on deck ${B.number}. Waiting for deck ${A.number}'s beat grid…`);
   const ph = beatPhase(tl, playheadMs(A, now)), cur = ph.beat + ph.frac;
-  let start = am.forceStart || mixStartBeat(tl, am.overlap);
-  if (start < cur + 1) start = am.forceStart = barFirstAtOrAfter(tl, cur + 2);   // switched on late: next bar
+  // Once a mix is scheduled, keep its plan (the "is there time?" checks below would fail in the last beat).
+  if (am.startTimer && am.plan) {
+    return amSay(`Next: ${nextTitle} on deck ${B.number} · starts at bar ${barNumber(tl, am.plan.start)} of deck ${A.number} ` +
+                 `(<b>${Math.max(0, Math.ceil(am.plan.start - cur))}</b> beats) · ${am.plan.how}`);
+  }
+  // Drop on outro end: start B early enough that its first drop lands on the beat after A's outro.
+  let start, stop, how, note = "";
+  const lead = am.style === "drop" && !am.forceStart ? leadToDrop(B) : null;
+  if (lead && lead.beats <= AM_MAX_LEAD && outroEndBeat(tl) - lead.beats > cur + 1) {
+    stop = outroEndBeat(tl); start = stop - lead.beats;
+    how = `its drop (bar ${lead.bar}) lands as deck ${A.number}'s outro ends · ${lead.beats}-beat lead-in`;
+  } else {
+    if (am.style === "drop" && !am.forceStart)
+      note = lead ? (lead.beats > AM_MAX_LEAD ? ` (its drop is ${lead.beats} beats in, too long a lead-in, so a ${am.overlap}-beat overlap)` : " (too late for its drop, so an overlap)")
+                  : " (no drop found in it, so an overlap)";
+    start = am.forceStart || mixStartBeat(tl, am.overlap);
+    if (start < cur + 1) start = am.forceStart = barFirstAtOrAfter(tl, cur + 2);   // switched on late: next bar
+    stop = Math.min(tl.beatMs.length, barFirstAtOrAfter(tl, start + am.overlap));
+    how = `${stop - start}-beat overlap${note}`;
+  }
   const beatsLeft = start - cur;
-  if (!am.startTimer && beatsLeft <= 16) amSchedule(A, B, tl, start);
-  amSay(`Next: ${nextTitle} on deck ${B.number} · mixes in at bar ${barNumber(tl, start)} of deck ${A.number} ` +
-        `(<b>${Math.ceil(beatsLeft)}</b> beats) · ${am.overlap / 4}-bar overlap`);
+  if (!am.startTimer && beatsLeft <= 16) { am.plan = { start, stop, how }; amSchedule(A, B, tl, start, stop); }
+  amSay(`Next: ${nextTitle} on deck ${B.number} · starts at bar ${barNumber(tl, start)} of deck ${A.number} ` +
+        `(<b>${Math.ceil(beatsLeft)}</b> beats) · ${how}`);
 }
 
-function amSchedule(A, B, tl, start) {
+function amSchedule(A, B, tl, start, stopBeat) {
   const a = A.number, b = B.number, next = am.next;
   am.startTimer = setTimeout(async () => {
-    am.startTimer = null;
+    am.startTimer = null; am.plan = null;
     const pa = lastState.players.find(p => p.number === a), pb = lastState.players.find(p => p.number === b);
     // Only if nothing changed in the meantime.
     if (!am.on || !pa || !pb || !pa.status.playing || pb.status.playing || pb.status.rekordboxId !== next.id) return;
@@ -1083,21 +1141,32 @@ function amSchedule(A, B, tl, start) {
     am.phase = "mixing"; am.forceStart = null;
     played.add(deckKey(pb.status));
     toast(`Automix: "${next.title}" in on deck ${b}`);
-    amSay(`Mixing: deck ${a} → deck ${b} (<b>${esc(next.title)}</b>) over ${am.overlap / 4} bars`);
-    const stopBeat = Math.min(tl.beatMs.length, barFirstAtOrAfter(tl, start + am.overlap));
+    amSay(`Mixing: deck ${a} → deck ${b} (<b>${esc(next.title)}</b>) over ${stopBeat - start} beats`);
+    // Tempo ramp: glide to the new track's own BPM, arriving as the old one stops.
+    const ts = tempoState(), native = pb.status.trackBpm;
+    if (am.tempo && ts && ts.master && native && Math.abs(native - ts.bpm) > 0.2)
+      tempoCmd({ action: "ramp", to: native, beats: stopBeat - start });
     am.stopTimer = setTimeout(async () => {
       am.stopTimer = null;
       const nb = lastState.players.find(p => p.number === b);
       am.phase = am.on ? "prep" : "off"; am.next = null;
       if (!am.on || !nb || !nb.status.playing) return;  // you took over: leave deck A alone
-      await deckCmd(b, "master");
+      const t = tempoState();
+      if (!(t && t.master)) await deckCmd(b, "master"); // the Pi keeps master while it's ramping
       await deckCmd(a, "stop");
       toast(`Automix: deck ${b} leads, picking the next track for deck ${a}`);
     }, timeOfBeat(pa, tl, stopBeat) - performance.now() - AM_LEAD_MS);
   }, timeOfBeat(A, tl, start) - performance.now() - AM_LEAD_MS);
 }
 
-$("#amMode").value = am.mode; $("#amOverlap").value = String(am.overlap);
+$("#amMode").value = am.mode; $("#amOverlap").value = String(am.overlap); $("#amStyle").value = am.style;
+$("#amStyle").onchange = e => { am.style = view.amStyle = e.target.value; saveView(); if (am.phase !== "mixing") amStop(); };
+$("#amTempo").onclick = () => {
+  const ts = tempoState();
+  if (!(ts && ts.enabled)) return toast("Tempo ramps need deckdash started with -Dtempo=on (the repo owner's call)", true);
+  am.tempo = !am.tempo; $("#amTempo").classList.toggle("on", am.tempo);
+  toast(am.tempo ? "Tempo ramp on: the Pi takes master and both decks follow it with SYNC" : "Tempo ramp off");
+};
 $("#amMode").onchange = e => { am.mode = view.amMode = e.target.value; saveView(); if (am.phase !== "mixing") { am.next = null; amStop(); } };
 $("#amOverlap").onchange = e => { am.overlap = view.amOverlap = +e.target.value; saveView(); if (am.phase !== "mixing") amStop(); };
 $("#amOn").onclick = () => {
@@ -1114,12 +1183,46 @@ $("#amNow").onclick = () => {
   if (!am.on || am.phase === "mixing") return;
   const A = lastState && lastState.players.find(p => p.status.playing), tl = A && timelines[A.number] && timelines[A.number].data;
   if (!tl) return toast("Nothing playing to mix out of", true);
-  clearTimeout(am.startTimer); am.startTimer = null;
+  clearTimeout(am.startTimer); am.startTimer = null; am.plan = null;
   const ph = beatPhase(tl, playheadMs(A, performance.now()));
   am.forceStart = barFirstAtOrAfter(tl, ph.beat + ph.frac + 2);
   amTick();
 };
 setInterval(amTick, 200);
+
+// Tempo row: RESET BPM glides every synced deck back to the chosen deck's original BPM, with the Pi
+// as master; MAKE MASTER hands master to that deck (ending the Pi's).
+function renderTempo() {
+  const ts = tempoState(), ps = lastState ? lastState.players.slice().sort((a, b) => a.number - b.number) : [];
+  const opts = ps.map(p => `<option value="${p.number}">Deck ${p.number} · ${p.status.trackBpm ? p.status.trackBpm.toFixed(2) + " original" : "no track"}</option>`).join("");
+  const sel = $("#tempoDeck");
+  if (sel.dataset.opts !== opts) { const v = sel.value; sel.innerHTML = opts; sel.dataset.opts = opts; if (v) sel.value = v; }
+  const master = ps.find(p => p.status.tempoMaster);
+  let txt;
+  if (!ts || !ts.enabled) txt = `Master: ${master ? "deck " + master.number : "none"} · ${lastState && lastState.master.bpm ? lastState.master.bpm.toFixed(2) : "—"} BPM · the Pi can't be master (deckdash needs -Dtempo=on)`;
+  else if (ts.master) txt = `<b>Pi is master</b> (player ${ts.player}) at <b>${ts.bpm.toFixed(2)}</b> BPM` + (ts.ramp ? ` · gliding to ${ts.ramp.to.toFixed(2)} (${Math.round(ts.ramp.done)}/${ts.ramp.beats} beats)` : "");
+  else txt = `Master: ${master ? "deck " + master.number : "none"} at ${lastState.master.bpm ? lastState.master.bpm.toFixed(2) : "—"} BPM${ts.liningUp ? " · Pi lining up to take over…" : ""}`;
+  $("#tempoStatus").innerHTML = txt;
+  $("#tempoReset").disabled = !(ts && ts.enabled);
+}
+$("#tempoReset").onclick = async () => {
+  const deck = +$("#tempoDeck").value, beats = +$("#tempoBeats").value, ts = tempoState();
+  if (!deck) return;
+  if (!ts.master) {
+    if (!(await tempoCmd({ action: "take" }))) return;
+    const t0 = performance.now();
+    while (!(tempoState() && tempoState().master) && performance.now() - t0 < 4000) await new Promise(r => setTimeout(r, 100));
+    if (!tempoState().master) return toast("The Pi couldn't take master (is a deck playing as master?)", true);
+  }
+  if (await tempoCmd({ action: "reset", deck, beats })) toast(`Gliding back to deck ${deck}'s original BPM over ${beats} beats (decks with SYNC on follow)`);
+};
+$("#tempoHand").onclick = async () => {
+  const deck = +$("#tempoDeck").value, ts = tempoState();
+  if (!deck) return;
+  if (ts && ts.enabled && ts.master) { if (await tempoCmd({ action: "release", deck })) toast(`Deck ${deck} is master`); }
+  else if (await deckCmd(deck, "master")) toast(`Deck ${deck} is master`);
+};
+setInterval(renderTempo, 250);
 
 // ---------------------------------------------------------------- drag and drop
 // Drag a library row, or a deck (its waveform lane or its chip above the library), onto a deck's
