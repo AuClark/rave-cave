@@ -20,6 +20,7 @@ Live values and presets live in state/ next to this file (not in git).
 
     python3 visuals.py [port]
 """
+import hashlib
 import json
 import queue
 import re
@@ -46,6 +47,16 @@ clients = []            # queue.Queue per connected page
 sketch = None           # {"name", "title", "about", "groups", "glsl"}
 values = {}             # param id -> float
 last_state = b"null"
+
+
+def code_version():
+    """Changes whenever the control page or the shared renderer changes (a deploy), so pages reload."""
+    h = hashlib.sha1()
+    for f in sorted([*WEB.rglob("*"), RENDER_JS]):
+        if f.is_file():
+            st = f.stat()
+            h.update(f"{f.name}{st.st_mtime_ns}{st.st_size}".encode())
+    return h.hexdigest()[:12]
 
 
 def log(msg):
@@ -239,7 +250,8 @@ class H(SimpleHTTPRequestHandler):
         self.end_headers()
         with lock:
             clients.append(q)
-            first = ("data: " + json.dumps({"t": "sketch", "sketch": sketch}) + "\n\n"
+            first = ("data: " + json.dumps({"t": "hello", "version": code_version()}) + "\n\n"
+                     "data: " + json.dumps({"t": "sketch", "sketch": sketch}) + "\n\n"
                      "data: " + json.dumps({"t": "params", "params": values}) + "\n\n").encode()
         try:
             self.wfile.write(first)

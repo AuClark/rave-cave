@@ -10,12 +10,14 @@
   /api/layouts      GET preset names
   /api/layouts/NAME GET a preset; POST saves the current layout as NAME;
                     POST .../NAME/load makes it current
-  /api/screen       POST {"w":..,"h":..} from the output page (its real resolution)
+  /api/screen       POST from the output page: {"w","h"} (its real resolution) plus stats
+                    {"fps","scale","gpu"} every few seconds, shown in the editor
 
 Layouts live in layouts/ next to this file (not in git): current.json plus presets.
 
     python3 projector.py [port]
 """
+import hashlib
 import json
 import queue
 import re
@@ -41,6 +43,7 @@ DEFAULT_LAYOUT = {
     "selected": None,
     "lead_ms": 60,          # latency compensation for this projector
     "brightness": 1.0,
+    "render_scale": 0,      # 0 = auto (drop resolution to keep the frame rate up), else 0.25..1
     "surfaces": [
         {"id": "s1", "name": "Wall", "content": "show", "opacity": 1.0, "hue_shift": 0.0,
          "corners": [[0.1, 0.1], [0.9, 0.1], [0.9, 0.9], [0.1, 0.9]]},
@@ -54,6 +57,16 @@ clients = []            # queue.Queue per connected page
 layout = None
 screen = {"w": 1920, "h": 1080}
 last_state = b"null"
+
+
+def code_version():
+    """Changes whenever a page file changes, so open pages know to reload after a deploy."""
+    h = hashlib.sha1()
+    for f in sorted(WEB.rglob("*")):
+        if f.is_file():
+            st = f.stat()
+            h.update(f"{f.name}{st.st_mtime_ns}{st.st_size}".encode())
+    return h.hexdigest()[:12]
 
 
 def log(msg):
@@ -73,6 +86,8 @@ def clean_layout(d):
     out["selected"] = d.get("selected") if isinstance(d.get("selected"), str) else None
     out["lead_ms"] = int(max(0, min(500, d.get("lead_ms", out["lead_ms"]))))
     out["brightness"] = float(max(0.0, min(1.0, d.get("brightness", out["brightness"]))))
+    rs = float(d.get("render_scale", 0) or 0)
+    out["render_scale"] = 0 if rs <= 0 else max(0.25, min(1.0, rs))
     surfaces = []
     for s in d.get("surfaces", [])[:32]:
         c = s.get("corners", [])
@@ -212,6 +227,11 @@ class H(SimpleHTTPRequestHandler):
             if path == "/api/screen":
                 d = self._body()
                 screen = {"w": int(d.get("w", 1920)), "h": int(d.get("h", 1080))}
+                for k in ("fps", "scale"):
+                    if k in d:
+                        screen[k] = round(float(d[k]), 2)
+                if "gpu" in d:
+                    screen["gpu"] = str(d["gpu"])[:80]
                 broadcast({"t": "screen", "screen": screen})
                 return self._json(200, {"ok": True})
             m = re.match(r"^/api/layouts/([^/]+?)(/load)?$", path)
@@ -243,7 +263,8 @@ class H(SimpleHTTPRequestHandler):
         self.end_headers()
         with lock:
             clients.append(q)
-            first = ("data: " + json.dumps({"t": "layout", "layout": layout}) + "\n\n"
+            first = ("data: " + json.dumps({"t": "hello", "version": code_version()}) + "\n\n"
+                     "data: " + json.dumps({"t": "layout", "layout": layout}) + "\n\n"
                      "data: " + json.dumps({"t": "screen", "screen": screen}) + "\n\n").encode()
         try:
             self.wfile.write(first)

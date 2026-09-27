@@ -88,6 +88,11 @@
       <h3>Output</h3>
       <label>Latency compensation <span id="vLead"></span> ms</label><input id="pLead" type="range" min="0" max="300" step="5">
       <label>Brightness <span id="vBr"></span></label><input id="pBr" type="range" min="0" max="1" step="0.05">
+      <div class="row"><label>Render resolution</label>
+        <select id="pRs" class="grow" title="Auto lowers the projector's render resolution when its frame rate drops">
+          <option value="0">auto (keep the frame rate up)</option><option value="1">100%</option>
+          <option value="0.75">75%</option><option value="0.5">50%</option><option value="0.35">35%</option>
+        </select></div>
     </div>
     <div class="card">
       <h3>Presets</h3>
@@ -123,7 +128,10 @@ function sizeStage() {
   stage.style.height = h + "px";
   const d = devicePixelRatio || 1;
   R.resize(Math.round(w * d), Math.round(h * d));
-  $("scr").textContent = `projector ${screen.w}×${screen.h}`;
+  $("scr").textContent = `projector ${screen.w}×${screen.h}` + (screen.fps != null
+    ? ` · ${Math.round(screen.fps)} fps · ${Math.round((screen.scale ?? 1) * 100)}% res` : "");
+  $("scr").title = screen.gpu || "";
+  $("scr").style.color = screen.fps != null && screen.fps < 40 ? "#ff8080" : "";
 }
 addEventListener("resize", sizeStage);
 sizeStage();
@@ -230,6 +238,7 @@ const shapeLabel = (sl, v) => { const d = SHAPE.find(x => x[0] === sl); $("v" + 
 for (const [sl, key] of SHAPE)
   $(sl).oninput = e => { const s = sel(); if (s) { s[key] = +e.target.value; shapeLabel(sl, s[key]); push(); } };
 $("pLead").oninput = e => { L.lead_ms = +e.target.value; $("vLead").textContent = L.lead_ms; push(); };
+$("pRs").onchange = e => { L.render_scale = +e.target.value; push(true); };
 $("pBr").oninput = e => { L.brightness = +e.target.value; $("vBr").textContent = Math.round(L.brightness * 100) + "%"; push(); };
 
 $("bMask").onclick = () => { draft = []; $("bMask").style.display = "none"; $("bMaskDone").style.display = ""; $("maskHint").style.display = ""; };
@@ -274,6 +283,7 @@ function ui() {
     for (const [sl, key, dflt] of SHAPE) { const v = s[key] ?? dflt; $(sl).value = v; shapeLabel(sl, v); }
   }
   $("pLead").value = L.lead_ms; $("vLead").textContent = L.lead_ms;
+  $("pRs").value = String(L.render_scale || 0);
   $("pBr").value = L.brightness; $("vBr").textContent = Math.round(L.brightness * 100) + "%";
 }
 
