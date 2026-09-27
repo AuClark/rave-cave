@@ -1,5 +1,5 @@
 [Unit]
-Description=Rave Cave Panel Controller Web Server
+Description=Sektor5 Panel Controller Web Server
 After=network-online.target
 Wants=network-online.target
 

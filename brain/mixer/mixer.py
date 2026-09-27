@@ -13,11 +13,11 @@ Every 50 ms it sends a JSON "mixer" message over UDP to deckdash (:9101) and sho
 analysis of the master mix ("audio": bass/mid/high energy, kicks, bass out) and the set
 recorder's state ("rec").
 
-The recorder writes the master mix (Rec Out) to RAVE_REC_DIR (default /srv/rave/recordings)
+The recorder writes the master mix (Rec Out) to S5_REC_DIR (default /srv/rave/recordings)
 as FLAC (WAV if flac isn't installed) whenever music plays: it starts after 3 s of sound
 (keeping 3 s of pre-roll) and stops after 90 s of silence. Next to each recording it keeps a
 tracklist (.txt and .cue) of the deck the lights follow, from deckdash's /api/state.
-RAVE_REC=off turns it off.
+S5_REC=off turns it off (the old RAVE_REC names still work).
 
     python3 brain/mixer/mixer.py
 """
@@ -164,8 +164,8 @@ class Recorder:
     MIN_FREE = 2 * 1024 ** 3                # stop before the eMMC gets tight
 
     def __init__(self):
-        self.enabled = os.environ.get("RAVE_REC", "on") != "off"
-        self.dir = Path(os.environ.get("RAVE_REC_DIR", "/srv/rave/recordings"))
+        self.enabled = os.environ.get("S5_REC", os.environ.get("RAVE_REC", "on")) != "off"
+        self.dir = Path(os.environ.get("S5_REC_DIR", os.environ.get("RAVE_REC_DIR", "/srv/rave/recordings")))
         self.pre = collections.deque(maxlen=int(self.PREROLL_S / BLOCK_S))
         self.flac = self.wav = None
         self.name = self.error = None

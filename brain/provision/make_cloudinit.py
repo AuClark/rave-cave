@@ -1,6 +1,6 @@
-"""Write cloud-init files for flashing the Rave Cave CM4 (Raspberry Pi OS Trixie).
+"""Write cloud-init files for flashing the Sektor5 CM4 (Raspberry Pi OS Trixie).
 
-Takes the Wi-Fi SSID/password from RAVE_WIFI_SSID / RAVE_WIFI_PASSWORD (environment or the repo's
+Takes the Wi-Fi SSID/password from S5_WIFI_SSID / S5_WIFI_PASSWORD (or the old RAVE_* names) (environment or the repo's
 git-ignored .env), otherwise asks in the terminal (password hidden), and writes
 user-data + network-config to ~/tools/rpi/cloudinit/, outside the repo so
 the password never gets committed.
@@ -30,7 +30,7 @@ if _root and (_root / ".env").is_file():
 HOSTNAME = "ravecave"
 USER = "pi"
 TIMEZONE = "Australia/Sydney"
-COUNTRY = os.environ.get("RAVE_WIFI_COUNTRY", "AU")
+COUNTRY = os.environ.get("S5_WIFI_COUNTRY", os.environ.get("RAVE_WIFI_COUNTRY", "AU"))
 PUBKEY = Path.home() / ".ssh" / "id_ed25519.pub"
 OUT = Path.home() / "tools" / "rpi" / "cloudinit"
 
@@ -83,8 +83,8 @@ NETWORK_CONFIG = """network:
 
 def main():
     pubkey = PUBKEY.read_text().strip()
-    ssid = os.environ.get("RAVE_WIFI_SSID") or input("Wi-Fi SSID: ").strip()
-    password = os.environ.get("RAVE_WIFI_PASSWORD") or getpass.getpass("Wi-Fi password (hidden): ")
+    ssid = os.environ.get("S5_WIFI_SSID", os.environ.get("RAVE_WIFI_SSID")) or input("Wi-Fi SSID: ").strip()
+    password = os.environ.get("S5_WIFI_PASSWORD", os.environ.get("RAVE_WIFI_PASSWORD")) or getpass.getpass("Wi-Fi password (hidden): ")
     OUT.mkdir(parents=True, exist_ok=True)
     (OUT / "user-data").write_text(USER_DATA.format(
         hostname=HOSTNAME, timezone=TIMEZONE, user=USER, pubkey=pubkey))

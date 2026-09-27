@@ -35,7 +35,7 @@ python3 -m venv ~/pyramid-venv
 echo "== Installing the pyramid service (starts on boot)"
 sudo tee /etc/systemd/system/pyramid.service >/dev/null <<EOF
 [Unit]
-Description=Rave Cave pyramid (WS2815 via SPI, DDP receiver)
+Description=Sektor5 pyramid (WS2815 via SPI, DDP receiver)
 After=network-online.target
 
 [Service]

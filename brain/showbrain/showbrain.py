@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Rave Cave show brain: read-ahead lighting driven by the decks.
+"""Sektor5 show brain: read-ahead lighting driven by the decks.
 
 Inputs:  deckdash feed (UDP 127.0.0.1:9100: beats + 20 Hz status) and
          per-track timelines (http://127.0.0.1:8080/api/timeline/N).

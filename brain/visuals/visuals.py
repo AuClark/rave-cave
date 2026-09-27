@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Rave Cave generative visuals: control host on :8110.
+"""Sektor5 generative visuals: control host on :8110.
 
 A sketch is a GLSL content() function (sketches/NAME.glsl) plus its parameter
 schema (sketches/NAME.json). The projector renders it on any surface whose

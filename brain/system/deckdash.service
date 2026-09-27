@@ -1,5 +1,5 @@
 [Unit]
-Description=Rave Cave deck dashboard (Pro DJ Link via beat-link)
+Description=Sektor5 deck dashboard (Pro DJ Link via beat-link)
 After=network-online.target
 Wants=network-online.target
 

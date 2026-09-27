@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Rave Cave Panel Controller Web Server
+Sektor5 Panel Controller Web Server
 
 Simple Flask app for monitoring Raspberry Pi 3 Model A+ with RGB Matrix Bonnet
 and Pi Camera. Serves live camera feed and hardware status.
@@ -127,7 +127,7 @@ def index():
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Rave Cave Panel Controller</title>
+    <title>Sektor5 Panel Controller</title>
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -206,7 +206,7 @@ def index():
 </head>
 <body>
     <div class="container">
-        <h1>🎛️ Rave Cave Panel Controller</h1>
+        <h1>🎛️ Sektor5 Panel Controller</h1>
         
         <div class="section">
             <h2>📹 Live Camera Feed</h2>
@@ -224,7 +224,7 @@ def index():
         </div>
         
         <div class="footer">
-            Rave Cave • rave-box • <a href="/api/status" style="color: #555;">JSON API</a>
+            Sektor5 • rave-box • <a href="/api/status" style="color: #555;">JSON API</a>
         </div>
     </div>
     
@@ -342,7 +342,7 @@ if __name__ == '__main__':
     camera_bg = Thread(target=camera_thread, daemon=True)
     camera_bg.start()
     
-    logger.info("Starting Rave Cave Panel Controller on 0.0.0.0:8080")
+    logger.info("Starting Sektor5 Panel Controller on 0.0.0.0:8080")
     logger.info("Camera status will be available at http://rave-box.local:8080/")
     
     # Run Flask app

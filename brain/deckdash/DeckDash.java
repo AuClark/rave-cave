@@ -55,7 +55,7 @@ public class DeckDash {
         });
 
         VirtualCdj vcdj = VirtualCdj.getInstance();
-        vcdj.setDeviceName("RaveCave");
+        vcdj.setDeviceName("Sektor5");
         // Stay off the real players' numbers; metadata comes from the USB export via CrateDigger.
         vcdj.setUseStandardPlayerNumber(false);
         TempoMaster.configure(vcdj);            // -Dtempo=on: a standard number, so the Pi can be master
@@ -276,7 +276,7 @@ public class DeckDash {
         long now = System.currentTimeMillis();
         j.num("now", now).num("uptimeSec", (now - started) / 1000);
         VirtualCdj v = VirtualCdj.getInstance();
-        j.key("self").obj().num("deviceNumber", v.getDeviceNumber()).str("name", "RaveCave")
+        j.key("self").obj().num("deviceNumber", v.getDeviceNumber()).str("name", "Sektor5")
                 .str("address", String.valueOf(v.getLocalAddress())).end();
 
         DeviceUpdate master = v.getTempoMaster();

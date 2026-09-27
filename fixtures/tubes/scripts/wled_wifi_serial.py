@@ -5,7 +5,7 @@ after flashing. Handy when a board lands on a new network.
 
     ~/.venvs/ble/bin/python fixtures/tubes/scripts/wled_wifi_serial.py [port]
 
-Reads RAVE_WIFI_SSID / RAVE_WIFI_PASSWORD from the environment or the repo's .env
+Reads S5_WIFI_SSID / S5_WIFI_PASSWORD (or the old RAVE_* names) from the environment or the repo's .env
 (git-ignored, see .env.example). Passing "SSID" "password" [port] still works.
 
 Prints the device URL WLED reports once it joins.
@@ -67,9 +67,9 @@ def main():
     if len(args) >= 2 and not args[0].startswith("/dev/"):
         ssid, password, args = args[0], args[1], args[2:]
     else:
-        ssid, password = os.environ.get("RAVE_WIFI_SSID"), os.environ.get("RAVE_WIFI_PASSWORD")
+        ssid, password = os.environ.get("S5_WIFI_SSID", os.environ.get("RAVE_WIFI_SSID")), os.environ.get("S5_WIFI_PASSWORD", os.environ.get("RAVE_WIFI_PASSWORD"))
     if not ssid or password is None:
-        sys.exit("Set RAVE_WIFI_SSID and RAVE_WIFI_PASSWORD in .env (see .env.example)")
+        sys.exit("Set S5_WIFI_SSID and S5_WIFI_PASSWORD in .env (see .env.example)")
     port = args[0] if args else "/dev/cu.usbserial-0001"
     s = serial.Serial()
     s.port, s.baudrate, s.timeout = port, 115200, 0.2

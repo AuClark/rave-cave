@@ -9,7 +9,7 @@
     {
       "name": "tube1",
       "kind": "strip",
-      "host": "${RAVE_TUBE1_HOST:-rave-tube-1.local}",
+      "host": "${S5_TUBE1_HOST:-rave-tube-1.local}",
       "leds": 60,
       "brightness": 0.6,
       "role": {
@@ -19,7 +19,7 @@
     {
       "name": "tube2",
       "kind": "strip",
-      "host": "${RAVE_TUBE2_HOST:-rave-tube-2.local}",
+      "host": "${S5_TUBE2_HOST:-rave-tube-2.local}",
       "leds": 60,
       "brightness": 0.6,
       "role": {
@@ -29,7 +29,7 @@
     {
       "name": "panel",
       "kind": "panel",
-      "host": "${RAVE_BOX_HOST:-rave-box.local}",
+      "host": "${S5_BOX_HOST:-rave-box.local}",
       "width": 128,
       "height": 16,
       "brightness": 0.8

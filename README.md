@@ -1,4 +1,6 @@
-# Rave Cave
+<p><img src="docs/brand/png/sektor5-logo-orange-on-black.png" alt="SEKTOR5" height="48"></p>
+
+# Sektor5
 
 A lighting rig driven by the DJ decks. A Raspberry Pi Compute Module 4 (the **brain**) joins the Pioneer DJ Link network, reads what each deck is playing, analyses every loaded track ahead of time to find breakdowns, builds and drops, and drives all the lights (the **fixtures**) from one scene engine.
 
@@ -95,9 +97,13 @@ Every box in the diagram is a folder in this repo.
 
 Both brain services start on boot. WLED fixtures fall back to their own idle effect whenever the stream stops.
 
+## Name and branding
+
+The project is **Sektor5** (formerly Rave Cave). Logo files, colours and usage are in [docs/brand/](docs/brand/). Device hostnames (`ravecave.local`, `rave-box`, `rave-tube-N`), the service account and `/srv/rave` paths still use the old name. They move to `sektor5` / `s5-box` / `s5-tube-N` in a later infrastructure rename.
+
 ## Configuration and secrets
 
-Site-specific values (Wi-Fi SSID and password, host overrides) live in a git-ignored `.env` at the repo root. Copy [`.env.example`](.env.example) and fill it in. Scripts and the show config read it; `brain/deploy.sh` copies it to the Pi. Hosts are addressed by `.local` names by default, so no IP addresses are needed in the code.
+Site-specific values (Wi-Fi SSID and password, host overrides) live in a git-ignored `.env` at the repo root. Copy [`.env.example`](.env.example) and fill it in. Settings are named `S5_*`; the old `RAVE_*` names still work. Scripts and the show config read it; `brain/deploy.sh` copies it to the Pi. Hosts are addressed by `.local` names by default, so no IP addresses are needed in the code.
 
 ## Rebuilding the rig
 
