@@ -96,6 +96,7 @@ public class DeckDash {
         http.createContext("/api/auth", Auth::handle);
         http.createContext("/s5auth.js", ex -> send(ex, 200, "text/javascript", Files.readAllBytes(WEB.resolve("s5auth.js"))));
         http.createContext("/api/system", ex -> send(ex, 200, "application/json", SystemInfo.json().getBytes(StandardCharsets.UTF_8)));
+        http.createContext("/api/system/tailscale", Tailscale::handle);
         http.createContext("/api/art/", DeckDash::art);
         http.createContext("/api/waveform/", DeckDash::waveform);
         http.createContext("/api/wavedetail/", DeckDash::waveDetail);

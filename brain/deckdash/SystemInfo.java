@@ -12,7 +12,7 @@ import java.util.concurrent.TimeUnit;
 /**
  * Brain health for the dashboard's System panel (/api/system). A background thread samples every
  * 2 s so the endpoint just returns the latest snapshot. Everything comes from /proc, /sys, systemd
- * and vcgencmd; nothing here changes any state.
+ * vcgencmd and the tailscale CLI; nothing here changes any state (Tailscale's controls are in Tailscale.java).
  */
 public class SystemInfo {
     static final String[] SERVICES = {"deckdash", "showbrain", "mixer", "projector", "visuals"};
@@ -159,6 +159,8 @@ public class SystemInfo {
         j.end();
         j.num("djlink_devices", org.deepsymmetry.beatlink.DeviceFinder.getInstance().isRunning()
                 ? org.deepsymmetry.beatlink.DeviceFinder.getInstance().getCurrentDevices().size() : 0);
+
+        j.raw("tailscale", Tailscale.json());
 
         Runtime rt = Runtime.getRuntime();
         j.key("deckdash_jvm").obj().num("heap_used_mb", (rt.totalMemory() - rt.freeMemory()) / (1024 * 1024))

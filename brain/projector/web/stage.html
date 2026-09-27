@@ -145,8 +145,7 @@
 </main>
 
 <script>
-// Page links go to the other control pages on this host.
-document.querySelectorAll("#pages a").forEach(a => a.href = `${location.protocol}//${location.hostname}:${a.dataset.port}${a.dataset.path}`);
+// Page links (a[data-port]) are wired by /s5auth.js.
 // The projector service (:8100) serves this page, its state feed and the projection renderer.
 // When the page is opened from somewhere else (the dashboard's /preview/), use :8100 directly.
 window.PROJ = location.port === "8100" ? "" : `${location.protocol}//${location.hostname}:8100`;

@@ -18,6 +18,7 @@ Ownership: the **front end** (the page) is Richard's. The **data behind it** (th
 | `GET /api/art/N` | Album art for player N (JPEG), `404` if none |
 | `GET /api/auth` | `{"enabled", "admin"}` for this browser. `POST /api/auth {"pin"}` sets the admin cookie; `POST /api/auth/logout` clears it. Same on every service's port. |
 | `GET /api/system` | Brain health, sampled every 2 s (see below). Shown in the dashboard's System panel (click the logo). |
+| `POST /api/system/tailscale` | Admin. `{"funnel": true\|false}` turns the public link on/off (off keeps the dashboard on the tailnet); `{"up": true\|false}` turns Tailscale on/off. Returns the new `tailscale` object. |
 | `GET /` | The live page (`/srv/rave/deckdash-web/index.html`) |
 | `GET /preview/…` | The preview page and any files beside it (`/srv/rave/deckdash-preview/`) |
 
@@ -128,5 +129,6 @@ Sampled every 2 s by `brain/deckdash/SystemInfo.java`. `ready: false` until the 
 | `clients.devices`, `clients.dashboard_streams` | Distinct devices across all pages; open `/api/events` streams |
 | `usb[]` | `{id, name}` of attached USB devices (e.g. `2b73:0013` DJM-450, `16c0:05dc` uDMX) |
 | `djlink_devices`, `deckdash_jvm.heap_used_mb`, `heap_max_mb` | DJ Link devices seen; deckdash memory |
+| `tailscale.*` | Every 10 s from the `tailscale` CLI: `installed`, `state` (`Running`, `Stopped`, `NeedsLogin`…), `dns_name`, `ips[]`, `tailnet`, `peers`, `peers_online` (Funnel relays not counted), `funnel`, `public_url`, `https_ports[]` (443 plus the tailnet-only ports), `auth_url` (set when it needs logging in), `version` |
 
 The panel flags **red** for 80 °C or more, under-voltage or throttling now, less than 1 GB free, or a service not running. It flags **amber** for 70 °C or more, throttling since boot, less than 3 GB free, more than 85% RAM, Wi-Fi weaker than -75 dBm, or any service restarts. The dot next to the logo shows the worst of these and refreshes every 10 s while the panel is closed.
