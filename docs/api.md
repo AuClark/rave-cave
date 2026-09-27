@@ -1,6 +1,6 @@
 # Dashboard API (deckdash, port 8080)
 
-The data the brain exposes for the dashboard front end. Served by `deckdash` on the brain: `http://ravecave.local:8080`. Every response sends `Access-Control-Allow-Origin: *`, so a page on any origin (a laptop, `/preview/`) can use it.
+The data the brain exposes for the dashboard front end. Served by `deckdash` on the brain: `http://sektor5.local:8080`. Every response sends `Access-Control-Allow-Origin: *`, so a page on any origin (a laptop, `/preview/`) can use it.
 
 Ownership: the **front end** (the page) is Richard's. The **data behind it** (these endpoints, the fixtures, the services) is maintained by the rig side. If you need something that isn't here, ask for it in an issue or PR. Fields are only ever added, not renamed or removed, without warning.
 
@@ -102,7 +102,7 @@ Section types: `intro`, `groove`, `breakdown`, `build`, `drop`, `outro`. To plac
 ## Example
 
 ```js
-const API = "http://ravecave.local:8080";
+const API = "http://sektor5.local:8080";
 const es = new EventSource(`${API}/api/events`);
 es.onmessage = e => {
   const st = JSON.parse(e.data);

@@ -1,4 +1,4 @@
-# The brain (CM4 `ravecave`)
+# The brain (CM4 `sektor5`)
 
 The computer that reads the decks and runs the show. Code: [`brain/`](../brain/).
 
@@ -17,7 +17,7 @@ The computer that reads the decks and runs the show. Code: [`brain/`](../brain/)
    ```bash
    python3 brain/provision/make_cloudinit.py      # writes ~/tools/rpi/cloudinit/ (outside the repo)
    ```
-   This sets hostname `ravecave`, user `pi` with your `~/.ssh/id_ed25519.pub`, no password login, Australia/Sydney, Wi-Fi, and `avahi-daemon`.
+   This sets hostname `sektor5` (`S5_HOSTNAME` in `.env` to change it), user `pi` with your `~/.ssh/id_ed25519.pub`, no password login, Australia/Sydney, Wi-Fi, and `avahi-daemon`.
 4. Flash with Raspberry Pi Imager's command-line mode:
    ```bash
    "/Applications/Raspberry Pi Imager.app/Contents/MacOS/rpi-imager" --cli \
@@ -25,7 +25,7 @@ The computer that reads the decks and runs the show. Code: [`brain/`](../brain/)
      --cloudinit-networkconfig ~/tools/rpi/cloudinit/network-config \
      raspios-trixie-arm64-lite.img.xz /dev/diskN
    ```
-5. Remove the boot jumper and power-cycle. First boot takes 2–3 minutes. Then `ssh pi@ravecave.local`.
+5. Remove the boot jumper and power-cycle. First boot takes 2–3 minutes. Then `ssh pi@sektor5.local`.
 
 ### 2. Network: Ethernet to the decks
 
@@ -54,14 +54,15 @@ From [`brain/system/`](../brain/system/):
 | `deckdash.service`, `showbrain.service` | `/etc/systemd/system/` | The two services (then `sudo systemctl enable --now deckdash showbrain`) |
 | `50-udmx.rules` | `/etc/udev/rules.d/` | Lets the `pi` user drive the uDMX (par can) without root |
 | `journald-rave.conf` | `/etc/systemd/journald.conf.d/rave.conf` | Persistent logs, capped at 100 MB |
+| `avahi-alias-ravecave.service` | `/etc/systemd/system/` | Transition only: also answers the old name `ravecave.local` (needs `avahi-utils`). Only on the brain renamed from `ravecave`; remove it once nothing uses the old name. |
 
 ### 4. Code
 
 From the Mac, in the repo:
 
 ```bash
-ssh pi@ravecave.local 'mkdir -p ~/deckdash/web ~/showbrain'
-scp brain/deckdash/fetch_libs.sh pi@ravecave.local:deckdash/ && ssh pi@ravecave.local 'bash ~/deckdash/fetch_libs.sh'
+ssh pi@sektor5.local 'mkdir -p ~/deckdash/web ~/showbrain'
+scp brain/deckdash/fetch_libs.sh pi@sektor5.local:deckdash/ && ssh pi@sektor5.local 'bash ~/deckdash/fetch_libs.sh'
 brain/deploy.sh          # copies every brain service, compiles, restarts them
 ```
 
@@ -101,26 +102,26 @@ sudo chown name:name /home/name/.ssh/authorized_keys && sudo chmod 600 /home/nam
 Removing them: `sudo deluser --remove-home name` (and delete any `/etc/sudoers.d/name`).
 
 **Working on projection mapping and visuals (Chris):**
-- Code lives in `/srv/rave/projector` and `/srv/rave/visuals`, and runs as `ravesvc`. Edit in place over SSH (`ssh chris@ravecave.local`), then `sudo systemctl restart visuals` (or `projector`). A new sketch in `/srv/rave/visuals/sketches/` shows up in the control page's menu after a restart.
+- Code lives in `/srv/rave/projector` and `/srv/rave/visuals`, and runs as `ravesvc`. Edit in place over SSH (`ssh chris@sektor5.local`), then `sudo systemctl restart visuals` (or `projector`). A new sketch in `/srv/rave/visuals/sketches/` shows up in the control page's menu after a restart.
 - Page-only changes (`web/`) just need a browser reload.
 - Anything worth keeping goes into a PR. `brain/deploy.sh projector` / `visuals` overwrites the code with what's in git (saved layouts, presets and live values are kept).
 
 **Working on the dashboard page:**
-- `http://ravecave.local:8080/` serves `/srv/rave/deckdash-web/index.html`, re-read on every request (no restart).
-- `http://ravecave.local:8080/preview/` serves `/srv/rave/deckdash-preview/`, a work-in-progress copy with the same live data. Break it freely.
-- API reference: [api.md](api.md). The API allows cross-origin requests, so the page can also be developed on a laptop against `http://ravecave.local:8080/api/...`.
+- `http://sektor5.local:8080/` serves `/srv/rave/deckdash-web/index.html`, re-read on every request (no restart).
+- `http://sektor5.local:8080/preview/` serves `/srv/rave/deckdash-preview/`, a work-in-progress copy with the same live data. Break it freely.
+- API reference: [api.md](api.md). The API allows cross-origin requests, so the page can also be developed on a laptop against `http://sektor5.local:8080/api/...`.
 - From the repo: `brain/deploy.sh preview` (test) and `brain/deploy.sh web` (live). Live changes go through a PR to `main` first.
 
 ## Admin PIN (viewers and admins)
 
 Anyone can open the pages and watch. **Changing anything needs admin**: loading or playing tracks, tempo, the Commander, projection layouts, visuals. Each service enforces this itself: a change without the admin cookie gets `401`. So hiding a button isn't what protects the rig.
 
-- **Unlocking:** enter the PIN once (any page: the VIEW ONLY badge bottom-right, or the prompt that appears when you try to change something). The browser gets a signed `s5_admin` cookie for 5 years. Cookies are per host, not per port, so one unlock covers every page on that address (`ravecave.local`, the Tailscale name and the public link each need one unlock).
+- **Unlocking:** enter the PIN once (any page: the VIEW ONLY badge bottom-right, or the prompt that appears when you try to change something). The browser gets a signed `s5_admin` cookie for 5 years. Cookies are per host, not per port, so one unlock covers every page on that address (`sektor5.local`, the Tailscale name and the public link each need one unlock).
 - **Locking a browser:** click the ADMIN badge.
 - **Set or change the PIN** (hidden input, stored only as a salted PBKDF2 hash in `/srv/rave/auth.json`, group `rave`, mode 640):
   ```bash
   brain/deploy.sh tools                                # once, copies set_pin.py to the brain
-  ssh -t pi@ravecave.local 'python3 ~/tools/set_pin.py'
+  ssh -t pi@sektor5.local 'python3 ~/tools/set_pin.py'
   ```
   Changing the PIN signs every browser out. `--sign-out` keeps the PIN and signs everyone out (lost phone); `--off` removes it. Services pick changes up immediately.
 - **Brute force:** each check takes about 0.5 s, and 8 wrong PINs in 10 minutes lock PIN entry for 10 minutes (per service). Use 6+ digits if the rig is on a public link.
@@ -129,15 +130,23 @@ Anyone can open the pages and watch. **Changing anything needs admin**: loading 
 
 ## Remote access (Tailscale)
 
-The brain is on the owner's tailnet as `ravecave` (MagicDNS `ravecave.<tailnet>.ts.net`; the real name is in the Tailscale admin console, not in git).
+The brain is on the owner's tailnet as `sektor5` (MagicDNS `sektor5.<tailnet>.ts.net`; the real name is in the Tailscale admin console, not in git).
 
-- **Public link (Tailscale Funnel):** only the dashboard is published, at `https://ravecave.<tailnet>.ts.net/`. Anyone with the link can watch; changes need the admin PIN (above).
-- **Everything else stays private:** the Commander, projector and visuals are reachable only on the rig's Wi-Fi (`http://ravecave.local:8090/` etc.) or over the tailnet at `https://ravecave.<tailnet>.ts.net:8090/`, `:8100`, `:8110`. They must be **https**: browsers always use HTTPS for `ts.net` names, so Tailscale serves HTTPS on each port (`tailscale serve --bg --https=8090 http://127.0.0.1:8090`, same for 8100 and 8110). Over HTTPS the dashboard is on 443, not 8080.
+- **Public link (Tailscale Funnel):** only the dashboard is published, at `https://sektor5.<tailnet>.ts.net/`. Anyone with the link can watch; changes need the admin PIN (above).
+- **Everything else stays private:** the Commander, projector and visuals are reachable only on the rig's Wi-Fi (`http://sektor5.local:8090/` etc.) or over the tailnet at `https://sektor5.<tailnet>.ts.net:8090/`, `:8100`, `:8110`. They must be **https**: browsers always use HTTPS for `ts.net` names, so Tailscale serves HTTPS on each port (`tailscale serve --bg --https=8090 http://127.0.0.1:8090`, same for 8100 and 8110). Over HTTPS the dashboard is on 443, not 8080.
 - **Top-bar page links** (`a[data-port]`, wired by `s5auth.js`) are greyed out for viewers. For admins they're greyed out only if that page can't be reached from where you are (e.g. on the public link without Tailscale).
 - **Controls:** the System panel (click the logo) has a Tailscale card: status, devices online, the public link, and buttons to turn the public link or Tailscale itself off and on (admin). Turning Tailscale off while you're using it cuts you off; turn it back on from the rig's Wi-Fi.
-- **Setup (done once):** `sudo tailscale up --hostname=ravecave`, `sudo tailscale set --operator=pi` (so deckdash can run the CLI without sudo), `tailscale funnel --bg --https=443 http://127.0.0.1:8080`, and the three `tailscale serve` lines above. All of it survives reboots. Check with `tailscale serve status`.
-- **Sharing with a collaborator:** share the `ravecave` machine from the admin console (Machines → ravecave → Share) or invite them to the tailnet.
+- **Setup (done once):** `sudo tailscale up --hostname=sektor5`, `sudo tailscale set --operator=pi` (so deckdash can run the CLI without sudo), `tailscale funnel --bg --https=443 http://127.0.0.1:8080`, and the three `tailscale serve` lines above. All of it survives reboots. Check with `tailscale serve status`.
+- **Sharing with a collaborator:** share the `sektor5` machine from the admin console (Machines → sektor5 → Share) or invite them to the tailnet.
 - Funnel needs HTTPS certificates and the `funnel` node attribute enabled in the tailnet policy (both already on).
+
+## Renaming the brain
+
+The brain was renamed from `ravecave` to `sektor5` on 27 Sep 2026. What that took, for next time:
+- `sudo hostnamectl set-hostname sektor5`, and the `127.0.1.1` line in `/etc/hosts`.
+- cloud-init resets the hostname on every boot from `/boot/firmware/user-data` (`hostname:`), so change it there too. `/etc/cloud/cloud.cfg.d/99-sektor5-hostname.cfg` (`preserve_hostname: true`) stops it resetting.
+- `sudo systemctl restart avahi-daemon` for the new `.local` name. `avahi-alias-ravecave.service` keeps the old name answering (it publishes the Wi-Fi address at start; restart it if that address changes).
+- Tailscale: `tailscale set --hostname=sektor5`, then rebuild the serve config for the new name: `tailscale serve reset`, the funnel line and the three serve lines from above. The old `ts.net` link stops working.
 
 ## Operations
 

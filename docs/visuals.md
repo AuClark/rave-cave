@@ -4,7 +4,7 @@ Code-driven visuals you can reshape live, in the spirit of Zach Lieberman's sket
 
 ## Using it
 
-1. Open **`http://ravecave.local:8110/`** on a phone or laptop (on Android, use the IP: `http://<brain IP>:8110/`).
+1. Open **`http://sektor5.local:8110/`** on a phone or laptop (on Android, use the IP: `http://<brain IP>:8110/`).
 2. Move the sliders. The preview and every generative surface update as you drag.
 3. **Randomise** throws everything, **Nudge** moves each value a little, **Reset** returns to the defaults. Each group has its own **random** button.
 4. **Save** a look as a preset and **Load** it later. Presets are per sketch.
@@ -101,7 +101,7 @@ Sketches can draw the song that's playing. rekordbox analyses every track when t
 - `GET /api/wave` returns the current waveform message (`source`: `live`, `sample` or `demo`; `title`, `beats`, `spb`, `w`, `h`, `data`).
 ## Reaction-diffusion lab
 
-**`http://ravecave.local:8110/rd.html`** (on Android, use the IP) is a standalone test page running a real Gray-Scott reaction-diffusion simulation on the GPU, after [Karl Sims](https://www.karlsims.com/rd.html). It is not a sketch: it's there to find looks and to check what the projector's GPU can handle before simulations go into the shared renderer.
+**`http://sektor5.local:8110/rd.html`** (on Android, use the IP) is a standalone test page running a real Gray-Scott reaction-diffusion simulation on the GPU, after [Karl Sims](https://www.karlsims.com/rd.html). It is not a sketch: it's there to find looks and to check what the projector's GPU can handle before simulations go into the shared renderer.
 
 - Pattern buttons set feed and kill (Coral, Mitosis, Mazes, Fingerprint, Worms, U-skate and more) and reseed. Draw with a finger or the mouse to add chemical.
 - **Pattern map**: Uniform, Karl's f/k map (every behaviour at once), or Radial (your pattern in the middle, spots at the rim).

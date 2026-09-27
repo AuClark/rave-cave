@@ -20,7 +20,7 @@
 #   brain/deploy.sh --force ...    this checkout as-is, skipping the checks (emergencies)
 #
 # Each deploy records what's running in ~/.deployed/<target> on the host:
-#   ssh pi@ravecave.local 'grep . ~/.deployed/*'
+#   ssh pi@sektor5.local 'grep . ~/.deployed/*'
 #
 # Hosts default to their .local names; override in the repo-root .env (see .env.example).
 set -euo pipefail
@@ -29,7 +29,7 @@ cd "$(dirname "$0")/.."
 # Settings renamed RAVE_* -> S5_* (Sektor5); the old names still work.
 S5_BRAIN_HOST=${S5_BRAIN_HOST:-${RAVE_BRAIN_HOST:-}}
 S5_BOX_HOST=${S5_BOX_HOST:-${RAVE_BOX_HOST:-}}
-BRAIN=${PI:-pi@${S5_BRAIN_HOST:-ravecave.local}}
+BRAIN=${PI:-pi@${S5_BRAIN_HOST:-sektor5.local}}
 BOX=${BOX:-raver@${S5_BOX_HOST:-rave-box.local}}
 
 force=0 src=here
@@ -104,8 +104,8 @@ if [[ $what == web ]]; then       # page only: no compile, no restart (the page 
   rsync -rlt --omit-dir-times brain/deckdash/web/ brain/common/web/s5auth.js "$BRAIN":/srv/rave/deckdash-web/ && echo "dashboard page updated"
 fi
 
-if [[ $what == preview ]]; then   # work-in-progress page at http://ravecave.local:8080/preview/
-  rsync -rlt --omit-dir-times brain/deckdash/web/ brain/common/web/s5auth.js "$BRAIN":/srv/rave/deckdash-preview/ && echo "preview updated: http://${S5_BRAIN_HOST:-ravecave.local}:8080/preview/"
+if [[ $what == preview ]]; then   # work-in-progress page at http://sektor5.local:8080/preview/
+  rsync -rlt --omit-dir-times brain/deckdash/web/ brain/common/web/s5auth.js "$BRAIN":/srv/rave/deckdash-preview/ && echo "preview updated: http://${S5_BRAIN_HOST:-sektor5.local}:8080/preview/"
 fi
 
 if [[ $what == all || $what == showbrain ]]; then

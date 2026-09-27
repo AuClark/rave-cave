@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 """Set, change or remove the rig's admin PIN. Run ON the brain as pi:
 
-    ssh -t pi@ravecave.local 'python3 ~/tools/set_pin.py'            # set or change the PIN
-    ssh -t pi@ravecave.local 'python3 ~/tools/set_pin.py --sign-out'   # keep the PIN, sign every browser out
-    ssh -t pi@ravecave.local 'python3 ~/tools/set_pin.py --off'        # remove the PIN (everyone is admin again)
+    ssh -t pi@sektor5.local 'python3 ~/tools/set_pin.py'            # set or change the PIN
+    ssh -t pi@sektor5.local 'python3 ~/tools/set_pin.py --sign-out'   # keep the PIN, sign every browser out
+    ssh -t pi@sektor5.local 'python3 ~/tools/set_pin.py --off'        # remove the PIN (everyone is admin again)
 
 The PIN is asked for twice with hidden input and stored only as a salted PBKDF2 hash in
 /srv/rave/auth.json (owner pi, group rave, mode 640), with a fresh random signing key. Changing the

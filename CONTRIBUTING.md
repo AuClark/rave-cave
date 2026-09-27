@@ -45,6 +45,6 @@ brain/deploy.sh deckdash          # from your checkout: only if it's a clean mai
 
 - `--pr` is for testing in the workshop, never during a show. Once the PR is merged, run `brain/deploy.sh live`.
 - Push your branch and open the PR first; `--pr` deploys what's on GitHub, not your local changes.
-- See what's running: `ssh pi@ravecave.local 'grep . ~/.deployed/*'`
+- See what's running: `ssh pi@sektor5.local 'grep . ~/.deployed/*'`
 - Dashboard page tweaks can go to `/preview/` from any branch, no PR or checks: `brain/deploy.sh preview`.
 - `--force` skips the checks and deploys your checkout as-is. Emergencies only; say so in the PR.
