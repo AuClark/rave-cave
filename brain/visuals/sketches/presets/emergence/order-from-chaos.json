@@ -1,0 +1,18 @@
+{
+ "waves": 11.0,
+ "scale": 70.0,
+ "thick": 0.5,
+ "blobs": 0.35,
+ "flow": 0.04,
+ "turn": 0.08,
+ "spin": 0.05,
+ "beat": 0.4,
+ "size": 0.46,
+ "hole": 0.08,
+ "ragged": 0.6,
+ "grow": 0.3,
+ "mix": 0.35,
+ "hue": 0.0,
+ "sat": 1.0,
+ "follow": 0
+}
