@@ -41,6 +41,7 @@
   .s5bar > :not(.s5home):not(nav.pages) { animation: s5in .45s ease both; }
   .s5bar ~ * { animation: s5in .35s ease both; }
   @keyframes s5in { from { opacity: 0; } to { opacity: 1; } }`;
+  S5.barCss = barCss;   // the System view (s5system.js) reuses it inside its shadow root
   const barStyle = document.createElement("style");
   barStyle.textContent = barCss;
   document.head.appendChild(barStyle);

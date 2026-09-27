@@ -2,7 +2,8 @@
 //
 // Served by deckdash (/s5system.js) and loaded by /s5auth.js on every page, so there's one copy.
 // Data comes from the dashboard's /api/system (sampled every 2 s by deckdash). It also puts a health
-// dot beside the logo. The view's top bar is the page's own bar (.s5bar), so the logo doesn't move.
+// dot beside the logo. The view's top bar is a copy of the shared bar (.s5bar) with the page's own
+// logo, so the logo doesn't move.
 (() => {
   "use strict";
   if (window.S5SYS) return;
@@ -14,6 +15,8 @@
     --good: #7ccf8a; --warn: #f2b84b; --bad: #ef5b5b; --well: #1f1f1f;
     --font: "Montserrat", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif; }
   #sys *, #sys *::before { box-sizing: border-box; }
+  .s5logo { display: flex; align-items: center; line-height: 1; } .s5logo .s5word { color: #f2f2f2; display: block; flex: none; }
+  .s5logo .s5five { fill: #ff5a1f; }
   #sys.open { animation: s5in .25s ease both; }
   #sys.open { display: block; }
     #sys .sys-title { animation: s5in .3s ease both; font-weight: 500; font-size: 13px; letter-spacing: .16em; text-transform: uppercase; color: var(--text);
@@ -51,22 +54,27 @@
     background: transparent; color: var(--text); border: 1px solid var(--line2); }
   #sys .acts button:hover { border-color: var(--accent); }
   #sys .acts button:disabled { opacity: .4; cursor: wait; }
-  #sys a { color: var(--accent2); }
+  #sys a { color: var(--accent2); }`;
+  const dotCss = `
   .s5home .hdot { position: absolute; left: 88px; top: 50%; width: 7px; height: 7px; margin-top: -3.5px; border-radius: 50%; background: #555;
     opacity: 0; transition: opacity .4s, background .4s; }
   .s5home .hdot.ok, .s5home .hdot.warn, .s5home .hdot.bad { opacity: 1; }
   .s5home .hdot.ok { background: #7ccf8a; } .s5home .hdot.warn { background: #f2b84b; } .s5home .hdot.bad { background: #ef5b5b; box-shadow: 0 0 8px #ef5b5b; }`;
-  const style = document.createElement("style");
-  style.textContent = css;
-  document.head.appendChild(style);
-
+  // The view lives in a shadow root so each page's own CSS (h2 counters, .card, button, a…) can't leak in.
+  const hostEl = document.createElement("div");
+  hostEl.id = "s5sys";
+  const root = hostEl.attachShadow({ mode: "open" });
+  root.innerHTML = `<style>:host { all: initial; } ${(window.S5AUTH && S5AUTH.barCss) || ""} ${css}</style>` +
+    `<div id="sys" aria-hidden="true"><div class="s5bar sys-top"><div class="s5home" id="sysLogo" title="Back to the app"></div>` +
+    `<span class="sys-title">System</span><span class="muted" id="sysHost"></span><span class="sp"></span><span class="muted" id="sysAge"></span></div>` +
+    `<div class="sys-grid" id="sysGrid"></div></div>`;
+  document.body.appendChild(hostEl);
+  const sysEl = root.getElementById("sys");
+  // The health dot sits beside the page's own logo (outside the shadow root).
+  const dotStyle = document.createElement("style");
+  dotStyle.textContent = dotCss;
+  document.head.appendChild(dotStyle);
   const home = document.querySelector(".s5bar .s5home");
-  const sysEl = document.createElement("div");
-  sysEl.id = "sys";
-  sysEl.setAttribute("aria-hidden", "true");
-  sysEl.innerHTML = `<div class="s5bar sys-top"><div class="s5home" id="sysLogo" title="Back to the app"></div><span class="sys-title">System</span>` +
-    `<span class="muted" id="sysHost"></span><span class="sp"></span><span class="muted" id="sysAge"></span></div><div class="sys-grid" id="sysGrid"></div>`;
-  document.body.appendChild(sysEl);
   let dot = null;
   if (home) {
     dot = document.createElement("span");
@@ -76,9 +84,9 @@
     home.addEventListener("click", () => sysOpen(!sysEl.classList.contains("open")));
     // Same logo, same place: the System bar reuses the page's own.
     const logo = home.querySelector(".s5logo");
-    if (logo) sysEl.querySelector("#sysLogo").appendChild(logo.cloneNode(true));
+    if (logo) root.getElementById("sysLogo").appendChild(logo.cloneNode(true));
   }
-  sysEl.querySelector("#sysLogo").addEventListener("click", () => sysOpen(false));
+  root.getElementById("sysLogo").addEventListener("click", () => sysOpen(false));
 
   let sysTimer = null, sysLast = null;
   const fmtUp = s => { const d = Math.floor(s / 86400), h = Math.floor(s % 86400 / 3600), m = Math.floor(s % 3600 / 60);
@@ -96,7 +104,7 @@
     return worst.includes("bad") ? "bad" : worst.includes("warn") ? "warn" : "ok";
   }
   function sysRender(d) {
-    document.getElementById("sysHost").textContent = d.host;
+    root.getElementById("sysHost").textContent = d.host;
     const u = d.cpu.usage || [0], t = d.throttle, m = d.memory, memPct = m.used_mb / m.total_mb * 100;
     const tempC = lvl(d.cpu.temp_c, 70, 80), cpuC = lvl(u[0], 75, 90), memC = lvl(memPct, 75, 90), diskC = lvl(d.disk.free_gb, 3, 1, false);
     const flag = (on, since, label) => `<span class="flag ${on ? "bad" : since ? "warn" : "ok"}">${label}${on ? " NOW" : since ? " SINCE BOOT" : ""}</span>`;
@@ -108,7 +116,7 @@
     const cl = d.clients || { ports: [] };
     const clRows = cl.ports.map(p => `<tr><td>${p.page}<div class="muted">:${p.port}</div></td><td>${p.devices}</td>
       <td class="muted">${p.addresses.length ? p.addresses.map(a => a.startsWith("fe80") ? "IPv6 link-local" : a).join("<br>") : "–"}</td></tr>`).join("");
-    document.getElementById("sysGrid").innerHTML = [
+    root.getElementById("sysGrid").innerHTML = [
       card(1, "Temperature", `<div class="big ${tempC}">${d.cpu.temp_c.toFixed(1)}<small>°C</small></div>
         <div class="bar"><div style="width:${Math.min(100, d.cpu.temp_c / 85 * 100)}%;background:var(--${tempC === "ok" ? "good" : tempC})"></div></div>
         <div class="flags">${flag(t.under_voltage_now, t.under_voltage_since_boot, "UNDER-VOLTAGE")}${flag(t.throttled_now, t.throttled_since_boot, "THROTTLED")}
@@ -159,7 +167,7 @@
         <button data-ts='{"up":${!on}}'>${on ? "Turn off Tailscale" : "Turn on Tailscale"}</button>
       </div>`;
   }
-  document.getElementById("sysGrid").addEventListener("click", async e => {
+  root.getElementById("sysGrid").addEventListener("click", async e => {
     const b = e.target.closest("button[data-ts]");
     if (!b) return;
     const req = JSON.parse(b.dataset.ts), viaTs = /\.ts\.net$|^100\./.test(location.hostname);
@@ -182,7 +190,7 @@
       const h = sysHealth(d);
       if (dot) dot.className = "hdot " + h;
       if (dot) dot.title = h === "ok" ? "System healthy" : h === "warn" ? "System: needs a look" : "System: problem";
-      if (sysEl.classList.contains("open")) { sysRender(d); document.getElementById("sysAge").textContent = "updated " + new Date(d.ts).toLocaleTimeString(); }
+      if (sysEl.classList.contains("open")) { sysRender(d); root.getElementById("sysAge").textContent = "updated " + new Date(d.ts).toLocaleTimeString(); }
     } catch (e) { if (dot) { dot.className = "hdot bad"; dot.title = "Can't reach the dashboard"; } }
   }
   function sysOpen(on) {
