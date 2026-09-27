@@ -190,22 +190,32 @@
     .libbody, .row2, .row3, .players { grid-template-columns: minmax(0, 1fr) !important; }
     main, section.panel, .tracks { min-width: 0; }
     .tracks, section.panel { overflow-x: auto; }
-    .masterrow { padding: 10px 12px 6px; flex-wrap: wrap; }
-    .masterrow .seg { order: 3; flex: 1 1 100%; }
-    .masterrow .zoom { display: none; }
+    .showline { padding: 8px 12px; gap: 6px 12px; }
+    .showline .zoom { display: none; }
+    .showline .showscene { font-size: 18px; }
+    .showline .masterbox .big { font-size: 22px; }
   }
   /* Master BPM sits just under the top bar (the bar itself is the same on every page). */
-  .masterrow { display: flex; align-items: center; gap: 16px; max-width: 1680px; margin: 0 auto; padding: 14px 24px 10px; }
-  /* What to show: one sliding selector instead of toggles in the top bar. */
-  .seg { position: relative; display: inline-grid; grid-auto-flow: column; grid-auto-columns: 1fr; border: 1px solid var(--line2); background: var(--well); --i: 0; }
-  .seg .thumb { position: absolute; top: 0; bottom: 0; left: calc(var(--i) * 100% / 3); width: calc(100% / 3); background: var(--accent); transition: left .25s ease; }
-  .seg button { position: relative; background: transparent; border: 0; border-radius: 0; color: var(--dim); cursor: pointer; padding: 10px 18px;
-    font: 600 11px/1 var(--font); letter-spacing: .12em; text-transform: uppercase; transition: color .25s; }
-  .seg button:hover { color: var(--text); }
-  .seg button.on { color: #111; }
+  /* The display: the show engine in one line over the waveforms, pinned under the top bar; the
+     section tabs sit at its bottom and pick one section below. */
+  .deckhero { position: sticky; top: var(--s5bar, 48px); z-index: 30; background: var(--bg); border-bottom: 1px solid var(--line); }
+  .deckhero > section.stack { border: 0; }
+  .showline { display: flex; align-items: center; flex-wrap: wrap; gap: 8px 16px; max-width: 1680px; margin: 0 auto; padding: 10px 24px 6px; }
+  .showline .showscene { font-size: 22px; font-weight: 300; letter-spacing: .04em; }
+  .showline #shCount { font-weight: 600; font-size: 13px; color: var(--warn); }
+  .showline .sp { flex: 1; }
+  .showline .masterbox { margin-left: 0; }
+  .showline .masterbox .big { font-size: 28px; }
   .zoom { display: flex; align-items: center; gap: 2px; }
-  .zoom button { background: transparent; color: var(--text); border: 1px solid var(--line2); border-radius: 0; padding: 7px 11px; cursor: pointer; font: 500 13px/1 var(--font); }
+  .zoom button { background: transparent; color: var(--text); border: 1px solid var(--line2); border-radius: 0; padding: 6px 10px; cursor: pointer; font: 500 13px/1 var(--font); }
   .zoom .zlbl { min-width: 48px; text-align: center; font-size: 12px; font-weight: 600; font-variant-numeric: tabular-nums; }
+  main.tabbed > section[data-title] > h2:first-child { display: none; }   /* the tab says which section this is */
+  main.tabbed > section[data-title] { max-width: 1680px; }
+  /* Touch drag (library row or deck chip onto a deck's waveform): the tag that follows the finger. */
+  .dragghost { position: fixed; left: 0; top: 0; z-index: 9995; pointer-events: none; margin: -46px 0 0 -12px; padding: 8px 12px;
+    max-width: 70vw; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; background: var(--accent); color: #111;
+    font: 600 12px/1 var(--font); box-shadow: 0 6px 18px rgba(0,0,0,.5); }
+  @media (pointer: coarse) { #tbody tr, .ldeck { -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; } }
   main { padding: 0; gap: 0; border-left: 1px solid var(--line); border-right: 1px solid var(--line); max-width: 1680px; margin: 0 auto; }
   /* Panels: square, flat, hairline borders; h2 numbered like "01 — Mixer". */
   main { counter-reset: sec; }
@@ -304,15 +314,36 @@
   <a data-port="8100" data-path="/stage.html">Stage</a></nav>
   <span id="conn" class="pill">CONNECTING</span>
 </header>
-<div class="masterrow">
-  <div class="seg" id="viewSeg" role="radiogroup" aria-label="Show"><i class="thumb"></i><button data-v="waves" role="radio">Waveforms</button><button data-v="both" role="radio">Both</button><button data-v="lib" role="radio" title="Track library: search, crates, load to deck">Library</button></div>
-  <div class="zoom"><button id="zOut" title="Zoom out (or scroll / pinch the waveforms)">−</button><span id="zLbl" class="zlbl">8 s</span><button id="zIn" title="Zoom in">+</button></div>
-  <div class="masterbox"><span class="lbl">Master</span><span id="masterName" class="lbl">—</span><span id="masterBpm" class="big">—</span></div>
-</div>
 
-<main>
-  <section id="stack" class="panel stack"><canvas id="stackcv"></canvas></section>
-  <section id="lib" class="panel lib">
+<main class="tabbed">
+  <!-- The display: the show engine in one line, and the decks' waveforms. Pinned under the top bar;
+       the section tabs go at its bottom (S5AUTH.sectionTabs). -->
+  <div class="deckhero" id="deckhero">
+    <div class="showline">
+      <div id="shScene" class="showscene">—</div><div id="shDeck" class="pmeta"></div><div id="shCount"></div>
+      <span class="sp"></span>
+      <div class="zoom"><button id="zOut" title="Zoom out (or scroll / pinch the waveforms)">−</button><span id="zLbl" class="zlbl">8 s</span><button id="zIn" title="Zoom in">+</button></div>
+      <div class="masterbox"><span class="lbl">Master</span><span id="masterName" class="lbl">—</span><span id="masterBpm" class="big">—</span></div>
+    </div>
+    <section id="stack" class="panel stack"><canvas id="stackcv"></canvas></section>
+  </div>
+  <section id="lib" class="panel lib" data-title="Library">
+    <div class="libdecks" id="libdecks"></div>
+    <div class="libbody">
+      <aside class="crates"><select id="libsrc"></select><ul id="crates"></ul></aside>
+      <div class="tracks">
+        <div class="ltools">
+          <input id="libq" type="search" placeholder="Search title, artist, album, genre, key…  ( / )" autocomplete="off">
+          <select id="libgenre"><option value="">All genres</option></select>
+          <button class="lbtn" id="fBpm" title="Within ±6% of the master tempo (or half / double)">BPM ≈ MASTER</button>
+          <button class="lbtn" id="fKey" title="Harmonically compatible with the master deck (Camelot ±1, relative)">KEY MATCH</button>
+          <span class="count" id="libcount"></span>
+        </div>
+        <div class="tscroll" id="tscroll"><table class="tt"><thead id="thead"></thead><tbody id="tbody"></tbody></table></div>
+      </div>
+    </div>
+  </section>
+  <section class="panel" id="amsec" data-title="Automix">
     <div class="automix">
       <button class="lbtn" id="amOn" title="Mixes from deck to deck on its own. Keep both channel faders up.">AUTOMIX</button>
       <select id="amMode" title="How the next track is chosen"><option value="queue">Next in this list</option><option value="harmonic">Best match (BPM + key)</option></select>
@@ -332,23 +363,8 @@
       <button class="lbtn" id="tempoReset" title="The Pi takes master (if it hasn't) and glides every synced deck back to this deck's original BPM">RESET BPM</button>
       <button class="lbtn" id="tempoHand" title="Give tempo master to this deck">MAKE MASTER</button>
     </div>
-    <div class="libdecks" id="libdecks"></div>
-    <div class="libbody">
-      <aside class="crates"><select id="libsrc"></select><ul id="crates"></ul></aside>
-      <div class="tracks">
-        <div class="ltools">
-          <input id="libq" type="search" placeholder="Search title, artist, album, genre, key…  ( / )" autocomplete="off">
-          <select id="libgenre"><option value="">All genres</option></select>
-          <button class="lbtn" id="fBpm" title="Within ±6% of the master tempo (or half / double)">BPM ≈ MASTER</button>
-          <button class="lbtn" id="fKey" title="Harmonically compatible with the master deck (Camelot ±1, relative)">KEY MATCH</button>
-          <span class="count" id="libcount"></span>
-        </div>
-        <div class="tscroll" id="tscroll"><table class="tt"><thead id="thead"></thead><tbody id="tbody"></tbody></table></div>
-      </div>
-    </div>
   </section>
-  <div class="row3">
-    <section class="panel">
+    <section class="panel" data-title="Mixer">
       <h2>Mixer <span id="mixModel" class="pmeta"></span></h2>
       <div class="meters">
         <div class="meter" id="m-ch1"><div class="lbl">CH 1 · post-fader</div><div class="bar"><div class="fill"></div><div class="hold"></div></div><div class="val">—</div><div class="sub"></div></div>
@@ -360,21 +376,16 @@
       <div class="midi" id="midi"></div>
       <div class="midi" id="mixaudio"></div>
     </section>
-    <section class="panel">
+    <section class="panel" data-title="Show engine">
       <h2>Show engine</h2>
-      <div class="row" style="display:flex;gap:12px;align-items:baseline;flex-wrap:wrap"><div id="shScene" class="showscene">—</div><div id="shDeck" class="pmeta"></div></div>
       <div id="shTitle" class="pmeta" style="margin-top:6px"></div>
-      <div id="shCount" style="margin-top:10px;font-weight:800;color:var(--warn)"></div>
       <div class="grid2" id="shKv"></div>
       <div class="fx" id="shFx"></div>
       <div class="pmeta" style="margin-top:10px">Control: <a id="cmdLink" data-port="8090" data-path="/" style="color:var(--accent2)">Commander</a></div>
     </section>
-  </div>
-  <div class="row2">
-    <section class="panel"><h2>Pro DJ Link network</h2><table id="devices"></table></section>
-    <section class="panel"><h2>Media in the players</h2><table id="media"></table></section>
-  </div>
-  <section class="panel"><details><summary>Raw data (everything the Pi receives, live)</summary><pre id="raw"></pre></details></section>
+    <section class="panel" data-title="DJ Link"><h2>Pro DJ Link network</h2><table id="devices"></table></section>
+    <section class="panel" data-title="Media"><h2>Media in the players</h2><table id="media"></table></section>
+  <section class="panel" data-title="Raw data"><h2>Raw data</h2><p class="pmeta">Everything the Pi receives, live.</p><pre id="raw"></pre></section>
 </main>
 <div id="toast" class="toast"></div>
 <script>
@@ -395,13 +406,7 @@ function saveView() {
 }
 function applyView() {
   saveView();
-  if (!view.waves && !view.lib) view.waves = true;
-  const mode = view.waves && view.lib ? "both" : view.lib ? "lib" : "waves";
-  $("#viewSeg").style.setProperty("--i", ["waves", "both", "lib"].indexOf(mode));
-  document.querySelectorAll("#viewSeg button").forEach(b => { b.classList.toggle("on", b.dataset.v === mode); b.setAttribute("aria-checked", b.dataset.v === mode); });
-  $(".masterrow .zoom").style.visibility = view.waves ? "" : "hidden";
-  $("#stack").classList.toggle("hidden", !view.waves);
-  $("#lib").classList.toggle("hidden", !view.lib);
+  view.waves = true; view.lib = true;       // waveforms are the display; the library is a tab
 }
 function zoomBy(k) {
   view.windowSec = Math.min(ZOOM_MAX, Math.max(ZOOM_MIN, view.windowSec * k));
@@ -876,7 +881,8 @@ function render(st) {
     : "<tr><td class='pmeta'>No media details yet</td></tr>";
   renderMixer(st.mixer);
   renderShow(st.show);
-  if ($("details").open) $("#raw").textContent = JSON.stringify(st, null, 2);
+  const raw = $("#raw");
+  if (!raw.closest("section").classList.contains("s5-hide")) raw.textContent = JSON.stringify(st, null, 2);   // only while its tab shows
   libOnState(st);
 }
 
@@ -1480,6 +1486,55 @@ addEventListener("dragend", endDrag);
   cv.addEventListener("dragleave", () => { dropTarget = null; });
   cv.addEventListener("drop", e => dropOnDeck(e, lane(e)));
 })();
+// Touch: press and hold a library row (or a deck chip) for a moment, then drag it onto a deck's
+// waveform lane (or chip) and let go. A quick swipe is still a scroll.
+(() => {
+  const cv = $("#stackcv");
+  let hold = null, ghost = null;
+  const laneFromPoint = (x, y) => {
+    const r = cv.getBoundingClientRect();
+    if (x >= r.left && x <= r.right && y >= r.top && y <= r.bottom) return laneAt(y - r.top);
+    const chip = document.elementFromPoint(x, y);
+    const c = chip && chip.closest && chip.closest("#libdecks [data-deck]");
+    return c ? +c.dataset.deck : null;
+  };
+  const move = (x, y) => {
+    ghost.style.transform = `translate(${x}px, ${y}px)`;
+    const n = laneFromPoint(x, y);
+    dropTarget = n && n !== dragging.from ? { n, playing: isPlaying(n), shift: false, at: Infinity } : null;
+  };
+  const stop = () => { if (hold) clearTimeout(hold.timer); hold = null; if (ghost) ghost.remove(); ghost = null; };
+  document.addEventListener("touchstart", e => {
+    if (e.touches.length !== 1) return;
+    const tr = e.target.closest("#tbody tr[data-i]"), chip = e.target.closest("#libdecks [data-deck]");
+    let item = null;
+    if (tr) { const t = lib.view[+tr.dataset.i]; item = t && { src: lib.src, id: t.id, title: t.title, from: null }; }
+    else if (chip && !e.target.closest("button")) item = deckTrack(+chip.dataset.deck);
+    if (!item) return;
+    const t0 = e.touches[0];
+    hold = { x0: t0.clientX, y0: t0.clientY, timer: setTimeout(() => {
+      hold = null; dragging = item;
+      ghost = Object.assign(document.createElement("div"), { className: "dragghost", textContent: item.title });
+      document.body.appendChild(ghost); move(t0.clientX, t0.clientY);
+      if (navigator.vibrate) navigator.vibrate(12);
+    }, 350) };
+  }, { passive: true });
+  document.addEventListener("touchmove", e => {
+    const t = e.touches[0];
+    if (hold && Math.hypot(t.clientX - hold.x0, t.clientY - hold.y0) > 10) stop();   // it's a scroll
+    if (!ghost) return;
+    e.preventDefault();                                                              // dragging: don't scroll
+    move(t.clientX, t.clientY);
+  }, { passive: false });
+  document.addEventListener("touchend", e => {
+    if (!ghost) { stop(); return; }
+    e.preventDefault();
+    const d = dragging, n = dropTarget && dropTarget.n;
+    stop(); endDrag();
+    if (n) loadTo(n, { id: d.id, title: d.title }, d.src, false);
+  });
+  document.addEventListener("touchcancel", () => { if (ghost) endDrag(); stop(); });
+})();
 // The deck chips above the library (the waveform lanes are handled above).
 for (const root of [$("#libdecks")]) {
   root.addEventListener("dragover", e => { const el = e.target.closest("[data-deck]"); overDeck(e, el && +el.dataset.deck, el); });
@@ -1560,12 +1615,11 @@ addEventListener("keydown", e => {
     if (n) loadTo(n, lib.view[lib.sel]);
   }
 });
-document.querySelectorAll("#viewSeg button").forEach(b => b.onclick = () => {
-  const had = view.lib;
-  view.waves = b.dataset.v !== "lib"; view.lib = b.dataset.v !== "waves";
-  applyView();
-  if (view.lib && !had) { lib.sig = ""; libSources(); }
-});
+// Section tabs under the waveforms (shared, /s5auth.js): Library, Automix, Mixer, Show engine, DJ Link, Media, Raw data.
+if (window.S5AUTH && S5AUTH.sectionTabs) {
+  const main = document.querySelector("main");
+  S5AUTH.sectionTabs({ panel: main, mount: $("#deckhero"), items: () => [...main.querySelectorAll(":scope > section[data-title]")], title: sec => sec.dataset.title });
+}
 libSources();
 setInterval(libSources, 5000);   // USBs come and go
 const dbToPct = d => Math.max(0, Math.min(100, (d + 60) / 60 * 100));   // -60..0 dBFS
