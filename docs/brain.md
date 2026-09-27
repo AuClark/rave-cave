@@ -131,8 +131,12 @@ Anyone can open the pages and watch. **Changing anything needs admin**: loading 
 
 The brain is on the owner's tailnet as `ravecave` (MagicDNS `ravecave.<tailnet>.ts.net`; the real name is in the Tailscale admin console, not in git).
 
-- **Public link (Tailscale Funnel):** only the dashboard (port 8080) is published, at `https://ravecave.<tailnet>.ts.net/`. Anyone with the link can watch; changes need the admin PIN (above). Turned on with `sudo tailscale funnel --bg 8080`, which survives reboots. Check with `tailscale funnel status`; turn off with `sudo tailscale funnel --https=443 off`.
-- **Everything else stays private:** the Commander (`:8090`), projector (`:8100`) and visuals (`:8110`) are reachable only on the local network or over the tailnet (`http://ravecave.<tailnet>.ts.net:8090/` etc.). To give a collaborator this, share the `ravecave` machine with them from the admin console (Machines → ravecave → Share) or invite them to the tailnet.
+- **Public link (Tailscale Funnel):** only the dashboard is published, at `https://ravecave.<tailnet>.ts.net/`. Anyone with the link can watch; changes need the admin PIN (above).
+- **Everything else stays private:** the Commander, projector and visuals are reachable only on the rig's Wi-Fi (`http://ravecave.local:8090/` etc.) or over the tailnet at `https://ravecave.<tailnet>.ts.net:8090/`, `:8100`, `:8110`. They must be **https**: browsers always use HTTPS for `ts.net` names, so Tailscale serves HTTPS on each port (`tailscale serve --bg --https=8090 http://127.0.0.1:8090`, same for 8100 and 8110). Over HTTPS the dashboard is on 443, not 8080.
+- **Top-bar page links** (`a[data-port]`, wired by `s5auth.js`) are greyed out for viewers. For admins they're greyed out only if that page can't be reached from where you are (e.g. on the public link without Tailscale).
+- **Controls:** the System panel (click the logo) has a Tailscale card: status, devices online, the public link, and buttons to turn the public link or Tailscale itself off and on (admin). Turning Tailscale off while you're using it cuts you off; turn it back on from the rig's Wi-Fi.
+- **Setup (done once):** `sudo tailscale up --hostname=ravecave`, `sudo tailscale set --operator=pi` (so deckdash can run the CLI without sudo), `tailscale funnel --bg --https=443 http://127.0.0.1:8080`, and the three `tailscale serve` lines above. All of it survives reboots. Check with `tailscale serve status`.
+- **Sharing with a collaborator:** share the `ravecave` machine from the admin console (Machines → ravecave → Share) or invite them to the tailnet.
 - Funnel needs HTTPS certificates and the `funnel` node attribute enabled in the tailnet policy (both already on).
 
 ## Operations

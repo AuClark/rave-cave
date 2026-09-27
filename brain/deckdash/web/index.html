@@ -318,6 +318,12 @@
   #sys .flag.bad { border-color: var(--bad); color: var(--bad); } #sys .flag.warn { border-color: var(--warn); color: var(--warn); }
   #sys .flag.ok { border-color: var(--good); color: var(--good); }
   #sys .muted { color: var(--dim); font-size: 12px; }
+  #sys .acts { display: flex; gap: 8px; margin-top: 16px; }
+  #sys .acts button { flex: 1; font: 600 11px/1 var(--font); letter-spacing: .14em; text-transform: uppercase; padding: 11px 8px; cursor: pointer;
+    background: transparent; color: var(--text); border: 1px solid var(--line2); }
+  #sys .acts button:hover { border-color: var(--accent); }
+  #sys .acts button:disabled { opacity: .4; cursor: wait; }
+  #sys a { color: var(--accent2); }
   .s5logo { display: inline-flex; align-items: center; vertical-align: middle; line-height: 1; }
   .s5logo .s5word { color: var(--text, #f2f2f2); flex: none; display: block; }
   .s5logo .s5five { fill: var(--accent, #ff5a1f); }
@@ -403,7 +409,7 @@
       <div id="shCount" style="margin-top:10px;font-weight:800;color:var(--warn)"></div>
       <div class="grid2" id="shKv"></div>
       <div class="fx" id="shFx"></div>
-      <div class="pmeta" style="margin-top:10px">Control: <a href="#" id="cmdLink" style="color:var(--accent2)">Commander</a></div>
+      <div class="pmeta" style="margin-top:10px">Control: <a id="cmdLink" data-port="8090" data-path="/" style="color:var(--accent2)">Commander</a></div>
     </section>
   </div>
   <div class="row2">
@@ -414,8 +420,7 @@
 </main>
 <div id="toast" class="toast"></div>
 <script>
-// Page links (top bar) go to the other control pages on this same host.
-document.querySelectorAll("#pages a").forEach(a => a.href = `${location.protocol}//${location.hostname}:${a.dataset.port}${a.dataset.path}`);
+// Page links (top bar, a[data-port]) are wired by /s5auth.js: greyed out for viewers.
 const $ = (s, r = document) => r.querySelector(s);
 const cards = {}, waves = {}, artRefs = {}, timelines = {};
 const details = {}, posModel = {};
@@ -1631,7 +1636,6 @@ function renderShow(sh) {
   $("#shFx").innerHTML = (sh.fixtures || []).map(f => `<span class="badge on sync">${esc(f)}</span>`).join("")
     + Object.entries(dmx).map(([k, v]) => `<span class="badge ${v === "connected" ? "on play" : "on end"}">${esc(k)}: ${esc(v)}</span>`).join("");
 }
-$("#cmdLink").href = `http://${location.hostname}:8090/`;
 
 // Live updates come over SSE (/api/events). If the stream goes quiet (the server's push task can
 // stall while /api/state still answers), fall back to polling /api/state and keep retrying the stream.
@@ -1727,8 +1731,44 @@ function sysRender(d) {
       ...(d.usb || []).map(x => [x.name, `<span class="muted">${x.id}</span>`]),
       !(d.usb || []).some(x => x.id === "2b73:0013") && ["DJM-450", "not connected", "warn"],
       !(d.usb || []).some(x => x.id === "16c0:05dc") && ["uDMX (par can)", "not connected", "warn"]])),
+    card(9, "Tailscale", tsCard(d.tailscale || {})),
   ].join("");
 }
+// Tailscale: the public link (Funnel, dashboard only) and remote access for the team.
+function tsCard(ts) {
+  if (!ts.installed) return `<div class="big warn">Not installed</div>`;
+  const on = ts.state === "Running", label = { Running: "Connected", Stopped: "Off", NeedsLogin: "Needs login", Starting: "Starting" }[ts.state] || ts.state;
+  return `<div class="big ${on ? "ok" : "warn"}">${label}</div>
+    ${kvs([
+      ["Name", ts.dns_name || "–"],
+      ["Address", (ts.ips || [])[0] || "–"],
+      ["Tailnet", ts.tailnet || "–"],
+      ["Devices online", on ? `${ts.peers_online} of ${ts.peers}` : "–"],
+      ["Public link", ts.funnel ? `<a href="${ts.public_url}" target="_blank" rel="noopener">${ts.public_url.replace(/^https:\/\/|\/$/g, "")}</a>` : "off", ts.funnel ? "ok" : ""],
+      ["Tailnet-only HTTPS", (ts.https_ports || []).filter(p => p !== 443).map(p => ":" + p).join(" ") || "–"],
+      ts.auth_url && ["Log in", `<a href="${ts.auth_url}" target="_blank" rel="noopener">approve this device</a>`, "warn"],
+      ["Version", (ts.version || "").split("-")[0]],
+    ])}
+    <div class="acts">
+      ${on ? `<button data-ts='{"funnel":${!ts.funnel}}'>${ts.funnel ? "Turn off public link" : "Turn on public link"}</button>` : ""}
+      <button data-ts='{"up":${!on}}'>${on ? "Turn off Tailscale" : "Turn on Tailscale"}</button>
+    </div>`;
+}
+document.getElementById("sysGrid").addEventListener("click", async e => {
+  const b = e.target.closest("button[data-ts]");
+  if (!b) return;
+  const req = JSON.parse(b.dataset.ts), viaTs = /\.ts\.net$|^100\./.test(location.hostname);
+  if (req.funnel === false && !confirm("Turn off the public link? The dashboard stays available on the tailnet.")) return;
+  if (req.up === false && !confirm(viaTs
+      ? "You're connected through Tailscale. Turning it off cuts this page off, and the public link goes too. Turn it back on from the rig's Wi-Fi. Continue?"
+      : "Turn off Tailscale? Remote access and the public link stop until it's turned back on.")) return;
+  b.disabled = true; b.textContent = "Working…";
+  try {
+    const r = await fetch("/api/system/tailscale", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(req) });
+    if (r.ok && sysLast) { sysLast.tailscale = await r.json(); sysRender(sysLast); }
+  } catch (e2) { /* lost the connection (e.g. Tailscale off while using it) */ }
+  sysPoll();
+});
 async function sysPoll() {
   try {
     const d = await (await fetch("/api/system", { cache: "no-store" })).json();

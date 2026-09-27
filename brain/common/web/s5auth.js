@@ -3,6 +3,10 @@
 // Anyone can look. Changing anything is admin-only, enforced by each service (a POST without the
 // admin cookie gets 401). This script shows VIEW ONLY / ADMIN, asks for the PIN when a change is
 // refused, and retries the change once unlocked. The cookie lasts 5 years, per browser and host.
+//
+// It also wires links to the other control pages (<a data-port="8090" data-path="/">, e.g. the top
+// bar): greyed out for viewers, and for admins greyed out only if that page can't be reached from
+// here (the public link publishes just the dashboard; the rest need the LAN or Tailscale).
 (() => {
   "use strict";
   const S5 = (window.S5AUTH = { enabled: false, admin: true, ready: false });
@@ -27,6 +31,7 @@
   .s5a-row { display: flex; gap: 8px; margin-top: 14px; }
   .s5a-row button { flex: 1; font: 600 11px/1 var(--font, system-ui, sans-serif); letter-spacing: .14em; text-transform: uppercase; padding: 11px;
     cursor: pointer; background: transparent; color: var(--text, #f2f2f2); border: 1px solid var(--line2, #555); }
+  a.s5-off { opacity: .32; cursor: not-allowed; }
   .s5a-row button.go { background: var(--accent, #ff5a1f); border-color: var(--accent, #ff5a1f); color: #111; }`;
 
   function el(tag, attrs = {}, html = "") {
@@ -36,15 +41,46 @@
     return e;
   }
 
+  // Another control page on this host. Over HTTPS (Tailscale), the dashboard is on 443, not 8080;
+  // the other pages keep their port (Tailscale serves HTTPS on each).
+  S5.url = (port, path = "/") => {
+    const https = location.protocol === "https:";
+    if (https && +port === 8080) return `https://${location.hostname}${path}`;
+    return `${location.protocol}//${location.hostname}:${port}${path}`;
+  };
+  const reach = {};   // port -> Promise<boolean>
+  function reachable(port) {
+    const own = location.port || (location.protocol === "https:" ? "443" : "80");
+    if (String(port) === own || (location.protocol === "https:" && +port === 8080 && own === "443")) return Promise.resolve(true);
+    return (reach[port] ||= rawFetch(S5.url(port, "/s5auth.js"), { mode: "no-cors", cache: "no-store", signal: AbortSignal.timeout(5000) })
+      .then(() => true, () => false));
+  }
+  function links() {
+    document.querySelectorAll("a[data-port]").forEach(a => {
+      a.href = S5.url(a.dataset.port, a.dataset.path || "/");
+      if (a.classList.contains("here")) return;
+      const off = why => { a.classList.toggle("s5-off", !!why); a.toggleAttribute("aria-disabled", !!why); a.title = why || a.dataset.title || ""; };
+      if (a.dataset.title === undefined) a.dataset.title = a.title || "";
+      if (S5.enabled && !S5.admin) return off("Admin only. Unlock with the PIN (bottom right) to open this page.");
+      off("");
+      reachable(a.dataset.port).then(ok => { if (ok || !S5.admin) return; off("Not reachable from here. Use the rig's Wi-Fi or Tailscale."); });
+    });
+  }
+  document.addEventListener("click", e => {
+    const a = e.target.closest && e.target.closest("a.s5-off");
+    if (a) { e.preventDefault(); if (S5.enabled && !S5.admin) prompt("That page is admin only. Enter the PIN."); }
+  }, true);
+
   let badge;
   function render() {
     document.documentElement.classList.toggle("s5-viewer", S5.enabled && !S5.admin);
     document.documentElement.classList.toggle("s5-admin", S5.enabled && S5.admin);
-    if (!badge) return;
+    if (!badge) return links();
     badge.style.display = S5.enabled ? "" : "none";
     badge.className = "s5a-badge " + (S5.admin ? "admin" : "viewer");
     badge.textContent = S5.admin ? "Admin" : "View only · unlock";
     badge.title = S5.admin ? "Unlocked on this browser. Click to lock it again." : "Enter the admin PIN to control the rig";
+    links();
   }
 
   async function status() {
@@ -124,4 +160,5 @@
     setInterval(status, 60000);
   }
   if (document.body) mount(); else document.addEventListener("DOMContentLoaded", mount);
+  if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", links);
 })();

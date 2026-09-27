@@ -111,7 +111,7 @@
       <div class="row"><select id="presetList" class="grow"></select><button id="bLoad">Load</button></div>
     </div>
     <p class="hint">Every change goes live on any projector surface set to <b>generative</b>
-      (<a id="editLink" href="#">mapping editor</a>, content → generative).</p>
+      (<a id="editLink" data-port="8100" data-path="/edit">mapping editor</a>, content → generative).</p>
   </div>
   <div id="groups"></div>
 </main>
@@ -130,7 +130,6 @@ function resize() {
 }
 addEventListener("resize", resize); resize();
 (function frame(now) { R.draw(now); requestAnimationFrame(frame); })(performance.now());
-$("editLink").href = `${location.protocol}//${location.hostname}:8100/edit`;
 
 connectEvents(R, {
   onStatus: ok => { $("conn").textContent = ok ? "live" : "reconnecting"; $("conn").className = "pill" + (ok ? " ok" : ""); },
@@ -206,6 +205,5 @@ $("bSave").onclick = async () => {
 };
 $("bLoad").onclick = () => { const n = $("presetList").value; if (n) fetch(`/api/presets/${encodeURIComponent(n)}/load`, { method: "POST" }); };
 </script>
-<script>document.querySelectorAll("#pages a").forEach(a => a.href = `${location.protocol}//${location.hostname}:${a.dataset.port}${a.dataset.path}`);</script>
 </body>
 </html>
