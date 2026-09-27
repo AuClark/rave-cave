@@ -157,6 +157,11 @@
   .ldeck[draggable] { cursor:grab; }
   .droptarget { outline:2px dashed var(--accent2); outline-offset:2px; }
   .droptarget.warn { outline-color:var(--bad); }
+  .automix { display:flex; gap:8px; align-items:center; flex-wrap:wrap; padding:10px 12px; border-bottom:1px solid var(--line); background:#101221; }
+  .automix select { font:inherit; font-size:12px; padding:5px; border-radius:8px; background:#151827; color:var(--text); border:1px solid var(--line); }
+  .automix .amstatus { flex:1 1 280px; font-size:12px; color:var(--dim); min-width:0; }
+  .automix .amstatus b { color:var(--text); }
+  .lbtn.amon { background:var(--good); color:#000; border-color:var(--good); box-shadow:0 0 12px rgba(61,255,139,.4); }
   .toast { position:fixed; left:50%; bottom:24px; transform:translateX(-50%); background:#1b1e2e; border:1px solid var(--line); padding:10px 16px; border-radius:12px;
            font-weight:700; opacity:0; transition:opacity .25s; pointer-events:none; z-index:20; max-width:90vw; }
   .toast.on { opacity:1; } .toast.err { border-color:var(--bad); color:var(--bad); }
@@ -180,6 +185,14 @@
 <main>
   <section id="stack" class="panel stack"><canvas id="stackcv"></canvas></section>
   <section id="lib" class="panel lib">
+    <div class="automix">
+      <button class="lbtn" id="amOn" title="Mixes from deck to deck on its own. Keep both channel faders up.">AUTOMIX</button>
+      <select id="amMode" title="How the next track is chosen"><option value="queue">Next in this list</option><option value="harmonic">Best match (BPM + key)</option></select>
+      <select id="amOverlap" title="How long both tracks play together"><option value="16">4-bar mix</option><option value="32">8-bar mix</option><option value="64">16-bar mix</option></select>
+      <span class="amstatus" id="amStatus">Automix is off.</span>
+      <button class="lbtn" id="amSkip" title="Choose a different next track">SKIP</button>
+      <button class="lbtn" id="amNow" title="Start the mix at the next bar">MIX NOW</button>
+    </div>
     <div class="libdecks" id="libdecks"></div>
     <div class="libbody">
       <aside class="crates"><select id="libsrc"></select><ul id="crates"></ul></aside>
@@ -966,6 +979,146 @@ async function playWhenLoaded(deck, t) {
   }
   toast(`Deck ${deck} didn't report "${t.title}" loaded, so it wasn't started`, true);
 }
+
+// ---------------------------------------------------------------- automix
+// Runs in this browser tab. The Pi can drive the decks (load, play, stop, sync, master) but not the
+// mixer's faders, so this mixes like rekordbox Automix on CDJs: with both channel faders up, the next
+// track starts on the bar where the playing one's outro begins, both play for the overlap, then the old
+// deck stops on a bar line and the new one becomes master. Then it repeats the other way round.
+const AM_LEAD_MS = 25;                                  // network + deck start latency to send early
+const am = { on: false, mode: view.amMode || "queue", overlap: +(view.amOverlap || 32), phase: "off",
+             next: null, skipped: new Set(), loadSent: 0, syncSent: 0, masterSent: 0, startTimer: null,
+             stopTimer: null, forceStart: null, said: "" };
+
+function amSay(html) { if (html !== am.said) { am.said = html; $("#amStatus").innerHTML = html; } }
+function barFirstAtOrBefore(tl, b) { let r = tl.barFirstBeat[0]; for (const x of tl.barFirstBeat) { if (x <= b) r = x; else break; } return r; }
+function barFirstAtOrAfter(tl, b) { const x = tl.barFirstBeat.find(x => x >= b); return x || tl.beatMs.length; }
+function barNumber(tl, beat) { return tl.barFirstBeat.filter(x => x <= beat).length; }
+function mixStartBeat(tl, overlap) {
+  const last = tl.beatMs.length, outro = tl.sections.filter(s => s.type === "outro").pop();
+  const b = outro ? outro.startBeat : last - overlap;
+  return barFirstAtOrBefore(tl, Math.max(1, Math.min(b, last - overlap)));
+}
+// Browser time (performance.now) at which a deck reaches a beat of its grid.
+function timeOfBeat(p, tl, beat) {
+  const now = performance.now(), rate = 1 + (p.status.pitchPct || 0) / 100;
+  return now + (tl.beatMs[Math.max(0, Math.min(tl.beatMs.length - 1, beat - 1))] - playheadMs(p, now)) / rate;
+}
+const deckKey = s => `${s.trackSourcePlayer}:${s.trackSourceSlot}/${s.rekordboxId}`;
+
+function amPickNext(currentId) {
+  const onDeck = new Set(lastState.players.map(p => p.status.rekordboxId));
+  const ok = t => !onDeck.has(t.id) && !played.has(lib.src + "/" + t.id) && !am.skipped.has(t.id) && t.id !== currentId;
+  if (am.mode === "harmonic") {
+    const mi = masterInfo();
+    const drift = t => Math.min(...[1, 0.5, 2].map(f => Math.abs(t.bpm * f / (mi.bpm || t.bpm) - 1)));
+    const score = t => (keyCompatible(t.key, mi.key) ? 1 : 0) - drift(t) * 10;
+    const c = lib.tracks.filter(ok).filter(t => t.bpm && drift(t) <= 0.06).sort((a, b) => score(b) - score(a));
+    return c[0] || null;
+  }
+  const v = lib.view.length ? lib.view : lib.tracks, i = v.findIndex(t => t.id === currentId);
+  return (i >= 0 ? v.slice(i + 1).concat(v.slice(0, i)) : v).find(ok) || null;
+}
+
+function amStop(reason) {
+  clearTimeout(am.startTimer); clearTimeout(am.stopTimer);
+  am.startTimer = am.stopTimer = null; am.forceStart = null;
+  am.phase = am.on ? "prep" : "off";
+  if (reason) amSay(reason);
+}
+
+function amTick() {
+  $("#amOn").classList.toggle("amon", am.on);
+  if (!am.on) return amSay("Automix is off. Keep both channel faders up, then switch it on.");
+  if (lib.missing || !lib.src || !lastState) return amSay("Automix needs the library.");
+  if (am.phase === "mixing") return;                   // the stop timer owns this phase
+  const ps = lastState.players.slice().sort((a, b) => a.number - b.number), playing = ps.filter(p => p.status.playing);
+  if (ps.length < 2) return amSay("Automix needs two decks on the link.");
+  if (!playing.length) { amStop(); return amSay("Start a track on either deck and automix takes it from there."); }
+  if (playing.length > 1) { amStop(); return amSay("Both decks are playing, so automix waits until one stops."); }
+  const A = playing[0], B = ps.find(p => p !== A), bs = B.status, now = performance.now();
+
+  // 1. The next track on the idle deck. A track you put there yourself (not played yet) is used as is.
+  const bOwn = bs.trackLoaded && bs.rekordboxId && bs.rekordboxId !== A.status.rekordboxId && !played.has(deckKey(bs));
+  if (am.next && am.next.deck !== B.number) am.next = null;
+  if (bOwn && (!am.next || (bs.rekordboxId !== am.next.id && now - am.loadSent > 8000)))
+    am.next = { id: bs.rekordboxId, title: (B.track && B.track.title) || `Track #${bs.rekordboxId}`, deck: B.number };
+  if (!am.next) {
+    const t = amPickNext(A.status.rekordboxId);
+    if (!t) return amSay("No tracks left to mix into. Pick another playlist or switch modes.");
+    am.next = { id: t.id, title: t.title, deck: B.number };
+  }
+  const nextTitle = `<b>${esc(am.next.title)}</b>`;
+  if (bs.rekordboxId !== am.next.id) {
+    if (now - am.loadSent > 8000) { am.loadSent = now; deckCmd(B.number, "load", { src: lib.src, id: am.next.id }); }
+    return amSay(`Loading ${nextTitle} on deck ${B.number}…`);
+  }
+  if (!bs.trackLoaded || bs.busy) return amSay(`Loading ${nextTitle} on deck ${B.number}…`);
+  // Retry a few times (a deck can miss a command), then leave it: the mix still starts on the bar.
+  const tries = am.next.tries || (am.next.tries = { sync: 0, master: 0 });
+  if (!bs.synced && tries.sync < 3 && now - am.syncSent > 3000) { am.syncSent = now; tries.sync++; deckCmd(B.number, "sync_on"); }
+  if (!A.status.tempoMaster && tries.master < 3 && now - am.masterSent > 3000) { am.masterSent = now; tries.master++; deckCmd(A.number, "master"); }
+
+  // 2. When to start it: the bar where deck A's outro begins (or MIX NOW's bar).
+  const tl = timelines[A.number] && timelines[A.number].data;
+  if (!tl) return amSay(`Next: ${nextTitle} on deck ${B.number}. Waiting for deck ${A.number}'s beat grid…`);
+  const ph = beatPhase(tl, playheadMs(A, now)), cur = ph.beat + ph.frac;
+  let start = am.forceStart || mixStartBeat(tl, am.overlap);
+  if (start < cur + 1) start = am.forceStart = barFirstAtOrAfter(tl, cur + 2);   // switched on late: next bar
+  const beatsLeft = start - cur;
+  if (!am.startTimer && beatsLeft <= 16) amSchedule(A, B, tl, start);
+  amSay(`Next: ${nextTitle} on deck ${B.number} · mixes in at bar ${barNumber(tl, start)} of deck ${A.number} ` +
+        `(<b>${Math.ceil(beatsLeft)}</b> beats) · ${am.overlap / 4}-bar overlap`);
+}
+
+function amSchedule(A, B, tl, start) {
+  const a = A.number, b = B.number, next = am.next;
+  am.startTimer = setTimeout(async () => {
+    am.startTimer = null;
+    const pa = lastState.players.find(p => p.number === a), pb = lastState.players.find(p => p.number === b);
+    // Only if nothing changed in the meantime.
+    if (!am.on || !pa || !pb || !pa.status.playing || pb.status.playing || pb.status.rekordboxId !== next.id) return;
+    if (!(await deckCmd(b, "play"))) return;
+    am.phase = "mixing"; am.forceStart = null;
+    played.add(deckKey(pb.status));
+    toast(`Automix: "${next.title}" in on deck ${b}`);
+    amSay(`Mixing: deck ${a} → deck ${b} (<b>${esc(next.title)}</b>) over ${am.overlap / 4} bars`);
+    const stopBeat = Math.min(tl.beatMs.length, barFirstAtOrAfter(tl, start + am.overlap));
+    am.stopTimer = setTimeout(async () => {
+      am.stopTimer = null;
+      const nb = lastState.players.find(p => p.number === b);
+      am.phase = am.on ? "prep" : "off"; am.next = null;
+      if (!am.on || !nb || !nb.status.playing) return;  // you took over: leave deck A alone
+      await deckCmd(b, "master");
+      await deckCmd(a, "stop");
+      toast(`Automix: deck ${b} leads, picking the next track for deck ${a}`);
+    }, timeOfBeat(pa, tl, stopBeat) - performance.now() - AM_LEAD_MS);
+  }, timeOfBeat(A, tl, start) - performance.now() - AM_LEAD_MS);
+}
+
+$("#amMode").value = am.mode; $("#amOverlap").value = String(am.overlap);
+$("#amMode").onchange = e => { am.mode = view.amMode = e.target.value; saveView(); if (am.phase !== "mixing") { am.next = null; amStop(); } };
+$("#amOverlap").onchange = e => { am.overlap = view.amOverlap = +e.target.value; saveView(); if (am.phase !== "mixing") amStop(); };
+$("#amOn").onclick = () => {
+  am.on = !am.on;
+  if (am.on) { am.phase = "prep"; am.next = null; am.skipped.clear(); toast("Automix on. Keep both channel faders up."); }
+  else { amStop(); toast("Automix off"); }
+  amTick();
+};
+$("#amSkip").onclick = () => {
+  if (!am.on || am.phase === "mixing" || !am.next) return;
+  am.skipped.add(am.next.id); am.next = null; am.loadSent = 0; amStop(); amTick();
+};
+$("#amNow").onclick = () => {
+  if (!am.on || am.phase === "mixing") return;
+  const A = lastState && lastState.players.find(p => p.status.playing), tl = A && timelines[A.number] && timelines[A.number].data;
+  if (!tl) return toast("Nothing playing to mix out of", true);
+  clearTimeout(am.startTimer); am.startTimer = null;
+  const ph = beatPhase(tl, playheadMs(A, performance.now()));
+  am.forceStart = barFirstAtOrAfter(tl, ph.beat + ph.frac + 2);
+  amTick();
+};
+setInterval(amTick, 200);
 
 // ---------------------------------------------------------------- drag and drop
 // Drag a library row, or a deck (its waveform lane or its chip above the library), onto a deck's
