@@ -230,6 +230,7 @@
       <div class="pmeta" style="margin-top:12px">Share of the mix (by channel energy)</div>
       <div class="sharebar"><div id="sh1" style="background:var(--accent2)"></div><div id="sh2" style="background:var(--accent)"></div></div>
       <div class="midi" id="midi"></div>
+      <div class="midi" id="mixaudio"></div>
     </section>
     <section class="panel">
       <h2>Show engine</h2>
@@ -1379,6 +1380,11 @@ function renderMixer(m) {
   $("#sh1").title = `CH1 ${Math.round(s1 * 100)}%`; $("#sh2").title = `CH2 ${Math.round(s2 * 100)}%`;
   const midi = m && m.midi;
   $("#midi").textContent = midi && midi.count ? `MIDI (${midi.count}): ` + midi.recent.map(x => x.hex).join("  ·  ") : "MIDI: nothing received yet";
+  // Master-mix analysis and the set recorder (brain/mixer), when that version is running.
+  const a = m && m.connected && m.audio, r = m && m.rec, hms = x => `${Math.floor(x / 3600)}:${String(Math.floor(x / 60) % 60).padStart(2, "0")}:${String(x % 60).padStart(2, "0")}`;
+  $("#mixaudio").innerHTML = (a ? `bass ${a.low_db} · mid ${a.mid_db} · high ${a.high_db} dB${a.bass_out ? ' · <b style="color:var(--warn)">BASS OUT</b>' : ""}` : "")
+    + (r ? (r.on ? `${a ? "  ·  " : ""}<b style="color:var(--bad)">● REC ${hms(r.secs)}</b> ${esc(r.file)} · ${r.tracks} tracks`
+                 : `${a ? "  ·  " : ""}${r.error ? esc(r.error) : r.enabled ? "recorder ready (starts when music plays)" : "recorder off"}`) : "");
 }
 function renderShow(sh) {
   if (!sh) { $("#shScene").textContent = "offline"; $("#shScene").className = "showscene"; return; }

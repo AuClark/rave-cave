@@ -185,6 +185,33 @@ A deck that is tempo master can't be retimed remotely: nothing can move its pitc
 - **Fixed overlap:** 16, 32 or 64 beats, starting where the outgoing track's outro begins.
 - **TEMPO RAMP** (needs `-Dtempo=on`): the Pi holds master, both decks get SYNC on, and during each mix the tempo glides to the incoming track's original BPM, arriving as the outgoing deck stops.
 
+## Mixer reactions and set recording
+
+`brain/mixer/mixer.py` reads the DJM-450 over USB. As well as the channel levels that pick the live deck (above), it analyses the master mix every 50 ms and records sets.
+
+**Master-mix analysis** (`audio` in the mixer message): bass, mid and high energy; kicks; and **bass out**. Bass out compares the loudest bass of the last beat with the mids, against a slow reference taken while the bass is in. So it fires on an EQ kill, a filter sweep or a bass-less breakdown, whatever the volume. On synthetic test audio it trips about 0.75 s after the bass goes, which is within a beat, and clears 0.1 s after it comes back. It doesn't trip on the gaps between kicks.
+
+**What the lights do** (`Engine.react`, toggle **MIXER REACT** in the Commander, default on from `mixer.react` in `config.json`):
+- **Bass out:** GROOVE, DROP, INTRO and OUTRO switch to the sparse breakdown look. When the bass comes back there's a white hit (not during BUILD or HOLD, which have their own drop).
+- **Fader level:** master loudness scales brightness from 35% to 100%, so the lights come down with the faders.
+- **Kicks:** on a track with no beat grid, the kicks in the mix drive the beat.
+- **Beat FX on:** strobes at the Commander's strobe rate.
+- **Filter:** sweeps the colour on the live deck's channel.
+
+Beat FX and filter need their MIDI controls mapped in `config.json`:
+
+```json
+"midi": { "fx_on": "B0 47", "ch1_filter": "B0 17", "ch2_filter": "B0 18" }
+```
+
+Those values are examples, not the DJM-450's. To find the real ones, move one control at a time and read the MIDI line in the dashboard's Mixer panel: each message is `status control value`, and the mapping is the first two bytes. `fx_on` is on when the value is 64 or more. A filter is centred at 64.
+
+**Set recording** (`rec` in the mixer message, shown as **● REC** in the dashboard's Mixer panel):
+- The master mix (Rec Out) is written to `/srv/rave/recordings` (`RAVE_REC_DIR`) as 24-bit 48 kHz **FLAC**, about 0.5 GB an hour. It needs `sudo apt install flac` on the brain. Without that it writes WAV, about 1 GB an hour.
+- Recording starts after 3 s of music (keeping 3 s of pre-roll) and stops after 90 s of silence. It won't start with less than 2 GB free.
+- Next to each recording it writes a tracklist, `set-….txt` and `set-….cue`, of the deck the lights follow, with timestamps.
+- `RAVE_REC=off` in the mixer service's environment turns it off.
+
 ## Smoke safety (non-negotiable)
 
 - Relay defaults **off** at boot and when commands stop (heartbeat timeout).

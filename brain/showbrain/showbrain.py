@@ -152,6 +152,13 @@ class Engine:
         self.palette_mode = "auto"      # auto (track key) | lock | cycle
         self.palette_hue = 0.83
         self.speed = 1.0                # 0.5 half-time, 1, 2 double-time
+        # Mixer reactions (DJM-450 via brain/mixer): bass kill, level, kicks, and mapped MIDI controls.
+        self.mixer_react = CONFIG.get("mixer", {}).get("react", True)
+        self.bass_was_out = False
+        self.fx_active = False          # Beat FX on (needs mixer.midi.fx_on mapped)
+        self.filters = {}               # mixer channel -> filter offset -1..1 (needs mixer.midi.chN_filter)
+        self.midi_t = 0.0               # newest MIDI message already handled
+        self.mix = {}                   # what the mixer is doing now, for the Commander
         self.fixture_ctl = {}           # fixture name -> {"on": bool, "level": 0..1}
         # Tap clock: drives the lights when no deck is playing (looks or forced events only).
         self.tap_bpm = 128.0
@@ -467,16 +474,73 @@ class Engine:
             ctx["hue"] = (ctx["hue"] + 0.125 * step) % 1.0
         return ctx
 
+    def react(self, ctx, t):
+        """Layer what the mixer is doing on top of the show: runs after shape(), before output_fx()."""
+        m = self.decks.mixer_state()
+        audio = (m or {}).get("audio")
+        self.mix = {"react": self.mixer_react, "connected": bool(m), "bass_out": False,
+                    "fx": self.fx_active, "filter": 0.0, "level": None}
+        if not m:
+            return ctx
+        self._midi(m)
+        if not self.mixer_react or not audio or ctx["scene"] in ("IDLE", "PREDROP"):
+            self.bass_was_out = bool(audio and audio.get("bass_out"))
+            return ctx
+        cfg = CONFIG.get("mixer", {})
+        # Bass killed (EQ, filter or fader): the sparse breakdown look, and a hit when it comes back.
+        out = bool(audio.get("bass_out"))
+        if out and ctx["scene"] in ("GROOVE", "DROP", "INTRO", "OUTRO"):
+            ctx["scene"] = "BREAKDOWN"
+            ctx.setdefault("section_progress", 0.5)
+        if self.bass_was_out and not out and ctx["scene"] not in ("BUILD", "HOLD"):
+            self.flash_t = t
+        self.bass_was_out = out
+        # No beat grid for this track: let the kicks in the mix drive the beat.
+        kick = audio.get("kick_ms") or 0
+        if ctx["bar"] == 0 and kick and t * 1000 - kick < 2000:
+            period = 60 / max(60.0, ctx.get("bpm") or 120.0)
+            ctx["frac"] = min(0.999, (t - kick / 1000) / period)
+        # Filter on the live deck's channel: sweep the colour with it.
+        chmap = {v: int(k) for k, v in cfg.get("channels", {"1": 1, "2": 2}).items()}     # player -> mixer ch
+        f = self.filters.get(chmap.get(ctx.get("live")), 0.0)
+        if abs(f) > 0.05:
+            ctx["hue"] = (ctx["hue"] + 0.3 * f) % 1.0
+        self.mix.update(bass_out=out, filter=round(f, 2), level=audio.get("level"))
+        return ctx
+
+    def _midi(self, m):
+        """Mapped DJM controls from the MIDI the mixer reports (config mixer.midi: name -> "B0 06")."""
+        mapping = {v.upper(): k for k, v in CONFIG.get("mixer", {}).get("midi", {}).items() if v}
+        newest = self.midi_t
+        for msg in (m.get("midi") or {}).get("recent", []):
+            if msg["t"] <= self.midi_t:
+                continue
+            newest = max(newest, msg["t"])
+            parts = msg["hex"].upper().split()
+            name = mapping.get(" ".join(parts[:2])) if len(parts) == 3 else None
+            if not name:
+                continue
+            v = int(parts[2], 16)
+            if name == "fx_on":
+                self.fx_active = v >= 64
+            elif name.endswith("_filter") and name[:2] == "ch":
+                self.filters[int(name[2:name.index("_")])] = (v - 64) / 63.0
+        self.midi_t = newest
+
     def output_fx(self, ctx, t):
         """Post-look effects every fixture applies: strobe, white (blinder / flash), blackout."""
         strobe = None
-        if self.strobe:
+        if self.strobe or (self.mixer_react and self.fx_active):
             if self.strobe_div:
                 strobe = ((ctx["frac"] * self.strobe_div) % 1.0) < 0.5
             else:
                 strobe = (t * 12) % 1.0 < 0.5
         white = 1.0 if self.blinder else (math.exp(-(t - self.flash_t) * 4) if t - self.flash_t < 1.5 else 0.0)
-        return {"intensity": self.intensity, "strobe": strobe, "white": white, "black": self.black_hold}
+        intensity = self.intensity
+        level = self.mix.get("level")
+        if self.mixer_react and level is not None and ctx["scene"] not in ("IDLE", "PREDROP"):
+            intensity *= 0.35 + 0.65 * level          # faders down, lights down
+        return {"intensity": intensity, "strobe": strobe, "white": white, "black": self.black_hold}
 
     # --- commands --------------------------------------------------------
     def command(self, c):
@@ -502,6 +566,8 @@ class Engine:
             self.blinder = bool(c.get("value", False))
         elif cmd == "black_hold":
             self.black_hold = bool(c.get("value", False))
+        elif cmd == "mixer_react":
+            self.mixer_react = bool(c.get("value", not self.mixer_react))
         elif cmd == "flash":
             self.flash_t = t
         elif cmd == "look":
@@ -766,6 +832,7 @@ def main():
         ctx = engine.shape(engine.decide(t0), t0)
         if engine.mode == "blackout":
             ctx["scene"] = "PREDROP"
+        ctx = engine.react(ctx, t0)
         fx = engine.output_fx(ctx, t0)
         engine.state = {k: v for k, v in ctx.items()} | {
             "mode": engine.mode, "follow": engine.follow, "lead_ms": engine.lead_ms,
@@ -778,6 +845,7 @@ def main():
             "preview": {f.name: f.preview for f in fixtures},
             "fps": round(fps_meas, 1),
             "live_reason": engine.live_reason,
+            "mix": engine.mix,
             "mixer_share": {str(k): round(v, 3) for k, v in engine.share_smooth.items()},
             "dmx": {k: d.status for k, d in UDMX_DEVICES.items()}}
         if ctx["scene"] != last_scene:

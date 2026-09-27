@@ -9,15 +9,29 @@ It only streams capture while a playback stream is open (implicit feedback), so 
 also play silence to it. The decks' channels are on LINE, so that silence isn't heard.
 
 Every 50 ms it sends a JSON "mixer" message over UDP to deckdash (:9101) and showbrain
-(:9100) with RMS/peak dB per channel, each channel's share of the mix, and recent MIDI.
+(:9100) with RMS/peak dB per channel, each channel's share of the mix, recent MIDI, an
+analysis of the master mix ("audio": bass/mid/high energy, kicks, bass out) and the set
+recorder's state ("rec").
+
+The recorder writes the master mix (Rec Out) to RAVE_REC_DIR (default /srv/rave/recordings)
+as FLAC (WAV if flac isn't installed) whenever music plays: it starts after 3 s of sound
+(keeping 3 s of pre-roll) and stops after 90 s of silence. Next to each recording it keeps a
+tracklist (.txt and .cue) of the deck the lights follow, from deckdash's /api/state.
+RAVE_REC=off turns it off.
 
     python3 brain/mixer/mixer.py
 """
+import collections
 import json
+import os
+import shutil
 import socket
 import subprocess
 import threading
 import time
+import urllib.request
+import wave
+from pathlib import Path
 
 import numpy as np
 
@@ -77,12 +91,227 @@ def db(x):
     return float(20 * np.log10(x + 1e-9))
 
 
+# ---------------------------------------------------------------- master-mix analysis
+
+class Analyser:
+    """Bass / mid / high energy, kicks and "bass out" from the master mix, one 50 ms block at a time.
+
+    Bass out compares the bass to the mids (so it doesn't depend on how loud the mix is) against a
+    slow reference taken while the bass is in: it fires on an EQ kill, a filter or a bass-less
+    breakdown, and clears when the bass comes back."""
+
+    DROP_DB, BACK_DB = 10.0, 5.0            # bass-to-mid fall that counts as "out", and "back"
+
+    def __init__(self, n):
+        self.win = np.hanning(n).astype(np.float32)
+        f = np.fft.rfftfreq(n, 1 / RATE)
+        self.masks = {"low": (f >= 30) & (f < 150), "mid": (f >= 150) & (f < 2000), "high": (f >= 2000) & (f < 16000)}
+        self.smooth = {}                    # band -> smoothed linear energy (~0.5 s)
+        self.l_fast = 0.0
+        self.prev_l = 0.0
+        self.last_kick = 0
+        self.ref = None                     # slow bass-to-mid reference (dB) while the bass is in
+        self.heard = 0.0                    # seconds of audio seen, for the reference warm-up
+        self.bass_out = False
+        self.cand_since = None
+        self.low_hist = collections.deque(maxlen=12)    # ~0.6 s: a beat, so gaps between kicks don't count
+
+    def update(self, mono, master_db, now_ms):
+        spec = np.abs(np.fft.rfft(mono * self.win)) ** 2 / len(mono)
+        e = {k: float(spec[m].sum()) + 1e-12 for k, m in self.masks.items()}
+        for k, v in e.items():
+            self.smooth[k] = v if k not in self.smooth else self.smooth[k] + 0.1 * (v - self.smooth[k])
+        sm = {k: 10 * np.log10(v) for k, v in self.smooth.items()}
+        active = master_db > -50
+
+        # Kick: a jump in bass energy well above its recent average, at most one per 250 ms.
+        low = e["low"]
+        self.l_fast += 0.1 * (low - self.l_fast)
+        if active and low > 1.6 * self.l_fast and low > self.prev_l and now_ms - self.last_kick > 250:
+            self.last_kick = now_ms
+        self.prev_l = low
+
+        # Bass out: the loudest bass of the last beat against the mids, with a little hysteresis
+        # in time so single blocks don't flicker it.
+        self.low_hist.append(low)
+        d = 10 * np.log10(max(self.low_hist)) - sm["mid"]
+        if active:
+            self.heard += BLOCK_S
+            if self.ref is None:
+                self.ref = d
+            elif not self.bass_out:
+                self.ref += 0.005 * (d - self.ref)          # ~10 s
+        if active and self.ref is not None and self.heard > 4:
+            want = d < self.ref - self.DROP_DB if not self.bass_out else d < self.ref - self.BACK_DB
+            if want != self.bass_out:
+                self.cand_since = self.cand_since or now_ms
+                if now_ms - self.cand_since >= (200 if want else 100):
+                    self.bass_out, self.cand_since = bool(want), None
+            else:
+                self.cand_since = None
+        elif not active:
+            self.bass_out, self.cand_since = False, None
+        return {"low_db": round(sm["low"], 1), "mid_db": round(sm["mid"], 1), "high_db": round(sm["high"], 1),
+                "kick_ms": int(self.last_kick), "bass_out": bool(self.bass_out),
+                "level": round(min(1.0, max(0.0, (master_db + 40) / 30)), 3)}
+
+
+# ---------------------------------------------------------------- set recorder
+
+class Recorder:
+    START_DB, STOP_DB = -50.0, -60.0
+    START_S, STOP_S, PREROLL_S = 3.0, 90.0, 3.0
+    MIN_FREE = 2 * 1024 ** 3                # stop before the eMMC gets tight
+
+    def __init__(self):
+        self.enabled = os.environ.get("RAVE_REC", "on") != "off"
+        self.dir = Path(os.environ.get("RAVE_REC_DIR", "/srv/rave/recordings"))
+        self.pre = collections.deque(maxlen=int(self.PREROLL_S / BLOCK_S))
+        self.flac = self.wav = None
+        self.name = self.error = None
+        self.loud_since = self.quiet_since = None
+        self.started = 0.0
+        self.frames = 0
+        self.tracks = []
+        self.lock = threading.Lock()
+
+    @property
+    def on(self):
+        return self.flac is not None or self.wav is not None
+
+    def state(self):
+        return {"on": self.on, "file": self.name, "secs": int(self.frames / RATE) if self.on else 0,
+                "tracks": len(self.tracks), "enabled": self.enabled, "error": self.error}
+
+    def feed(self, pcm, master_db, now):
+        """pcm: one block of the master mix as 24-bit little-endian stereo."""
+        if not self.enabled:
+            return
+        if not self.on:
+            self.pre.append(pcm)
+            if master_db > self.START_DB:
+                self.loud_since = self.loud_since or now
+                if now - self.loud_since >= self.START_S:
+                    self._open(now)
+            else:
+                self.loud_since = None
+            return
+        self._write(pcm)
+        if master_db < self.STOP_DB:
+            self.quiet_since = self.quiet_since or now
+            if now - self.quiet_since >= self.STOP_S:
+                self.close("silence")
+        else:
+            self.quiet_since = None
+
+    def _open(self, now):
+        try:
+            self.dir.mkdir(parents=True, exist_ok=True)
+            if shutil.disk_usage(self.dir).free < self.MIN_FREE:
+                raise OSError("less than 2 GB free")
+            self.name = time.strftime("set-%Y-%m-%d-%H%M%S")
+            if shutil.which("flac"):
+                self.flac = subprocess.Popen(
+                    ["flac", "--silent", "--force", "--endian=little", "--sign=signed", "--channels=2",
+                     "--bps=24", f"--sample-rate={RATE}", "-5", "-o", str(self.dir / f"{self.name}.flac"), "-"],
+                    stdin=subprocess.PIPE)
+            else:
+                self.wav = wave.open(str(self.dir / f"{self.name}.wav"), "wb")
+                self.wav.setnchannels(2)
+                self.wav.setsampwidth(3)
+                self.wav.setframerate(RATE)
+            self.error = None
+        except OSError as e:
+            self.error = f"can't record: {e}"
+            self.enabled = False                # don't retry every block
+            log(self.error)
+            return
+        self.started = now - len(self.pre) * BLOCK_S
+        self.frames = 0
+        self.tracks = []
+        self.quiet_since = None
+        for pcm in self.pre:
+            self._write(pcm)
+        self.pre.clear()
+        log(f"recording {self.name}")
+        threading.Thread(target=self._tracklist, args=(self.name,), daemon=True).start()
+
+    def _write(self, pcm):
+        try:
+            if self.flac:
+                self.flac.stdin.write(pcm)
+            else:
+                self.wav.writeframesraw(pcm)
+            self.frames += len(pcm) // 6
+        except (OSError, ValueError) as e:
+            self.error = f"recording stopped: {e}"
+            log(self.error)
+            self.close("error")
+
+    def close(self, why):
+        with self.lock:
+            name, secs = self.name, int(self.frames / RATE)
+            try:
+                if self.flac:
+                    self.flac.stdin.close()
+                    self.flac.wait(timeout=30)
+                if self.wav:
+                    self.wav.close()
+            except (OSError, subprocess.TimeoutExpired):
+                pass
+            self.flac = self.wav = None
+        if name:
+            log(f"recording {name} closed ({why}): {secs // 60} min, {len(self.tracks)} tracks")
+
+    def _tracklist(self, name):
+        """While recording, note each track on the deck the lights follow (deckdash /api/state)."""
+        last = None
+        while self.on and self.name == name:
+            try:
+                with urllib.request.urlopen("http://127.0.0.1:8080/api/state", timeout=2) as r:
+                    st = json.loads(r.read())
+                show = st.get("show") or {}
+                playing = [p for p in st.get("players", []) if p.get("status", {}).get("playing")]
+                live = show.get("live") or (playing[0]["number"] if len(playing) == 1 else None)
+                p = next((p for p in playing if p["number"] == live), None)
+                t = p and p.get("track")
+                if t and t.get("title") and (live, t["title"]) != last:
+                    last = (live, t["title"])
+                    self.tracks.append({"at": max(0.0, time.time() - self.started), "deck": live,
+                                        "artist": t.get("artist") or "", "title": t["title"]})
+                    self._write_tracklist(name)
+            except Exception:
+                pass
+            time.sleep(2)
+
+    def _write_tracklist(self, name):
+        audio = f"{name}.flac" if self.flac else f"{name}.wav"
+        txt = [f"{name}\n"]
+        cue = [f'TITLE "{name}"', f'FILE "{audio}" WAVE']
+        for i, t in enumerate(self.tracks, 1):
+            s = int(t["at"])
+            txt.append(f"{s // 3600:02d}:{s % 3600 // 60:02d}:{s % 60:02d}  {t['artist']} - {t['title']}  (deck {t['deck']})")
+            q = lambda v: v.replace('"', "'")
+            frames = int(t["at"] * 75)
+            cue += [f"  TRACK {i:02d} AUDIO", f'    TITLE "{q(t["title"])}"', f'    PERFORMER "{q(t["artist"])}"',
+                    f"    INDEX 01 {frames // 4500:02d}:{frames // 75 % 60:02d}:{frames % 75:02d}"]
+        try:
+            (self.dir / f"{name}.txt").write_text("\n".join(txt) + "\n")
+            (self.dir / f"{name}.cue").write_text("\n".join(cue) + "\n")
+        except OSError as e:
+            log(f"tracklist: {e}")
+
+
 def run():
+    os.umask(0o002)                         # recordings stay readable/writable for the rave group
     sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    rec = Recorder()
     threading.Thread(target=midi_reader, daemon=True).start()
     while True:
         if not card_present():
-            msg = json.dumps({"t": "mixer", "ts": int(time.time() * 1000), "connected": False})
+            if rec.on:
+                rec.close("mixer unplugged")
+            msg = json.dumps({"t": "mixer", "ts": int(time.time() * 1000), "connected": False, "rec": rec.state()})
             for tgt in TARGETS:
                 sock.sendto(msg.encode(), tgt)
             time.sleep(2)
@@ -95,16 +324,19 @@ def run():
         cap = subprocess.Popen(["arecord", "-D", dev, "-f", "S24_3LE", "-c", str(CH), "-r", str(RATE), "-t", "raw", "-q"],
                                stdout=subprocess.PIPE, stderr=subprocess.DEVNULL)
         log("capturing from DJM-450")
-        blk = int(RATE * BLOCK_S) * CH * 3
+        n = int(RATE * BLOCK_S)
+        blk = n * CH * 3
         peak_hold = np.full(3, SILENCE_DB)
+        ana = Analyser(n)
         try:
             while True:
                 b = cap.stdout.read(blk)
                 if len(b) < blk:
                     break
                 a = np.frombuffer(b, np.uint8).reshape(-1, 3).astype(np.int32)
-                s = a[:, 0] | (a[:, 1] << 8) | (a[:, 2] << 16)
-                s = np.where(s >= 1 << 23, s - (1 << 24), s).reshape(-1, CH) / float(1 << 23)
+                si = a[:, 0] | (a[:, 1] << 8) | (a[:, 2] << 16)
+                si = np.where(si >= 1 << 23, si - (1 << 24), si).reshape(-1, CH)
+                s = si / float(1 << 23)
                 # Stereo pairs -> ch1, ch2, master
                 pairs = [s[:, 0:2], s[:, 2:4], s[:, 4:6]]
                 rms = np.array([np.sqrt((p ** 2).mean()) for p in pairs])
@@ -116,19 +348,25 @@ def run():
                 share = (e / e.sum()).tolist() if e.sum() > 1e-10 else [0.0, 0.0]
                 with midi_lock:
                     midi = {"count": midi_count, "recent": list(midi_log[-8:])}
+                now = time.time()
+                audio = ana.update(s[:, 4:6].mean(axis=1).astype(np.float32), float(rms_db[2]), int(now * 1000))
+                # Master pair as packed 24-bit little-endian: the low three bytes of each int32.
+                rec.feed(si[:, 4:6].astype("<i4").view(np.uint8).reshape(-1, 4)[:, :3].tobytes(), float(rms_db[2]), now)
                 names = ["ch1", "ch2", "master"]
                 msg = {"t": "mixer", "ts": int(time.time() * 1000), "connected": True, "model": "DJM-450",
                        "channels": {n: {"rms_db": round(float(rms_db[i]), 1), "peak_db": round(float(pk_db[i]), 1),
                                         "peak_hold_db": round(float(peak_hold[i]), 1),
                                         "active": bool(rms_db[i] > SILENCE_DB)} for i, n in enumerate(names)},
                        "share": {"ch1": round(share[0], 3), "ch2": round(share[1], 3)},
-                       "midi": midi}
+                       "midi": midi, "audio": audio, "rec": rec.state()}
                 data = json.dumps(msg).encode()
                 for tgt in TARGETS:
                     sock.sendto(data, tgt)
         finally:
             for p in (cap, play):
                 p.kill()
+            if rec.on:
+                rec.close("capture stopped")
         log("capture stopped, retrying")
         time.sleep(2)
 

@@ -74,6 +74,8 @@
   </div>
   <label>Strobe rate (locked to the beat)</label>
   <div class="seg" id="sdiv"><button data-v="1">1/4</button><button data-v="2">1/8</button><button data-v="4">1/16</button><button data-v="0">FREE</button></div>
+  <label>Mixer reactions <span id="mixinfo" class="dim"></span></label>
+  <button id="mixreact" style="width:100%" onclick="cmd('mixer_react', !(S.mix && S.mix.react))" title="Lights react to the DJM: bass kill, fader level, Beat FX, filter">MIXER REACT</button>
   <label>Motion speed</label>
   <div class="seg" id="speed"><button data-v="0.5">½× HALF</button><button data-v="1">1×</button><button data-v="2">2× DOUBLE</button></div>
 </div>
@@ -235,6 +237,10 @@ async function poll() {
     $('hold').classList.toggle('on', !!S.hold);
     $('black').classList.toggle('on', S.mode === 'blackout');
     segOn('mode', S.mode); segOn('follow', S.follow); segOn('sdiv', S.strobe_div); segOn('speed', S.speed);
+    const mx = S.mix || {};
+    $('mixreact').classList.toggle('on', !!mx.react);
+    $('mixinfo').textContent = !mx.connected ? '· no mixer data' : [mx.bass_out && 'BASS OUT', mx.fx && 'FX ON',
+      Math.abs(mx.filter || 0) > 0.05 && `FILTER ${mx.filter > 0 ? '+' : ''}${mx.filter}`, mx.level != null && `level ${Math.round(mx.level * 100)}%`].filter(Boolean).map(x => '· ' + x).join(' ');
     segOn('pmode', S.palette ? S.palette.mode : 'auto');
     document.querySelectorAll('#swatches button').forEach(b => b.classList.toggle('on', S.palette && S.palette.mode === 'lock' && Math.abs(+b.dataset.h - S.palette.hue) < 0.001));
     document.querySelectorAll('[data-look]').forEach(b => b.classList.toggle('on', (S.look || 'AUTO') === b.dataset.look));
