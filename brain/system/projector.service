@@ -3,8 +3,10 @@ Description=Rave Cave projector page (projection mapping host on :8100)
 After=showbrain.service network-online.target
 
 [Service]
-User=pi
-WorkingDirectory=/home/pi/projector
+User=ravesvc
+Group=rave
+UMask=0002
+WorkingDirectory=/srv/rave/projector
 ExecStart=/usr/bin/python3 -u projector.py 8100
 Restart=always
 RestartSec=2
