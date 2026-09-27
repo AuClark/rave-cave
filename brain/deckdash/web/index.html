@@ -419,7 +419,7 @@ function phaseReadout(decks, pos) {
       phase = diff;
       txt += `  ·  ${ms >= 0 ? "+" : ""}${ms.toFixed(0)} ms ${Math.abs(ms) < 3 ? "in phase" : ms > 0 ? "ahead" : "behind"}`;
       ok = ok && Math.abs(ms) < 10;
-      const bwA = p.status.beatWithinBar, bwM = master.status.beatWithinBar;
+      const now = performance.now(), bwA = liveBeatInBar(p, now), bwM = liveBeatInBar(master, now);
       if (bwA > 0 && bwM > 0 && bwA !== bwM && Math.abs(diff) < 0.25) { txt += `  ·  bar off by ${((bwA - bwM) + 4) % 4} beat`; ok = false; }
     }
     out.push({ txt, ok, rgb: deckRgb(p.number), num: p.number, phase });
@@ -448,8 +448,36 @@ function drawDropHint(g, dpr, W) {
   if (sub) { g.font = `600 ${12 * dpr}px system-ui`; g.fillStyle = "#8a8fa8"; const sw = g.measureText(sub).width; g.fillText(sub, (W - sw) / 2, cy + 14 * dpr); }
 }
 
+// Beat in the bar, worked out every frame from the smoothed playhead and the beat grid. The decks'
+// status packets only arrive a few times a second (and reach us at 10 Hz), so their beat-in-bar
+// lands late and can skip a beat.
+function liveBeatInBar(p, now) {
+  const tl = timelines[p.number] && timelines[p.number].data;
+  if (tl && p.status.trackLoaded && tl.barFirstBeat && tl.barFirstBeat.length) {
+    const ph = beatPhase(tl, playheadMs(p, now));
+    if (ph) {
+      const fb = tl.barFirstBeat;
+      let lo = 0, hi = fb.length - 1;                  // last bar starting at or before this beat
+      if (ph.beat < fb[0]) return ((ph.beat - fb[0]) % 4 + 4) % 4 + 1;
+      while (lo < hi) { const m = (lo + hi + 1) >> 1; if (fb[m] <= ph.beat) lo = m; else hi = m - 1; }
+      return ((ph.beat - fb[lo]) % 4) + 1;
+    }
+  }
+  return p.status.beatWithinBar;
+}
+
+// The four beat squares on each deck card, every frame.
+function updateCardBeats(now) {
+  for (const p of lastState.players) {
+    const el = cards[p.number]; if (!el) continue;
+    const bwb = liveBeatInBar(p, now), live = p.status.playing || p.status.beatWithinBar > 0;
+    el.querySelectorAll(".beats div").forEach((b, i) => b.classList.toggle("on", live && bwb === i + 1));
+  }
+}
+
 function drawStack() {
   requestAnimationFrame(drawStack);
+  if (lastState) updateCardBeats(performance.now());
   if (!view.waves || !lastState) return;
   const cv = $("#stackcv"), dpr = window.devicePixelRatio || 1, now = performance.now();
   const players = lastState.players.slice().sort((a, b) => a.number - b.number);
@@ -572,7 +600,7 @@ function drawStack() {
   const phases = Object.fromEntries(phaseReadout(rows, pos).map(r => [r.num, r]));
   const gx = 34 * dpr, cw = 26 * dpr, gap = 4 * dpr, gaugeX = gx + 4 * (cw + gap) + 20 * dpr, gaugeW = Math.min(360 * dpr, W * 0.3);
   rows.forEach((p, i) => {
-    const y = my + 3 * dpr + i * rh, rgb = deckRgb(p.number), bwb = p.status.beatWithinBar, h = rh - 4 * dpr;
+    const y = my + 3 * dpr + i * rh, rgb = deckRgb(p.number), bwb = liveBeatInBar(p, performance.now()), h = rh - 4 * dpr;
     g.font = `900 ${11 * dpr}px system-ui`; g.fillStyle = rgba(rgb, 1); g.fillText(p.number, 14 * dpr, y + h - 1 * dpr);
     for (let k = 0; k < 4; k++) {
       g.fillStyle = bwb === k + 1 ? (k === 0 ? "#fff" : rgba(rgb, 1)) : "#1d2031";
@@ -764,7 +792,7 @@ function render(st) {
     $(".sub", el).innerHTML = `track ${s.trackBpm ? s.trackBpm.toFixed(2) : "—"} BPM · <span class="pitch ${pc > 0 ? "pos" : pc < 0 ? "neg" : ""}">${pc > 0 ? "+" : ""}${pc.toFixed(2)}%</span>`;
 
     const bars = el.querySelectorAll(".beats div");
-    bars.forEach((b, i) => { b.classList.toggle("on", s.beatWithinBar === i + 1 && (s.playing || s.beatWithinBar > 0)); b.classList.toggle("one", i === 0); });
+    bars.forEach((b, i) => b.classList.toggle("one", i === 0));   // lit each frame by updateCardBeats
     const flash = $(".flash", el);
     if (p.beat.msSinceLast >= 0 && p.beat.msSinceLast < 120) { flash.classList.add("on"); setTimeout(() => flash.classList.remove("on"), 60); }
 
