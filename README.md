@@ -9,6 +9,8 @@ A light and visuals rig driven by the DJ decks. A Raspberry Pi Compute Module 4 
 - Anyone can watch the dashboard from a public link; changes need an admin PIN.
 - An LED pyramid is wired and taking test patterns, but isn't in the show yet.
 
+<p><img src="docs/screenshots/projector-live.gif" alt="The projector output: a generative sketch (subliminal) glitching in time with the music" width="100%"></p>
+
 ## System
 
 ```mermaid
@@ -69,6 +71,12 @@ All pages are served by the brain (`sektor5.local` on the rig's network). Changi
 | **Projection** | `:8100/edit` | Mapping editor: surfaces, masks, content, presets. The projector itself opens `:8100/`. |
 | **Visuals** | `:8110` | Choose and reshape the live generative sketch and its presets. `:8110/rd.html` is a GPU test lab. |
 | **Stage** | `:8100/stage.html` | 3D view of the whole rig lit live from the show, with laser shows, projector brightness and a stage designer. |
+
+| | |
+|---|---|
+| <img src="docs/screenshots/dashboard.png" alt="Decks: waveform lanes, automix and tempo controls, track library"> **Decks** | <img src="docs/screenshots/commander.png" alt="Lighting: performance pads, scenes, drop control, colours, fixture levels"> **Lighting** |
+| <img src="docs/screenshots/visuals.png" alt="Visuals: the live sketch with its parameters and presets"> **Visuals** | <img src="docs/screenshots/projection.png" alt="Projection: the mapping editor with a surface and its settings"> **Projection** |
+| <img src="docs/screenshots/stage.png" alt="Stage: 3D view of the rig lit from the show"> **Stage** | |
 
 **Remote:** the brain is on Tailscale. The dashboard has a public, view-only link; the other pages are available to the team over the tailnet. See [docs/brain.md](docs/brain.md#remote-access-tailscale).
 
