@@ -121,7 +121,8 @@
     root.getElementById("sysHost").textContent = d.host;
     const u = d.cpu.usage || [0], t = d.throttle, m = d.memory, memPct = m.used_mb / m.total_mb * 100;
     const tempC = lvl(d.cpu.temp_c, 70, 80), cpuC = lvl(u[0], 75, 90), memC = lvl(memPct, 75, 90), diskC = lvl(d.disk.free_gb, 3, 1, false);
-    const flag = (on, since, label) => `<span class="flag ${on ? "bad" : since ? "warn" : "ok"}">${label}${on ? " NOW" : since ? " SINCE BOOT" : ""}</span>`;
+    // Power and clock problems: only list the ones that have happened (red now, amber earlier since boot).
+    const flag = (on, since, label) => on || since ? `<span class="flag ${on ? "bad" : "warn"}">${label}${on ? " NOW" : " SINCE BOOT"}</span>` : "";
     const wifi = d.network.wifi, sig = wifi.signal_dbm, sigC = sig ? lvl(sig, -70, -80, false) : "";
     const card = (n, title, body) => `<section class="card"><h2><i>${String(n).padStart(2, "0")}</i>— ${title}</h2>${body}</section>`;
     const svcRows = (d.services || []).map(s => `<tr><td>${s.name}</td><td class="${s.state === "active" ? "ok" : "bad"}">${s.state === "active" ? s.sub : s.state}</td>
@@ -133,8 +134,9 @@
     root.getElementById("sysGrid").innerHTML = [
       card(1, "Temperature", `<div class="big ${tempC}">${d.cpu.temp_c.toFixed(1)}<small>°C</small></div>
         <div class="bar"><div style="width:${Math.min(100, d.cpu.temp_c / 85 * 100)}%;background:var(--${tempC === "ok" ? "good" : tempC})"></div></div>
-        <div class="flags">${flag(t.under_voltage_now, t.under_voltage_since_boot, "UNDER-VOLTAGE")}${flag(t.throttled_now, t.throttled_since_boot, "THROTTLED")}
-        ${flag(t.freq_capped_now, t.freq_capped_since_boot, "FREQ CAP")}${flag(t.soft_temp_limit_now, t.soft_temp_limit_since_boot, "TEMP LIMIT")}</div>`),
+        ${(() => { const f = flag(t.under_voltage_now, t.under_voltage_since_boot, "UNDER-VOLTAGE") + flag(t.throttled_now, t.throttled_since_boot, "THROTTLED") +
+            flag(t.freq_capped_now, t.freq_capped_since_boot, "FREQ CAP") + flag(t.soft_temp_limit_now, t.soft_temp_limit_since_boot, "TEMP LIMIT");
+          return f ? `<div class="flags">${f}</div>` : `<div class="ok" style="font-size:12px">Power and clock speed normal since boot</div>`; })()}`),
       card(2, "CPU", `<div class="big ${cpuC}">${u[0].toFixed(0)}<small>%</small></div><div class="bar"><div style="width:${u[0]}%"></div></div>
         <div class="cores">${u.slice(1).map((c, i) => `<div><i style="height:${c}%"></i><span>${i} · ${c.toFixed(0)}%</span></div>`).join("")}</div>
         ${kvs([["Load (1/5/15 min)", d.cpu.load.split(" ").slice(0, 3).join(" · ")], ["Clock", d.cpu.mhz + " MHz"], ["Uptime", fmtUp(d.uptime_s)]])}`),
