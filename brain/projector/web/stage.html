@@ -28,12 +28,16 @@
   nav.pages a.here { color: var(--text); border-bottom-color: var(--accent); }
   .pill { align-self: center; border: 1px solid var(--line2); color: var(--dim); font-weight: 600; font-size: 11px; letter-spacing: .12em; padding: 4px 10px; }
   .pill.ok { color: var(--good); border-color: var(--good); } .pill.bad { color: var(--bad); border-color: var(--bad); }
-  /* View controls: their own row under the top bar (the bar is the same on every page). */
   body { display: flex; flex-direction: column; }
-  .stagebar { display: flex; justify-content: flex-end; padding: 8px 24px; border-bottom: 1px solid var(--line); flex: none; }
-  .hctl { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; justify-content: flex-end; }
-  .hctl .sep { width: 1px; height: 28px; background: var(--line); margin: 0 6px; }
-  .hctl label { color: var(--dim); font-size: 11px; letter-spacing: .12em; font-weight: 500; }
+  /* View controls live in the side panel (View tab), so nothing sits between the top bar and the view. */
+  #viewsec .row { grid-template-columns: 70px minmax(0, 1fr); }
+  #viewsec select, #viewsec input[type=range] { width: 100%; }
+  .cams { display: grid; grid-template-columns: repeat(4, 1fr); gap: 4px; }
+  .cams button { padding: 8px 4px; }
+  #design { position: absolute; top: 12px; right: 12px; z-index: 3; background: rgba(20,20,20,.7); }
+  #design.on { background: var(--accent); }
+  aside > .s5sect { position: sticky; top: 0; z-index: 2; }
+  aside h2 { display: none; }   /* the tab says which section this is */
   main { display: grid; grid-template-columns: minmax(0, 1fr) 340px; flex: 1 1 auto; min-height: 0; }
   main.full { grid-template-columns: minmax(0, 1fr) 0; }
   main.full aside { display: none; }
@@ -65,16 +69,19 @@
   .btns { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 10px; }
   .note { color: #777; font-size: 11px; margin-top: 8px; line-height: 1.5; }
   #props.empty > :not(h2):not(.note) { display: none; }
-  @media (max-width: 760px) {   /* phones: one row of view controls that scrolls sideways; less text over the view */
-    .stagebar { padding: 6px 12px; justify-content: flex-start; overflow-x: auto; scrollbar-width: none; }
-    .stagebar::-webkit-scrollbar { display: none; }
-    .hctl { flex-wrap: nowrap; }
-    .hctl label, #hint { display: none; }
+  @media (max-width: 760px) {   /* phones: less text over the view */
+    #hint { display: none; }
     #hud { left: 12px; right: 12px; bottom: 10px; } #hud .scene { font-size: 26px; }
   }
   /* Narrow screens: the 3D view stays in view (under the top bar) while the panels scroll underneath. */
-  @media (max-width: 900px) { body { display: block; } main { grid-template-columns: 1fr; grid-template-rows: auto auto; height: auto; } aside { border-left: 0; }
-    #view { position: sticky; top: 64px; z-index: 30; height: 48vh; } }
+  @media (max-width: 900px) {
+    /* The page grows with its content (not fixed to the window), so the pinned bar and view stay pinned. */
+    html, body { height: auto; } body { display: block; }
+    main { grid-template-columns: minmax(0, 1fr); grid-template-rows: auto auto; height: auto; } aside { border-left: 0; overflow: visible; min-width: 0; }
+    #view { position: sticky; top: var(--s5bar, 48px); z-index: 30; height: 48vh; }
+    aside > .s5sect { top: calc(var(--s5bar, 48px) + 48vh); z-index: 29; }
+    #design { display: none; }
+  }
   .s5logo { display: inline-flex; align-items: center; vertical-align: middle; line-height: 1; }
   .s5logo .s5word { color: var(--text, #f2f2f2); flex: none; display: block; }
   .s5logo .s5five { fill: var(--accent, #ff5a1f); }
@@ -89,28 +96,23 @@
   <div class="s5home"><span class="s5logo" aria-label="SEKTOR5"><svg class="s5word" viewBox="0 0 568 100" width="79.52" height="14" aria-hidden="true"><path d="M13,0 L70,0 L70,21 L21,21 L21,40 L57,40 L70,53 L70,87 L57,100 L0,100 L0,79 L49,79 L49,61 L13,61 L0,48 L0,13 ZM96,0 L104,0 L104,100 L96,100 L83,87 L83,13 ZM108,0 L153,0 L153,21 L108,21 ZM108,40 L145,40 L145,61 L108,61 ZM108,79 L153,79 L153,100 L108,100 ZM179,0 L187,0 L187,100 L179,100 L166,87 L166,13 ZM191,34 L209,0 L236,0 L215,50 L236,100 L209,100 L191,66 ZM262,0 L306,0 L319,13 L319,21 L249,21 L249,13 ZM273.5,25 L294.5,25 L294.5,100 L273.5,100 ZM365,0 L350,0 L332,18 L332,82 L350,100 L365,100 L365,79 L358,79 L353,74 L353,26 L358,21 L365,21 ZM369,0 L384,0 L402,18 L402,82 L384,100 L369,100 L369,79 L376,79 L381,74 L381,26 L376,21 L369,21 ZM428,0 L436,0 L436,100 L428,100 L415,87 L415,13 ZM440,0 L472,0 L485,13 L485,48 L473,60 L440,60 L440,39 L464,39 L464,21 L440,21 ZM440,64 L463,64 L485,100 L462,100 Z" fill="currentColor"/><path class="s5five" d="M498,0 L568,0 L568,21 L519,21 L519,40 L555,40 L568,53 L568,87 L555,100 L498,100 L498,79 L547,79 L547,61 L498,61 Z"/></svg></span></div>
   <nav class="pages" id="pages"><a data-port="8080" data-path="/">Decks</a><a data-port="8090" data-path="/">Lighting</a><a data-port="8100" data-path="/edit">Projection</a><a data-port="8110" data-path="/">Visuals</a><a class="here" data-port="8100" data-path="/stage.html">Stage</a></nav>
 </header>
-<div class="stagebar">
-  <div class="hctl">
-    <label>VIEW</label>
-    <button data-cam="audience" class="on">AUDIENCE</button><button data-cam="dj">DJ</button><button data-cam="top">TOP</button><button data-cam="side">SIDE</button>
-    <span class="sep"></span>
-    <label>HAZE</label><input id="haze" type="range" min="0" max="1" step="0.05" value="0.55" style="width:90px">
-    <label>LASERS</label><select id="laserLook" style="width:150px" title="Laser show look (saved with the layout)"></select>
-    <select id="laserSec" style="width:118px" title="Preview a section: the lasers play it on a 128 BPM clock, whatever the show is doing">
-      <option value="">FOLLOW SHOW</option><option value="GROOVE">GROOVE</option><option value="BUILD">BUILD</option><option value="DROP">DROP</option><option value="BREAKDOWN">BREAKDOWN</option><option value="INTRO">INTRO</option></select>
-    <span class="sep"></span>
-    <button id="bloom" class="on" title="Glow (turn off on slow machines)">GLOW</button>
-    <span class="sep"></span>
-    <button id="design" class="on" title="Show the designer panel">DESIGN</button>
-  </div>
-</div>
 <main id="main">
   <div id="view">
     <div id="hud"></div>
     <div id="conn" class="pill">CONNECTING</div>
     <div id="hint">drag to orbit · scroll to zoom · right-drag to pan · click a fixture to select</div>
+    <button id="design" class="on" title="Hide the side panel">PANEL</button>
   </div>
   <aside>
+    <section id="viewsec">
+      <h2>View</h2>
+      <div class="row"><span>Camera</span><div class="btns cams" style="margin:0"><button data-cam="audience" class="on">AUDIENCE</button><button data-cam="dj">DJ</button><button data-cam="top">TOP</button><button data-cam="side">SIDE</button></div></div>
+      <div class="row"><span>Haze</span><input id="haze" type="range" min="0" max="1" step="0.05" value="0.55"></div>
+      <div class="row"><span>Lasers</span><select id="laserLook" title="Laser show look (saved with the layout)"></select></div>
+      <div class="row"><span>Section</span><select id="laserSec" title="Preview a section: the lasers play it on a 128 BPM clock, whatever the show is doing">
+        <option value="">FOLLOW SHOW</option><option value="GROOVE">GROOVE</option><option value="BUILD">BUILD</option><option value="DROP">DROP</option><option value="BREAKDOWN">BREAKDOWN</option><option value="INTRO">INTRO</option></select></div>
+      <div class="row"><span>Glow</span><div><button id="bloom" class="on" title="Glow (turn off on slow machines)">GLOW</button></div></div>
+    </section>
     <section>
       <h2>Rig</h2>
       <div class="list" id="list"></div>
@@ -755,6 +757,7 @@ renderer.domElement.addEventListener("pointerup", e => {
   ray.setFromCamera(ptr, camera);
   const hits = ray.intersectObjects([...built.values()].flatMap(p => p.hit), false);
   select(hits.length ? hits[0].object.userData.fid : null);
+  showSelected(selected);
 });
 
 function renderList() {
@@ -767,7 +770,7 @@ function renderList() {
       `<span class="src ${live && fx.source !== "off" ? "live" : "sim"}">${tag}</span></div>`;
   }).join("");
 }
-$("#list").onclick = e => { const d = e.target.closest("[data-id]"); if (d) select(d.dataset.id); };
+$("#list").onclick = e => { const d = e.target.closest("[data-id]"); if (d) { select(d.dataset.id); showSelected(d.dataset.id); } };
 $("#add").innerHTML = Object.entries(TYPES).map(([k, t]) => `<button data-type="${k}">${t.label.toUpperCase()}</button>`).join("");
 $("#add").onclick = e => {
   const b = e.target.closest("[data-type]"); if (!b) return;
@@ -777,7 +780,7 @@ $("#add").onclick = e => {
                pos: hang ? [0, 3.02, STAGE.trussZ] : type === "screen" ? [0, 2.2, STAGE.wallZ + 0.03] : type === "ledbar" ? [0, STAGE.h + 0.05, -0.2] : [0, STAGE.h, -0.6],
                aim: hang ? (type === "laser" ? [0, 2.9, 8] : [0, 1, 1.5]) : type === "screen" ? [0, 2.2, 5] : type === "projector" ? [0, 2, STAGE.wallZ] : [0, 2, -0.6] };
   if (T.count) fx.count = T.count; if (T.angle) fx.angle = T.angle; if (T.colour) fx.colour = T.colour; if (T.size) fx.size = [...T.size];
-  rig.push(fx); built.set(fx.id, build(fx)); renderList(); select(fx.id); saveRig();
+  rig.push(fx); built.set(fx.id, build(fx)); renderList(); select(fx.id); showSelected(fx.id); saveRig();
 };
 
 function sourcesFor(fx) {
@@ -823,7 +826,7 @@ $("#gAim").onclick = () => { gizmoMode = "aim"; $("#gAim").classList.add("on"); 
 $("#bDup").onclick = () => {
   const fx = cur(); if (!fx) return;
   const c = { ...fx, id: fx.type + Date.now().toString(36), name: fx.name + " copy", pos: [fx.pos[0] + 0.4, fx.pos[1], fx.pos[2]], aim: [fx.aim[0] + 0.4, fx.aim[1], fx.aim[2]] };
-  rig.push(c); built.set(c.id, build(c)); renderList(); select(c.id); saveRig();
+  rig.push(c); built.set(c.id, build(c)); renderList(); select(c.id); showSelected(c.id); saveRig();
 };
 $("#bDel").onclick = () => {
   const fx = cur(); if (!fx || !confirm(`Delete ${fx.name}?`)) return;
@@ -879,6 +882,11 @@ $("#file").onchange = async e => {
   catch (err) { alert("That file isn't a stage layout: " + err.message); }
   e.target.value = "";
 };
+// Section tabs under the view (shared, /s5auth.js): View, Rig, Add fixture, Selected, Match real lights, Layout.
+const aside = document.querySelector("aside");
+window.stageTabs = window.S5AUTH && S5AUTH.sectionTabs ? S5AUTH.sectionTabs({ panel: aside, mount: aside, first: true,
+  items: () => [...aside.querySelectorAll(":scope > section")], title: sec => sec.querySelector("h2").textContent.trim() }) : null;
+const showSelected = id => { if (id && window.stageTabs) stageTabs.select("Selected"); };
 $("#design").onclick = () => { $("#main").classList.toggle("full"); $("#design").classList.toggle("on", !$("#main").classList.contains("full")); if (!$("#design").classList.contains("on")) select(null); setTimeout(resize, 0); };
 
 // ------------------------------------------------------------------ go
