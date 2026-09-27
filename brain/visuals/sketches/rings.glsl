@@ -29,8 +29,9 @@ vec3 content(vec2 uv) {
     float rr = p_inner + fi * p_spacing * (1.0 + 0.25 * k);
     float wave = p_amp * (1.0 + k) * sin(p_waves * ang + fi * p_phase + t * p_speed * TAU);
     float d = abs(r - (rr * shape + wave));
-    float line = smoothstep(p_width, p_width * 0.3, d);
-    float glow = p_glow * p_width * p_width / (d * d + p_width * p_width) * 0.6;
+    float w = max(p_width, u_px);                      // never thinner than a pixel (stops shimmer)
+    float line = (1.0 - smoothstep(w - u_px, w + u_px, d)) * min(1.0, p_width / u_px);
+    float glow = p_glow * w * w / (d * d + w * w) * 0.6;
     col += hsv(hue0 + p_spread * f, p_sat, 1.0) * (line + glow);
   }
   return (1.0 - exp(-col * 1.4)) * (0.75 + 0.25 * k);
