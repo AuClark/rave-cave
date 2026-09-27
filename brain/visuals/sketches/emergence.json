@@ -1,0 +1,30 @@
+{
+  "title": "Emergence",
+  "about": "A Turing-pattern labyrinth of worms and spirals in coloured zones, after Maxime Causeret's video for Max Cooper's Order From Chaos. The maze slithers and rewires in time with the beat.",
+  "groups": [
+    {"name": "Pattern", "params": [
+      {"id": "waves",  "label": "Complexity (waves)",   "min": 3,    "max": 16,   "step": 1,     "default": 11},
+      {"id": "scale",  "label": "Stripes per height",   "min": 6,    "max": 120,  "step": 0.5,   "default": 70},
+      {"id": "thick",  "label": "Spots → worms → fill", "min": 0.1,  "max": 0.9,  "step": 0.01,  "default": 0.5},
+      {"id": "blobs",  "label": "Solid blobs",          "min": 0,    "max": 1,    "step": 0.01,  "default": 0.35}
+    ]},
+    {"name": "Motion", "params": [
+      {"id": "flow",   "label": "Slither (cycles/beat)", "min": 0,   "max": 0.5,  "step": 0.005, "default": 0.04},
+      {"id": "turn",   "label": "Rewire",               "min": -1,   "max": 1,    "step": 0.01,  "default": 0.08},
+      {"id": "spin",   "label": "Spin",                 "min": -2,   "max": 2,    "step": 0.01,  "default": 0.05},
+      {"id": "beat",   "label": "Beat punch",           "min": 0,    "max": 1,    "step": 0.01,  "default": 0.4}
+    ]},
+    {"name": "Organism", "params": [
+      {"id": "size",   "label": "Size",                 "min": 0.1,  "max": 1.2,  "step": 0.01,  "default": 0.46},
+      {"id": "hole",   "label": "Hole",                 "min": 0,    "max": 0.4,  "step": 0.005, "default": 0.08},
+      {"id": "ragged", "label": "Ragged edge",          "min": 0,    "max": 1,    "step": 0.01,  "default": 0.6},
+      {"id": "grow",   "label": "Grow through section", "min": 0,    "max": 1,    "step": 0.01,  "default": 0.3}
+    ]},
+    {"name": "Colour", "params": [
+      {"id": "mix",    "label": "Zone mixing",          "min": 0,    "max": 1,    "step": 0.01,  "default": 0.35},
+      {"id": "hue",    "label": "Hue shift",            "min": -0.5, "max": 0.5,  "step": 0.005, "default": 0},
+      {"id": "sat",    "label": "Saturation",           "min": 0,    "max": 1.3,  "step": 0.01,  "default": 1},
+      {"id": "follow", "label": "Follow show hue",      "min": 0,    "max": 1,    "step": 1,     "default": 0}
+    ]}
+  ]
+}
