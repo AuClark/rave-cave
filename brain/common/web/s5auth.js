@@ -84,17 +84,16 @@
     return e;
   }
 
-  // Another control page on this host. Over HTTPS (Tailscale), the dashboard is on 443, not 8080;
-  // the other pages keep their port (Tailscale serves HTTPS on each).
+  // Another control page on this host. Over HTTPS (Tailscale) the dashboard is on 443 and every
+  // other page on its port + 10000 (18090, 18100, 18110): Tailscale can't share a port with the
+  // service itself, or the service can't restart.
   S5.url = (port, path = "/") => {
-    const https = location.protocol === "https:";
-    if (https && +port === 8080) return `https://${location.hostname}${path}`;
-    return `${location.protocol}//${location.hostname}:${port}${path}`;
+    if (location.protocol !== "https:") return `${location.protocol}//${location.hostname}:${port}${path}`;
+    return +port === 8080 ? `https://${location.hostname}${path}` : `https://${location.hostname}:${+port + 10000}${path}`;
   };
   const reach = {};   // port -> Promise<boolean>
   function reachable(port) {
-    const own = location.port || (location.protocol === "https:" ? "443" : "80");
-    if (String(port) === own || (location.protocol === "https:" && +port === 8080 && own === "443")) return Promise.resolve(true);
+    if (S5.url(port, "") === location.origin) return Promise.resolve(true);
     return (reach[port] ||= rawFetch(S5.url(port, "/s5auth.js"), { mode: "no-cors", cache: "no-store", signal: AbortSignal.timeout(5000) })
       .then(() => true, () => false));
   }
