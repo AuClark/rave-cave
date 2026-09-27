@@ -27,7 +27,7 @@ if _root and (_root / ".env").is_file():
             _k, _v = _line.split("=", 1)
             os.environ.setdefault(_k.strip(), _v.strip().strip('"').strip("'"))
 
-HOSTNAME = "ravecave"
+HOSTNAME = os.environ.get("S5_HOSTNAME") or os.environ.get("RAVE_HOSTNAME") or "sektor5"   # e.g. S5_HOSTNAME=sektor5-2 for a second brain
 USER = "pi"
 TIMEZONE = "Australia/Sydney"
 COUNTRY = os.environ.get("S5_WIFI_COUNTRY", os.environ.get("RAVE_WIFI_COUNTRY", "AU"))

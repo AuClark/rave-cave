@@ -1,10 +1,10 @@
 # Show engine: read-ahead lighting from the decks
 
-How the Sektor5 CM4 (`ravecave`) turns Pro DJ Link data from the XDJ-700s into lighting that anticipates the music: it detects drops ahead of time, builds suspense into them, and hits the drop on the beat.
+How the Sektor5 CM4 (`sektor5`) turns Pro DJ Link data from the XDJ-700s into lighting that anticipates the music: it detects drops ahead of time, builds suspense into them, and hits the drop on the beat.
 
 Code: [`brain/deckdash/`](../brain/deckdash/) (deck data, timelines, dashboard) and [`brain/showbrain/`](../brain/showbrain/) (scenes, looks, Commander).
 
-**Status (27 Sep 2026): phases 1-4 running** on `ravecave`:
+**Status (27 Sep 2026): phases 1-4 running** on `sektor5`:
 - `deckdash` (Java, :8080): deck data, the track timeline analyser (`Timeline.java`, `/api/timeline/N`), a dashboard with sections, drops and a countdown on the waveforms, a stacked scrolling two-deck waveform, and a UDP feed to showbrain (127.0.0.1:9100).
 - `showbrain` (Python + numpy, :8090 Commander): the scene engine at 50 fps (about 2.5 ms per frame), driving `rave-tube-1`, `rave-tube-2` (flipped role, comet hand-off) over DDP and the par can over USB DMX. Per-track overrides and drop-calibration marks are saved in `overrides.json` on the Pi, not in git.
 - Deploy with `brain/deploy.sh`.
@@ -46,7 +46,7 @@ The rule used was: a phrase boundary (every 8 bars) where the next 4 bars carry 
 ```mermaid
 flowchart LR
   decks["XDJ-700 × 2"] -- "Pro DJ Link<br/>(Ethernet, link-local)" --> dd
-  subgraph brain ["brain/ (CM4 ravecave)"]
+  subgraph brain ["brain/ (CM4 sektor5)"]
     dd["deckdash<br/>beat-link client<br/>timeline analyser<br/>dashboard :8080"]
     sb["showbrain<br/>beat clock · scene state machine<br/>looks per fixture · Commander :8090"]
     dd -- "UDP :9100 beats + status<br/>HTTP /api/timeline/N" --> sb
@@ -134,7 +134,7 @@ Robustness:
 
 ## Commander (control page on the Pi)
 
-`http://ravecave.local:8090`, built for a phone or a laptop next to the decks. It works like SoundSwitch or rekordbox Lighting: the auto show runs underneath, and the Commander layers performance controls on top.
+`http://sektor5.local:8090`, built for a phone or a laptop next to the decks. It works like SoundSwitch or rekordbox Lighting: the auto show runs underneath, and the Commander layers performance controls on top.
 
 - **Status and live view:** scene, live deck, "DROP in N beats", build progress, beat-in-bar, and a live colour strip of what every fixture is outputting right now.
 - **Performance pads (hold):** STROBE (locked to the beat at 1/4, 1/8 or 1/16, or FREE at 12 Hz), BLINDER (full white), BLACKOUT, and FLASH (tap: a white hit that decays over about a beat).
@@ -152,7 +152,7 @@ API: `POST /api/cmd {"cmd": ..., "value": ...}` with `mode`, `follow`, `intensit
 
 ## Dashboard: waveforms and library
 
-`http://ravecave.local:8080`:
+`http://sektor5.local:8080`:
 - **Waveforms:** one lane per deck, deck 1 on top, like the XDJ and rekordbox. Each lane has everything the old deck cards showed: artwork; title, artist, album, genre, label, rating and bitrate; status tags (PLAYING, CUED, LOOP, SYNC, MASTER, END); key, drop countdown, track BPM, pitch and effective BPM; the scrolling waveform with the beat grid and hot/memory cues in their rekordbox colours; and a whole-track overview with sections, drops, cues, playhead, and elapsed · bar · remaining. A phase meter between the lanes shows each deck's beat in the bar and its phase against the master.
 - **LIBRARY** is a Serato-style browser for the rekordbox export on the USB/SD in the players (read with CrateDigger). It has crates and playlists on the left, and search, genre, "BPM ≈ master" and "key match" (Camelot) filters with sortable columns. Tracks already loaded on a deck and tracks already played are marked.
   - **Load** with the per-row deck buttons, a double-click (loads the first deck that isn't playing), or ↑/↓ then Shift+←/→ for deck 1/2. `/` focuses search and Esc clears it. Loading onto a playing deck asks for confirmation first, and the server refuses unless it's forced.

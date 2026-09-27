@@ -1,6 +1,6 @@
 # Stage: 3D visualiser and designer
 
-`http://ravecave.local:8100/stage.html` (the **Stage** link at the top of every control page). It's served by the projector service. The 3D engine is three.js r160, included in `brain/projector/web/vendor/` with its MIT licence, so it works offline.
+`http://sektor5.local:8100/stage.html` (the **Stage** link at the top of every control page). It's served by the projector service. The 3D engine is three.js r160, included in `brain/projector/web/vendor/` with its MIT licence, so it works offline.
 
 ## What it shows
 

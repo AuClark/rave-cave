@@ -26,7 +26,7 @@ A battery RGBWA+UV wireless-DMX uplight ("V6 APP Battery Wireless", 6 × 18 W 6-
 
 ## In the show
 
-The uDMX now plugs into the CM4 (`ravecave`) and the par can is a fixture in the show engine.
+The uDMX now plugs into the CM4 (`sektor5`) and the par can is a fixture in the show engine.
 - The Pi sees the stick as `16c0:05dc`. `python3-usb` is installed, and a udev rule (`/etc/udev/rules.d/50-udmx.rules`) gives the `plugdev` group access, so the `pi` user can drive it without root.
 - Show engine: `brain/showbrain/dmx.py` (a background sender that tolerates transient USB errors, reconnects, and resends every second as a keep-alive) plus the `par` look in `brain/showbrain/looks.py`.
 - Fixture config (`brain/showbrain/config.json`): `"kind": "dmx_par"`, `"address": 1`, the channel map above, and `"delay_ms": 35`. USB DMX is near-instant, so it's delayed to land with the Wi-Fi fixtures.

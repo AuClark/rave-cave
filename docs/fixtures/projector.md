@@ -8,8 +8,8 @@ A projector running Chrome, showing the brain's projection-mapping page full-scr
 
 | URL | For | What it does |
 |---|---|---|
-| `http://ravecave.local:8100/` | The projector | Full-screen output. Tap/click or press F / Enter for fullscreen. T toggles the test pattern, I shows an info HUD. `?test=1` and `?hud=1` do the same from the URL. |
-| `http://ravecave.local:8100/edit` | A phone or laptop | The mapping editor, with a live preview of the output at the projector's aspect ratio |
+| `http://sektor5.local:8100/` | The projector | Full-screen output. Tap/click or press F / Enter for fullscreen. T toggles the test pattern, I shows an info HUD. `?test=1` and `?hud=1` do the same from the URL. |
+| `http://sektor5.local:8100/edit` | A phone or laptop | The mapping editor, with a live preview of the output at the projector's aspect ratio |
 
 ## Setting up a room (about 5 minutes)
 

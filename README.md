@@ -60,7 +60,7 @@ flowchart LR
 
 ## Pages
 
-All pages are served by the brain (`ravecave.local` on the rig's network). Changing anything needs the admin PIN; viewers can look but not touch ([details](docs/brain.md#admin-pin-viewers-and-admins)).
+All pages are served by the brain (`sektor5.local` on the rig's network). Changing anything needs the admin PIN; viewers can look but not touch ([details](docs/brain.md#admin-pin-viewers-and-admins)).
 
 | Page | Where | What it does |
 |---|---|---|
@@ -116,7 +116,7 @@ All pages are served by the brain (`ravecave.local` on the rig's network). Chang
 3. **Tubes:** ESP32 + WLED in each tube → [docs/fixtures/tubes.md](docs/fixtures/tubes.md).
 4. **Par can:** uDMX into the brain, light on 10-channel DMX at address 1 → [docs/fixtures/parcan.md](docs/fixtures/parcan.md).
 5. **Pyramid:** Pi 3 A+ → SP901E → strips → [docs/fixtures/pyramid.md](docs/fixtures/pyramid.md).
-6. List the fixtures in `config.json`, run `brain/deploy.sh`, then set the admin PIN (`ssh -t pi@ravecave.local 'python3 ~/tools/set_pin.py'`).
+6. List the fixtures in `config.json`, run `brain/deploy.sh`, then set the admin PIN (`ssh -t pi@sektor5.local 'python3 ~/tools/set_pin.py'`).
 
 ## Known limitations
 
@@ -126,4 +126,4 @@ All pages are served by the brain (`ravecave.local` on the rig's network). Chang
 
 ## Next
 
-Pyramid pixel map and looks, drop-prediction calibration, and laser and smoke outputs. Smoke will have hardware-enforced off-by-default, burst limits and arming. The device hostnames, service account and `/srv/rave` paths still use the old Rave Cave name and move to `sektor5` / `s5-box` / `s5-tube-N` in a later rename; logos and colours are in [docs/brand/](docs/brand/).
+Pyramid pixel map and looks, drop-prediction calibration, and laser and smoke outputs. Smoke will have hardware-enforced off-by-default, burst limits and arming. The brain is `sektor5` (the old `ravecave.local` still answers for now). The fixtures' hostnames, service account and `/srv/rave` paths still use the old Rave Cave name and move to `s5-box` / `s5-tube-N` in a later rename; logos and colours are in [docs/brand/](docs/brand/).
