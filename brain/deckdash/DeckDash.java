@@ -301,13 +301,15 @@ public class DeckDash {
         long now = System.currentTimeMillis();
         j.num("now", now).num("uptimeSec", (now - started) / 1000);
         VirtualCdj v = VirtualCdj.getInstance();
-        j.key("self").obj().num("deviceNumber", v.getDeviceNumber()).str("name", "Sektor5")
-                .str("address", String.valueOf(v.getLocalAddress())).end();
+        boolean up = v.isRunning();             // false until the decks' DJ Link network appears
+        j.bool("djlink", up);
+        j.key("self").obj().num("deviceNumber", up ? v.getDeviceNumber() : 0).str("name", "Sektor5")
+                .str("address", up ? String.valueOf(v.getLocalAddress()) : null).end();
 
-        DeviceUpdate master = v.getTempoMaster();
+        DeviceUpdate master = up ? v.getTempoMaster() : null;
         j.key("master").obj();
         if (master != null) j.num("player", master.getDeviceNumber()).str("name", master.getDeviceName());
-        j.num("bpm", round(v.getMasterTempo(), 2)).end();
+        j.num("bpm", up ? round(v.getMasterTempo(), 2) : 0).end();
 
         j.key("devices").arr();
         List<DeviceAnnouncement> devs = new ArrayList<>(DeviceFinder.getInstance().getCurrentDevices());
@@ -482,7 +484,7 @@ public class DeckDash {
         long now = System.currentTimeMillis();
         VirtualCdj v = VirtualCdj.getInstance();
         Json j = new Json().obj().str("t", "status").num("ts", now);
-        DeviceUpdate m = v.getTempoMaster();
+        DeviceUpdate m = v.isRunning() ? v.getTempoMaster() : null;
         j.num("master", m == null ? 0 : m.getDeviceNumber()).key("players").arr();
         // Look up each announced device directly (same path as the dashboard). getLatestStatus()
         // can come back empty after the clock jumps at boot (no RTC; NTP sync moves time forward).
