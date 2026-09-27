@@ -153,6 +153,10 @@
   table.tt td.ld { width:1%; }
   .onDeck { display:inline-block; font-size:10px; font-weight:900; padding:1px 5px; border-radius:4px; color:#000; margin-right:3px; }
   .ctag { display:inline-block; width:8px; height:8px; border-radius:2px; margin-right:6px; vertical-align:middle; }
+  table.tt tbody tr[draggable] { cursor:grab; }
+  .ldeck[draggable] { cursor:grab; }
+  .droptarget { outline:2px dashed var(--accent2); outline-offset:2px; }
+  .droptarget.warn { outline-color:var(--bad); }
   .toast { position:fixed; left:50%; bottom:24px; transform:translateX(-50%); background:#1b1e2e; border:1px solid var(--line); padding:10px 16px; border-radius:12px;
            font-weight:700; opacity:0; transition:opacity .25s; pointer-events:none; z-index:20; max-width:90vw; }
   .toast.on { opacity:1; } .toast.err { border-color:var(--bad); color:var(--bad); }
@@ -398,6 +402,27 @@ function phaseReadout(decks, pos) {
   return out;
 }
 
+// Where each deck's lane is on the waveform canvas (CSS px), for drag and drop; set by drawStack.
+let laneHits = [], dropTarget = null, dragging = null;
+function laneAt(y) { const h = laneHits.find(l => y >= l.y0 && y < l.y1); return h ? h.n : null; }
+
+function drawDropHint(g, dpr, W) {
+  // dragover repeats every ~50 ms while hovering; a stale target means the drag ended elsewhere.
+  if (!dropTarget || !dragging || performance.now() - dropTarget.at > 400) return;
+  const h = laneHits.find(l => l.n === dropTarget.n); if (!h) return;
+  const y0 = h.y0 * dpr, y1 = h.y1 * dpr, warn = dropTarget.playing;
+  g.fillStyle = warn ? "rgba(255,77,94,.22)" : "rgba(47,230,255,.18)"; g.fillRect(0, y0, W, y1 - y0);
+  g.strokeStyle = warn ? "#ff4d5e" : "#2fe6ff"; g.lineWidth = 2 * dpr; g.setLineDash([8 * dpr, 6 * dpr]);
+  g.strokeRect(dpr, y0 + dpr, W - 2 * dpr, y1 - y0 - 2 * dpr); g.setLineDash([]);
+  const txt = `${warn ? `Deck ${dropTarget.n} is PLAYING · ` : ""}${dropTarget.shift ? "Load + play" : "Load"} "${dragging.title}" on deck ${dropTarget.n}`;
+  const sub = dropTarget.shift ? "" : "hold Shift to load and play";
+  g.font = `800 ${16 * dpr}px system-ui`;
+  const w = Math.max(g.measureText(txt).width, 10), cy = (y0 + y1) / 2;
+  g.fillStyle = "rgba(7,7,12,.88)"; g.fillRect((W - w) / 2 - 14 * dpr, cy - (sub ? 26 : 18) * dpr, w + 28 * dpr, (sub ? 48 : 32) * dpr);
+  g.fillStyle = warn ? "#ff4d5e" : "#fff"; g.fillText(txt, (W - w) / 2, cy + (sub ? -4 : 4) * dpr);
+  if (sub) { g.font = `600 ${12 * dpr}px system-ui`; g.fillStyle = "#8a8fa8"; const sw = g.measureText(sub).width; g.fillText(sub, (W - sw) / 2, cy + 14 * dpr); }
+}
+
 function drawStack() {
   requestAnimationFrame(drawStack);
   if (!view.waves || !lastState) return;
@@ -456,6 +481,10 @@ function drawStack() {
       g.fillStyle = "rgba(7,7,12,.75)"; g.fillRect(W - w - 8 * dpr, y - 15 * dpr, w, 20 * dpr);
       g.fillStyle = r.ok ? "#3dff8b" : rgba(r.rgb, 1); g.fillText(r.txt, W - w, y);
     });
+    // One lane holds every deck: split it into a drop band per deck (top = first deck).
+    const bands = players.length ? players : [];
+    laneHits = bands.map((p, i) => ({ n: p.number, y0: i * laneCss / bands.length, y1: (i + 1) * laneCss / bands.length }));
+    drawDropHint(g, dpr, W);
     return;
   }
 
@@ -465,6 +494,7 @@ function drawStack() {
   }
   const MH = meterCss * dpr, HEAD = 22 * dpr;
   const laneY = i => i * LH + (i >= 1 ? MH : 0);
+  laneHits = players.map((p, li) => ({ n: p.number, y0: laneY(li) / dpr, y1: (laneY(li) + LH) / dpr }));
   players.forEach((p, li) => {
     const y0 = laneY(li), s = p.status, t0 = t0q[p.number], rgb = deckRgb(p.number);
     const wy = y0 + HEAD, wh = LH - HEAD - 4 * dpr, mid = wy + wh / 2;
@@ -535,6 +565,7 @@ function drawStack() {
     g.fillStyle = r ? (r.ok ? "#3dff8b" : rgba(rgb, 1)) : "#8a8fa8";
     g.fillText(r ? r.txt : (p.status.tempoMaster ? "MASTER" : ""), gaugeX + gaugeW + 16 * dpr, y + h - 1 * dpr);
   });
+  drawDropHint(g, dpr, W);
 }
 
 // Wheel and trackpad pinch zoom (pinch arrives as ctrl+wheel); two-finger pinch on touch.
@@ -570,6 +601,7 @@ function cardFor(n) {
   if (cards[n]) return cards[n];
   const el = document.createElement("div");
   el.className = "card";
+  el.dataset.deck = n;
   el.innerHTML = `
     <div class="flash"></div>
     <div class="phead"><div class="pnum">${n}</div><div><div class="pmodel"></div><div class="pmeta"></div></div></div>
@@ -880,7 +912,7 @@ function libRender() {
   $("#tbody").innerHTML = lib.view.slice(0, LIMIT).map((t, i) => {
     const on = od[t.id] || [];
     const cls = [i === lib.sel ? "sel" : "", played.has(lib.src + "/" + t.id) ? "played" : "", mi.key && keyCompatible(t.key, mi.key) ? "compat" : ""].join(" ");
-    return `<tr data-i="${i}" class="${cls}"><td class="ld">${on.map(n => `<span class="onDeck" style="background:${rgba(deckRgb(n), 1)}">${n}</span>`).join("")}</td>
+    return `<tr data-i="${i}" class="${cls}" draggable="true"><td class="ld">${on.map(n => `<span class="onDeck" style="background:${rgba(deckRgb(n), 1)}">${n}</span>`).join("")}</td>
       <td class="num">${t.n}</td>
       <td title="${esc(t.title)}">${t.color && RB_COLOURS[t.color] ? `<span class="ctag" style="background:${RB_COLOURS[t.color]}"></span>` : ""}${esc(t.title)}</td>
       <td title="${esc(t.artist)}">${esc(t.artist)}</td><td class="num">${t.bpm ? t.bpm.toFixed(2) : ""}</td><td class="key">${esc(t.key)}</td>
@@ -903,7 +935,7 @@ async function deckCmd(deck, action, extra) {
   } catch (e) { toast(`Deck ${deck}: ${e.message}`, true); return false; }
 }
 
-async function loadTo(deck, t) {
+async function loadTo(deck, t, src = lib.src, play = false) {
   if (!t) return;
   const p = lastState && lastState.players.find(x => x.number === deck);
   let force = false;
@@ -911,11 +943,91 @@ async function loadTo(deck, t) {
     if (!confirm(`Deck ${deck} is PLAYING "${p.track ? p.track.title : ""}".\nLoad "${t.title}" anyway?`)) return;
     force = true;
   }
-  if (await deckCmd(deck, "load", { src: lib.src, id: t.id, force })) {
-    played.add(lib.src + "/" + t.id);
+  if (await deckCmd(deck, "load", { src, id: t.id, force })) {
+    played.add(src + "/" + t.id);
     try { localStorage.setItem("deckdashPlayed", JSON.stringify([...played].slice(-2000))); } catch (e) {}
-    toast(`Loading "${t.title}" → deck ${deck}`);
+    toast(`Loading "${t.title}" → deck ${deck}${play ? " and playing" : ""}`);
+    if (play) playWhenLoaded(deck, t);
   }
+}
+
+// Press play once the deck reports the new track loaded (it takes a second or two to load).
+async function playWhenLoaded(deck, t) {
+  const start = performance.now();
+  await new Promise(r => setTimeout(r, 1000));          // let the old track's status clear first
+  while (performance.now() - start < 12000) {
+    const p = lastState && lastState.players.find(x => x.number === deck);
+    const s = p && p.status;
+    if (s && s.trackLoaded && s.rekordboxId === t.id && !s.busy) {
+      if (!s.playing) await deckCmd(deck, "play");
+      return;
+    }
+    await new Promise(r => setTimeout(r, 250));
+  }
+  toast(`Deck ${deck} didn't report "${t.title}" loaded, so it wasn't started`, true);
+}
+
+// ---------------------------------------------------------------- drag and drop
+// Drag a library row, or a deck (its waveform lane or its chip above the library), onto a deck's
+// waveform lane, deck card or chip to load it there. Shift while dropping loads and plays.
+const DRAG_T = "application/x-rave-track";
+function deckTrack(n) {
+  const p = lastState && lastState.players.find(x => x.number === n), s = p && p.status;
+  if (!s || !s.trackLoaded || !s.rekordboxId) return null;
+  return { src: `${s.trackSourcePlayer}:${s.trackSourceSlot}`, id: s.rekordboxId, title: (p.track && p.track.title) || `Track #${s.rekordboxId}`, from: n };
+}
+function startDrag(e, item) {
+  if (!item) { e.preventDefault(); return; }
+  dragging = item;
+  e.dataTransfer.setData(DRAG_T, JSON.stringify(item));
+  e.dataTransfer.setData("text/plain", item.title);
+  e.dataTransfer.effectAllowed = "copy";
+}
+function endDrag() {
+  dragging = null; dropTarget = null;
+  document.querySelectorAll(".droptarget").forEach(el => el.classList.remove("droptarget", "warn"));
+}
+function isPlaying(n) { const p = lastState && lastState.players.find(x => x.number === n); return !!(p && p.status.playing); }
+function overDeck(e, n, el) {
+  if (!dragging || !n || n === dragging.from) { dropTarget = null; return false; }
+  e.preventDefault();
+  e.dataTransfer.dropEffect = "copy";
+  dropTarget = { n, playing: isPlaying(n), shift: e.shiftKey, at: performance.now() };
+  if (el) { el.classList.add("droptarget"); el.classList.toggle("warn", dropTarget.playing); }
+  return true;
+}
+function dropOnDeck(e, n) {
+  if (!dragging || !n || n === dragging.from) return;
+  e.preventDefault();
+  const d = dragging, play = e.shiftKey;
+  endDrag();
+  loadTo(n, { id: d.id, title: d.title }, d.src, play);
+}
+
+$("#tbody").addEventListener("dragstart", e => {
+  const tr = e.target.closest("tr[data-i]"), t = tr && lib.view[+tr.dataset.i];
+  startDrag(e, t && { src: lib.src, id: t.id, title: t.title, from: null });
+});
+$("#libdecks").addEventListener("dragstart", e => {
+  const el = e.target.closest("[data-deck]"); startDrag(e, el && deckTrack(+el.dataset.deck));
+});
+addEventListener("dragend", endDrag);
+
+// Waveform canvas: drag a lane out, drop onto a lane.
+(() => {
+  const cv = $("#stackcv");
+  if (matchMedia("(pointer: fine)").matches) cv.draggable = true;   // leave touch for pinch zoom
+  const lane = e => laneAt(e.clientY - cv.getBoundingClientRect().top);
+  cv.addEventListener("dragstart", e => startDrag(e, deckTrack(lane(e))));
+  cv.addEventListener("dragover", e => overDeck(e, lane(e)));
+  cv.addEventListener("dragleave", () => { dropTarget = null; });
+  cv.addEventListener("drop", e => dropOnDeck(e, lane(e)));
+})();
+// Deck cards and the deck chips above the library.
+for (const root of [$("#players"), $("#libdecks")]) {
+  root.addEventListener("dragover", e => { const el = e.target.closest("[data-deck]"); overDeck(e, el && +el.dataset.deck, el); });
+  root.addEventListener("dragleave", e => { const el = e.target.closest("[data-deck]"); if (el && !el.contains(e.relatedTarget)) el.classList.remove("droptarget", "warn"); });
+  root.addEventListener("drop", e => { const el = e.target.closest("[data-deck]"); dropOnDeck(e, el && +el.dataset.deck); });
 }
 
 function libRenderDecks() {
@@ -924,7 +1036,7 @@ function libRenderDecks() {
     const s = p.status, t = p.track, c = rgba(deckRgb(p.number), 1);
     // Deck commands go through /api/deck, which only exists once Library.java is deployed.
     const off = lib.missing ? ` disabled title="Needs the deckdash update (Library.java) on the brain"` : "";
-    return `<div class="ldeck" style="border-left:3px solid ${c}"><span class="n" style="color:${c}">${p.number}</span>
+    return `<div class="ldeck" data-deck="${p.number}"${s.trackLoaded && s.rekordboxId ? ' draggable="true" title="Drag onto another deck to load the same track"' : ""} style="border-left:3px solid ${c}"><span class="n" style="color:${c}">${p.number}</span>
       <span class="tt">${t ? `<b>${esc(t.title)}</b> · ${esc(t.artist || "")}` : s.trackLoaded ? "loading…" : "empty"}</span>
       <button class="lbtn play${s.playing ? " on" : ""}" data-dk="${p.number}" data-a="${s.playing ? "stop" : "play"}" title="Fader start / stop over DJ Link"${off}>${s.playing ? "■ STOP" : "▶ PLAY"}</button>
       <button class="lbtn${s.synced ? " on" : ""}" data-dk="${p.number}" data-a="${s.synced ? "sync_off" : "sync_on"}"${off}>SYNC</button>
@@ -934,7 +1046,7 @@ function libRenderDecks() {
 
 // Re-render the table only when what it shows from the decks changes (not on every 10 Hz push).
 function libOnState(st) {
-  if (!view.lib) return;
+  if (!view.lib || dragging) return;      // re-rendering would remove the row being dragged
   for (const p of st.players) if (p.status.playing && p.status.trackLoaded)
     played.add(`${p.status.trackSourcePlayer}:${p.status.trackSourceSlot}/${p.status.rekordboxId}`);
   const mi = masterInfo();
