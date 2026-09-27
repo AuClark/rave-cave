@@ -33,12 +33,28 @@ const R = new MapRenderer(document.getElementById("gl"), document.getElementById
 connectEvents(R, { onStatus: ok => (online = ok) });
 connectVisuals(R);   // generative sketch + live params for "gen" surfaces
 
+// Render resolution: the projector's GPU is weak, so in auto mode (layout.render_scale = 0)
+// the page renders below full resolution when the frame rate drops, and climbs back when
+// there's headroom. The canvas is stretched to the screen either way.
+let scale = 1, fps = 60, lastT = 0, good = 0, W = 1920, H = 1080;
+const GPU = R.gpuName();
+function applyScale() { R.resize(Math.max(64, Math.round(W * scale)), Math.max(36, Math.round(H * scale))); }
+function report() {
+  fetch("/api/screen", { method: "POST", body: JSON.stringify({ w: W, h: H, fps, scale, gpu: GPU }) }).catch(() => {});
+}
 function resize() {
-  const d = devicePixelRatio || 1, w = Math.round(innerWidth * d), h = Math.round(innerHeight * d);
-  R.resize(w, h);
-  fetch("/api/screen", { method: "POST", body: JSON.stringify({ w, h }) }).catch(() => {});
+  const d = devicePixelRatio || 1;
+  W = Math.round(innerWidth * d); H = Math.round(innerHeight * d);
+  applyScale(); report();
 }
 addEventListener("resize", resize); resize();
+setInterval(() => {
+  const want = R.layout ? R.layout.render_scale || 0 : 0;
+  if (want > 0) scale = want;
+  else if (fps < 45 && scale > 0.35) { scale = Math.max(0.35, scale * 0.8); good = 0; }
+  else if (fps > 57 && scale < 1 && ++good >= 3) { scale = Math.min(1, scale * 1.15); good = 0; }
+  applyScale(); report();
+}, 2000);
 
 function fullscreen() {
   document.documentElement.requestFullscreen?.().catch(() => {});
@@ -54,12 +70,15 @@ addEventListener("keydown", e => {
 setTimeout(() => tap.classList.add("hidden"), 8000);
 
 function frame(now) {
+  if (lastT) fps += (1000 / Math.max(1, now - lastT) - fps) * 0.05;
+  lastT = now;
   R.draw(now, { test: localTest });
   if (!hud.classList.contains("hidden")) {
     const s = R.clock.s, L = R.layout;
     hud.textContent = (online ? "" : "NO CONNECTION TO BRAIN\n")
       + (s ? `${s.scene}  ${s.bpm?.toFixed(1)} bpm  deck ${s.live}  bar ${s.bar}  ${s.section ?? ""}\n${s.title ?? ""}\n` : "show engine: no data\n")
-      + (L ? `${L.surfaces.length} surfaces, ${L.masks.length} masks, lead ${L.lead_ms} ms  ${R.cv.width}×${R.cv.height}` : "");
+      + (L ? `${L.surfaces.length} surfaces, ${L.masks.length} masks, lead ${L.lead_ms} ms\n` : "")
+      + `${fps.toFixed(0)} fps, rendering ${R.cv.width}×${R.cv.height} (${Math.round(scale * 100)}%) of ${W}×${H}\n${GPU}`;
   }
   requestAnimationFrame(frame);
 }

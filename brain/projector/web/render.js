@@ -92,7 +92,9 @@ function quadAspect(c, W, H) {
 
 // ---------------------------------------------------------------- shaders
 
-const VERT = `attribute vec2 a; void main() { gl_Position = vec4(a, 0.0, 1.0); }`;
+// Each surface is drawn as its bounding box (u_box, in clip space), not the whole screen.
+const VERT = `attribute vec2 a; uniform vec4 u_box;
+void main() { gl_Position = vec4(mix(u_box.xy, u_box.zw, a * 0.5 + 0.5), 0.0, 1.0); }`;
 
 const COMMON = `
 #ifdef GL_FRAGMENT_PRECISION_HIGH
@@ -230,7 +232,7 @@ CONTENT.test = `vec3 content(vec2 uv) {
 class MapRenderer {
   constructor(canvas, overlay) {
     this.cv = canvas; this.ov = overlay; this.o = overlay.getContext("2d");
-    const gl = canvas.getContext("webgl", { antialias: false, premultipliedAlpha: false, preserveDrawingBuffer: true });
+    const gl = canvas.getContext("webgl", { antialias: false, premultipliedAlpha: false, preserveDrawingBuffer: false });
     if (!gl) throw new Error("WebGL not available");
     this.gl = gl;
     const buf = gl.createBuffer();
@@ -274,7 +276,7 @@ class MapRenderer {
     const u = {};
     for (const n of ["u_res", "u_Hinv", "u_aspect", "u_beat", "u_frac", "u_bwb", "u_bar", "u_hue", "u_scene", "u_progress",
                      "u_since", "u_energy", "u_sp", "u_opacity", "u_bright", "u_sel", "u_time", "u_tex",
-                     "u_radius", "u_border", "u_bbright", "u_bsat", "u_bpulse", "u_px", ...extra])
+                     "u_radius", "u_border", "u_bbright", "u_bsat", "u_bpulse", "u_px", "u_box", ...extra])
       u[n] = gl.getUniformLocation(p, n);
     return { p, u, a: gl.getAttribLocation(p, "a") };
   }
@@ -298,7 +300,14 @@ class MapRenderer {
   }
 
   resize(w, h) {
+    if (this.cv.width === w && this.cv.height === h) return;
     for (const c of [this.cv, this.ov]) { c.width = w; c.height = h; }
+  }
+
+  // GPU name, for the projector's stats.
+  gpuName() {
+    const gl = this.gl, ext = gl.getExtension("WEBGL_debug_renderer_info");
+    return String(ext ? gl.getParameter(ext.UNMASKED_RENDERER_WEBGL) : gl.getParameter(gl.RENDERER)).slice(0, 80);
   }
 
   draw(now, opts = {}) {
@@ -306,7 +315,7 @@ class MapRenderer {
     const W = this.cv.width, H = this.cv.height;
     gl.viewport(0, 0, W, H);
     gl.clearColor(0, 0, 0, 1); gl.clear(gl.COLOR_BUFFER_BIT);
-    this.o.clearRect(0, 0, W, H);
+    if (this.ovDirty) { this.o.clearRect(0, 0, W, H); this.ovDirty = false; }   // skip when nothing was drawn
     if (!L) return;
     this.clock.lead = L.lead_ms ?? 60;
     const f = this.clock.frame(now);
@@ -320,6 +329,8 @@ class MapRenderer {
       const u = pr.u;
       gl.uniform2f(u.u_res, W, H);
       gl.uniformMatrix3fv(u.u_Hinv, false, colMajor(invert3(squareToQuad(s.corners))));
+      const xs = s.corners.map(c => c[0]), ys = s.corners.map(c => c[1]);
+      gl.uniform4f(u.u_box, 2 * Math.min(...xs) - 1, 1 - 2 * Math.max(...ys), 2 * Math.max(...xs) - 1, 1 - 2 * Math.min(...ys));
       const [qw, qh] = quadSize(s.corners, W, H);
       gl.uniform1f(u.u_aspect, qh > 1 ? qw / qh : 1);
       gl.uniform1f(u.u_px, 1 / Math.max(qh, 1));
@@ -340,6 +351,7 @@ class MapRenderer {
     // Masks (black) on the overlay, then edit handles.
     const o = this.o;
     o.fillStyle = "#000";
+    if (L.masks.length || L.edit || opts.handles) this.ovDirty = true;
     for (const m of L.masks) {
       o.beginPath();
       m.points.forEach(([x, y], i) => (i ? o.lineTo(x * W, y * H) : o.moveTo(x * W, y * H)));
@@ -388,8 +400,10 @@ class MapRenderer {
 }
 
 // Connect to an event stream (the projector host's by default); calls the handlers as messages arrive.
-function connectEvents(renderer, { onLayout, onScreen, onStatus, onSketch, onParams, url = "/api/events", state = true } = {}) {
-  let es;
+// Each service says hello with a version of its page code; when that changes (a deploy),
+// the page reloads itself so nobody has to hard-refresh the projector. reload: false opts out.
+function connectEvents(renderer, { onLayout, onScreen, onStatus, onSketch, onParams, url = "/api/events", state = true, reload = true } = {}) {
+  let es, version = null;
   const open = () => {
     es = new EventSource(url);
     es.onopen = () => onStatus && onStatus(true);
@@ -397,6 +411,10 @@ function connectEvents(renderer, { onLayout, onScreen, onStatus, onSketch, onPar
     es.onmessage = e => {
       const m = JSON.parse(e.data);
       if (m.t === "state") { if (state) renderer.clock.update(m.s); }
+      else if (m.t === "hello") {
+        if (version && m.version !== version && reload) setTimeout(() => location.reload(), 300 + Math.random() * 700);
+        version = m.version;
+      }
       else if (m.t === "layout") onLayout ? onLayout(m.layout) : (renderer.layout = m.layout);
       else if (m.t === "screen" && onScreen) onScreen(m.screen);
       else if (m.t === "sketch") { renderer.setSketch(m.sketch); onSketch && onSketch(m.sketch); }
@@ -410,5 +428,5 @@ function connectEvents(renderer, { onLayout, onScreen, onStatus, onSketch, onPar
 // The visuals service (:8110, same host) feeds content "gen": its sketch and live params.
 // The beat clock comes from the projector's own stream, so this one's state is ignored.
 function connectVisuals(renderer, opts = {}) {
-  return connectEvents(renderer, { state: false, ...opts, url: `${location.protocol}//${location.hostname}:8110/api/events` });
+  return connectEvents(renderer, { state: false, reload: false, ...opts, url: `${location.protocol}//${location.hostname}:8110/api/events` });
 }
