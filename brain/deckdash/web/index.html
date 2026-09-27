@@ -287,12 +287,10 @@
   #sys.open { display: block; }
   #sys .sys-top { position: sticky; top: 0; display: flex; align-items: center; gap: 20px; padding: 0 24px; min-height: 64px;
                   background: rgba(36,36,36,.96); border-bottom: 1px solid var(--line); z-index: 2; }
-  #sys .sys-top h1 { margin: 0; font-weight: 300; font-size: 22px; letter-spacing: .04em; }
-  #sys .sys-top h1 b { color: var(--accent); font-weight: 500; }
+  #sys .sys-logo { cursor: pointer; }
+  #sys .sys-title { font-weight: 500; font-size: 13px; letter-spacing: .16em; text-transform: uppercase; color: var(--text);
+                    padding-left: 20px; border-left: 1px solid var(--line); line-height: 28px; }
   #sys .sys-top .sp { flex: 1; }
-  #sys .sys-top button { font: inherit; font-weight: 600; letter-spacing: .12em; font-size: 11px; background: transparent; color: var(--text);
-                         border: 1px solid var(--line2); padding: 8px 14px; cursor: pointer; }
-  #sys .sys-top button:hover { border-color: var(--accent); color: var(--accent); }
   #sys .sys-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(340px, 1fr)); border-left: 1px solid var(--line);
                    max-width: 1680px; margin: 0 auto; }
   #sys .card { border-right: 1px solid var(--line); border-bottom: 1px solid var(--line); padding: 22px 28px; min-height: 160px; }
@@ -345,7 +343,7 @@
 </header>
 
 <div id="sys" aria-hidden="true">
-  <div class="sys-top"><h1>SYSTEM <b>·</b> <span id="sysHost">brain</span></h1><span class="muted" id="sysAge"></span><span class="sp"></span><button id="sysClose">CLOSE</button></div>
+  <div class="sys-top"><div class="logo sys-logo" id="sysLogo" title="Back to the app"></div><span class="sys-title">System</span><span class="muted" id="sysHost"></span><span class="sp"></span><span class="muted" id="sysAge"></span></div>
   <div class="sys-grid" id="sysGrid"></div>
 </div>
 <main>
@@ -1749,7 +1747,12 @@ function sysOpen(on) {
   if (on) { if (sysLast) sysRender(sysLast); sysPoll(); }
 }
 document.getElementById("logo").addEventListener("click", () => sysOpen(!sysEl.classList.contains("open")));
-document.getElementById("sysClose").addEventListener("click", () => sysOpen(false));
+// The System view reuses the page's own logo, in the same place, so it matches whatever the page uses.
+(() => {
+  const src = document.querySelector("#logo .s5logo"), dst = document.getElementById("sysLogo");
+  if (src && dst) dst.appendChild(src.cloneNode(true));
+  dst.addEventListener("click", () => sysOpen(false));
+})();
 addEventListener("keydown", e => { if (e.key === "Escape" && sysEl.classList.contains("open")) sysOpen(false); });
 sysOpen(false); sysPoll();
 </script>
