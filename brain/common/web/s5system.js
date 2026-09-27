@@ -155,6 +155,7 @@
         <table><tr><th>Page</th><th>Devices</th><th>From</th></tr>${clRows}</table>`),
       card(8, "Hardware", kvs([
         ["DJ Link devices", d.djlink_devices],
+        d.case_fan && ["Case fan (Argon ONE)", d.case_fan.fan_pct ? `${d.case_fan.fan_pct}%` : "off (cool)", Date.now() / 1000 - d.case_fan.ts > 30 ? "warn" : ""],
         ...(d.usb || []).map(x => [x.name, `<span class="muted">${x.id}</span>`]),
         !(d.usb || []).some(x => x.id === "2b73:0013") && ["DJM-450", "not connected", "warn"],
         !(d.usb || []).some(x => x.id === "16c0:05dc") && ["uDMX (par can)", "not connected", "warn"]])),

@@ -162,6 +162,8 @@ public class SystemInfo {
 
         j.raw("tailscale", Tailscale.json());
         j.raw("sim", Sim.json());
+        String fan = read("/run/argon-fan/status.json").trim();             // Argon ONE case (argon_fan.py)
+        j.raw("case_fan", fan.startsWith("{") ? fan : "null");
 
         Runtime rt = Runtime.getRuntime();
         j.key("deckdash_jvm").obj().num("heap_used_mb", (rt.totalMemory() - rt.freeMemory()) / (1024 * 1024))
