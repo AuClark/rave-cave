@@ -465,5 +465,6 @@ function connectEvents(renderer, { onLayout, onScreen, onStatus, onSketch, onPar
 // The visuals service (:8110, same host) feeds content "gen": its sketch and live params.
 // The beat clock comes from the projector's own stream, so this one's state is ignored.
 function connectVisuals(renderer, opts = {}) {
-  return connectEvents(renderer, { state: false, reload: false, ...opts, url: `${location.protocol}//${location.hostname}:${location.protocol === "https:" ? 18110 : 8110}/api/events`   // Tailscale HTTPS: port + 10000 });
+  // Over Tailscale HTTPS the visuals service is on port + 10000 (18110).
+  return connectEvents(renderer, { state: false, reload: false, ...opts, url: `${location.protocol}//${location.hostname}:${location.protocol === "https:" ? 18110 : 8110}/api/events` });
 }
