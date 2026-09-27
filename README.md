@@ -59,6 +59,7 @@ Every box in the diagram is a folder in this repo.
 | [`fixtures/pyramid/`](fixtures/pyramid/) | WS2815 receiver and setup for rave-box | [docs/fixtures/pyramid.md](docs/fixtures/pyramid.md) |
 | [`fixtures/parcan/`](fixtures/parcan/) | Stand-alone uDMX sender | [docs/fixtures/parcan.md](docs/fixtures/parcan.md) |
 | [`fixtures/panel/`](fixtures/panel/) | HUB75 receiver, panel health test, status web UI | [docs/fixtures/panel.md](docs/fixtures/panel.md) |
+| [`docs/api.md`](docs/api.md) | Dashboard API reference (for front-end work) | |
 | [`docs/`](docs/) | All documentation, plus `history/` (original plan, first panel log) and `manuals/` | |
 
 ## Hardware

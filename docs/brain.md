@@ -99,7 +99,7 @@ Removing them: `sudo deluser --remove-home name` (and delete any `/etc/sudoers.d
 **Working on the dashboard page:**
 - `http://ravecave.local:8080/` serves `/srv/rave/deckdash-web/index.html`, re-read on every request (no restart).
 - `http://ravecave.local:8080/preview/` serves `/srv/rave/deckdash-preview/`, a work-in-progress copy with the same live data. Break it freely.
-- The API allows cross-origin requests, so the page can also be developed on a laptop against `http://ravecave.local:8080/api/...`.
+- API reference: [api.md](api.md). The API allows cross-origin requests, so the page can also be developed on a laptop against `http://ravecave.local:8080/api/...`.
 - From the repo: `brain/deploy.sh preview` (test) and `brain/deploy.sh web` (live). Live changes go through a PR to `main` first.
 
 ## Operations
