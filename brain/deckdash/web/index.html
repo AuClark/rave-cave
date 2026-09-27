@@ -1106,9 +1106,18 @@ function amPickNext(currentId) {
   return (i >= 0 ? v.slice(i + 1).concat(v.slice(0, i)) : v).find(ok) || null;
 }
 
+// A kick-aligned mix took SYNC off the incoming deck when it was scheduled. If that mix is abandoned,
+// put SYNC back so the deck isn't left unsynced for later mixes.
+function amKickCancel() {
+  const k = am.kickPlan;
+  am.kickPlan = null;
+  if (k && k.deck) deckCmd(k.deck, "sync_on");
+}
+
 function amStop(reason) {
   clearTimeout(am.startTimer); clearTimeout(am.stopTimer);
   am.startTimer = am.stopTimer = null; am.forceStart = null; am.plan = null;
+  amKickCancel();
   am.phase = am.on ? "prep" : "off";
   if (reason) amSay(reason);
 }
@@ -1199,7 +1208,7 @@ function amSchedule(A, B, tl, start, stopBeat) {
   const ea = am.kick && !ramping ? gridError(a) : null, eb = am.kick && !ramping ? gridError(b) : null;
   let kick = null;
   if (ea && eb && ea.ms != null && eb.ms != null && Math.abs(ea.ms - eb.ms) >= 3) {
-    kick = { shift: ea.ms - eb.ms, errA: ea.ms, errB: eb.ms };
+    kick = { shift: ea.ms - eb.ms, errA: ea.ms, errB: eb.ms, deck: b };
     deckCmd(b, "sync_off");                            // B keeps the tempo it synced to (checked before the start)
   }
   am.kickPlan = kick;
@@ -1214,14 +1223,14 @@ function amSchedule(A, B, tl, start, stopBeat) {
       am.startTimer = null; am.plan = null;
       const pa = lastState.players.find(p => p.number === a), pb = lastState.players.find(p => p.number === b);
       // Only if nothing changed in the meantime.
-      if (!am.on || !pa || !pb || !pa.status.playing || pb.status.playing || pb.status.rekordboxId !== next.id) return;
+      if (!am.on || !pa || !pb || !pa.status.playing || pb.status.playing || pb.status.rekordboxId !== next.id) return amKickCancel();
       if (kick && (pb.status.synced || Math.abs(pb.status.effectiveBpm - pa.status.effectiveBpm) > 0.02)) {
         // B didn't hold A's tempo without SYNC (or SYNC stayed on): align grids instead.
         if (!pb.status.synced) deckCmd(b, "sync_on");
         toast(`Kick align skipped: deck ${b} ${pb.status.synced ? "kept SYNC on" : "doesn't hold " + pa.status.effectiveBpm.toFixed(2) + " BPM without SYNC"}`, true);
-        kick = null;
+        kick = null; am.kickPlan = null;
       }
-      if (!(await deckCmd(b, "play"))) return;
+      if (!(await deckCmd(b, "play"))) return amKickCancel();
       am.phase = "mixing"; am.forceStart = null;
       played.add(deckKey(pb.status));
       toast(`Automix: "${next.title}" in on deck ${b}`);
