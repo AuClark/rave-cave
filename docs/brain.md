@@ -62,8 +62,10 @@ From the Mac, in the repo:
 ```bash
 ssh pi@ravecave.local 'mkdir -p ~/deckdash/web ~/showbrain'
 scp brain/deckdash/fetch_libs.sh pi@ravecave.local:deckdash/ && ssh pi@ravecave.local 'bash ~/deckdash/fetch_libs.sh'
-brain/deploy.sh          # copies deckdash + showbrain, compiles, restarts both
+brain/deploy.sh          # copies every brain service, compiles, restarts them
 ```
+
+It refuses unless your checkout is a clean `main` matching `origin/main`. To test a pull request use `brain/deploy.sh --pr N <target>`, and `brain/deploy.sh live` to go back to `main`. See [CONTRIBUTING.md](../CONTRIBUTING.md#deploying-to-the-rig). Each deploy records its commit in `~/.deployed/<target>` on the Pi.
 
 `deploy.sh` also copies the repo's `.env` to the Pi (as `~/showbrain/.env`) if present. It's never committed.
 
