@@ -277,13 +277,55 @@
   nav.apps a.here small { color: #777; }
   nav.apps a.here .arr { background: var(--accent); color: #fff; align-self: stretch; display: grid; place-items: center; width: 84px; margin: -30px -32px -30px 0; }
   @media (max-width: 900px) { nav.apps { grid-template-columns: 1fr 1fr; } nav.apps a:nth-child(3) { border-left: 0; } }
+
+  /* ---- System panel (click the logo) ---- */
+  .logo { cursor: pointer; user-select: none; position: relative; }
+  .logo .hdot { display: inline-block; width: 7px; height: 7px; border-radius: 50%; margin-left: 8px; vertical-align: middle; background: var(--line2); }
+  .logo .hdot.ok { background: var(--good); } .logo .hdot.warn { background: var(--warn); } .logo .hdot.bad { background: var(--bad); box-shadow: 0 0 8px var(--bad); }
+  #sys { position: fixed; inset: 0; z-index: 50; background: var(--bg); overflow: auto; display: none; }
+  #sys.open { display: block; }
+  #sys .sys-top { position: sticky; top: 0; display: flex; align-items: center; gap: 20px; padding: 0 24px; min-height: 64px;
+                  background: rgba(36,36,36,.96); border-bottom: 1px solid var(--line); z-index: 2; }
+  #sys .sys-top h1 { margin: 0; font-weight: 300; font-size: 22px; letter-spacing: .04em; }
+  #sys .sys-top h1 b { color: var(--accent); font-weight: 500; }
+  #sys .sys-top .sp { flex: 1; }
+  #sys .sys-top button { font: inherit; font-weight: 600; letter-spacing: .12em; font-size: 11px; background: transparent; color: var(--text);
+                         border: 1px solid var(--line2); padding: 8px 14px; cursor: pointer; }
+  #sys .sys-top button:hover { border-color: var(--accent); color: var(--accent); }
+  #sys .sys-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(340px, 1fr)); border-left: 1px solid var(--line);
+                   max-width: 1680px; margin: 0 auto; }
+  #sys .card { border-right: 1px solid var(--line); border-bottom: 1px solid var(--line); padding: 22px 28px; min-height: 160px; }
+  #sys .card h2 { margin: 0 0 16px; font-weight: 500; font-size: 12px; letter-spacing: .16em; text-transform: uppercase; color: var(--dim); }
+  #sys .card h2 i { font-style: normal; color: var(--accent); margin-right: 6px; }
+  #sys .big { font-weight: 300; font-size: 44px; line-height: 1; font-variant-numeric: tabular-nums; }
+  #sys .big small { font-size: 16px; color: var(--dim); margin-left: 4px; }
+  #sys .kv { display: flex; justify-content: space-between; gap: 12px; padding: 5px 0; border-bottom: 1px solid var(--line); font-size: 13px; }
+  #sys .kv:last-child { border-bottom: 0; }
+  #sys .kv span { color: var(--dim); } #sys .kv b { font-weight: 500; text-align: right; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
+  #sys .bar { height: 6px; background: var(--well); margin: 10px 0 14px; position: relative; }
+  #sys .bar div { position: absolute; left: 0; top: 0; bottom: 0; background: var(--good); transition: width .4s; }
+  #sys .cores { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; margin-bottom: 12px; }
+  #sys .cores div { background: var(--well); height: 42px; position: relative; }
+  #sys .cores div i { position: absolute; left: 0; right: 0; bottom: 0; background: var(--accent); opacity: .8; transition: height .4s; }
+  #sys .cores div span { position: absolute; left: 6px; top: 4px; font-size: 11px; color: var(--dim); }
+  #sys .ok { color: var(--good); } #sys .warn { color: var(--warn); } #sys .bad { color: var(--bad); }
+  #sys table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  #sys th { text-align: left; font-weight: 500; font-size: 11px; letter-spacing: .12em; text-transform: uppercase; color: var(--dim);
+            padding: 0 6px 8px 0; border-bottom: 1px solid var(--line); }
+  #sys td { padding: 7px 6px 7px 0; border-bottom: 1px solid var(--line); font-variant-numeric: tabular-nums; vertical-align: top; }
+  #sys td:nth-child(n+3) { white-space: nowrap; }
+  #sys .flags { display: flex; flex-wrap: wrap; gap: 6px; }
+  #sys .flag { font-size: 11px; font-weight: 600; letter-spacing: .08em; padding: 3px 8px; border: 1px solid var(--line2); color: var(--dim); }
+  #sys .flag.bad { border-color: var(--bad); color: var(--bad); } #sys .flag.warn { border-color: var(--warn); color: var(--warn); }
+  #sys .flag.ok { border-color: var(--good); color: var(--good); }
+  #sys .muted { color: var(--dim); font-size: 12px; }
 </style>
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;500;600&display=swap" rel="stylesheet">
 </head>
 <body>
 <header>
-  <div class="logo">RAVE <b>CAVE</b></div>
+  <div class="logo" id="logo" title="System health">RAVE <b>CAVE</b><span class="hdot" id="hdot"></span></div>
   <nav class="pages" id="pages">
     <a class="here" data-port="8080" data-path="/">Decks</a><a data-port="8090" data-path="/">Lighting</a><a data-port="8100" data-path="/edit">Projection</a><a data-port="8110" data-path="/">Visuals</a>
   <a data-port="8100" data-path="/stage.html">Stage</a></nav>
@@ -296,6 +338,11 @@
   </div>
   <div class="masterbox"><span class="lbl">Master</span><span id="masterName" class="lbl">—</span><span id="masterBpm" class="big">—</span></div>
 </header>
+
+<div id="sys" aria-hidden="true">
+  <div class="sys-top"><h1>SYSTEM <b>·</b> <span id="sysHost">brain</span></h1><span class="muted" id="sysAge"></span><span class="sp"></span><button id="sysClose">CLOSE</button></div>
+  <div class="sys-grid" id="sysGrid"></div>
+</div>
 <main>
   <section id="stack" class="panel stack"><canvas id="stackcv"></canvas></section>
   <section id="lib" class="panel lib">
@@ -1618,6 +1665,88 @@ $("#zOut").onclick = () => zoomBy(1.5);
 applyView();
 connect();
 requestAnimationFrame(drawStack);
+
+// ---- System panel: click the logo. Data from /api/system (sampled every 2 s by deckdash).
+const sysEl = document.getElementById("sys");
+let sysTimer = null, sysLast = null;
+const fmtUp = s => { const d = Math.floor(s / 86400), h = Math.floor(s % 86400 / 3600), m = Math.floor(s % 3600 / 60);
+  return (d ? d + "d " : "") + (d || h ? h + "h " : "") + m + "m"; };
+const lvl = (v, warn, bad, higherIsWorse = true) => higherIsWorse ? (v >= bad ? "bad" : v >= warn ? "warn" : "ok")
+                                                                   : (v <= bad ? "bad" : v <= warn ? "warn" : "ok");
+const kvs = rows => rows.filter(Boolean).map(([k, v, c]) => `<div class="kv"><span>${k}</span><b class="${c || ""}">${v}</b></div>`).join("");
+function sysHealth(d) {
+  const t = d.throttle || {}, worst = [];
+  if (d.cpu.temp_c >= 80 || t.under_voltage_now || t.throttled_now || d.disk.free_gb < 1 ||
+      (d.services || []).some(s => s.state !== "active")) worst.push("bad");
+  if (d.cpu.temp_c >= 70 || t.under_voltage_since_boot || t.throttled_since_boot || t.soft_temp_limit_now ||
+      d.disk.free_gb < 3 || d.memory.used_mb / d.memory.total_mb > 0.85 || (d.network.wifi.signal_dbm && d.network.wifi.signal_dbm < -75) ||
+      (d.services || []).some(s => s.restarts > 0)) worst.push("warn");
+  return worst.includes("bad") ? "bad" : worst.includes("warn") ? "warn" : "ok";
+}
+function sysRender(d) {
+  document.getElementById("sysHost").textContent = d.host;
+  const u = d.cpu.usage || [0], t = d.throttle, m = d.memory, memPct = m.used_mb / m.total_mb * 100;
+  const tempC = lvl(d.cpu.temp_c, 70, 80), cpuC = lvl(u[0], 75, 90), memC = lvl(memPct, 75, 90), diskC = lvl(d.disk.free_gb, 3, 1, false);
+  const flag = (on, since, label) => `<span class="flag ${on ? "bad" : since ? "warn" : "ok"}">${label}${on ? " NOW" : since ? " SINCE BOOT" : ""}</span>`;
+  const wifi = d.network.wifi, sig = wifi.signal_dbm, sigC = sig ? lvl(sig, -70, -80, false) : "";
+  const card = (n, title, body) => `<section class="card"><h2><i>${String(n).padStart(2, "0")}</i>— ${title}</h2>${body}</section>`;
+  const svcRows = (d.services || []).map(s => `<tr><td>${s.name}</td><td class="${s.state === "active" ? "ok" : "bad"}">${s.state === "active" ? s.sub : s.state}</td>
+    <td>${s.cpu_pct >= 0 ? s.cpu_pct.toFixed(1) + "%" : "–"}</td><td>${s.mem_mb >= 0 ? Math.round(s.mem_mb) + " MB" : "–"}</td>
+    <td class="${s.restarts ? "warn" : ""}">${s.restarts}</td></tr>`).join("");
+  const cl = d.clients || { ports: [] };
+  const clRows = cl.ports.map(p => `<tr><td>${p.page}<div class="muted">:${p.port}</div></td><td>${p.devices}</td>
+    <td class="muted">${p.addresses.length ? p.addresses.map(a => a.startsWith("fe80") ? "IPv6 link-local" : a).join("<br>") : "–"}</td></tr>`).join("");
+  document.getElementById("sysGrid").innerHTML = [
+    card(1, "Temperature", `<div class="big ${tempC}">${d.cpu.temp_c.toFixed(1)}<small>°C</small></div>
+      <div class="bar"><div style="width:${Math.min(100, d.cpu.temp_c / 85 * 100)}%;background:var(--${tempC === "ok" ? "good" : tempC})"></div></div>
+      <div class="flags">${flag(t.under_voltage_now, t.under_voltage_since_boot, "UNDER-VOLTAGE")}${flag(t.throttled_now, t.throttled_since_boot, "THROTTLED")}
+      ${flag(t.freq_capped_now, t.freq_capped_since_boot, "FREQ CAP")}${flag(t.soft_temp_limit_now, t.soft_temp_limit_since_boot, "TEMP LIMIT")}</div>`),
+    card(2, "CPU", `<div class="big ${cpuC}">${u[0].toFixed(0)}<small>%</small></div><div class="bar"><div style="width:${u[0]}%"></div></div>
+      <div class="cores">${u.slice(1).map((c, i) => `<div><i style="height:${c}%"></i><span>${i} · ${c.toFixed(0)}%</span></div>`).join("")}</div>
+      ${kvs([["Load (1/5/15 min)", d.cpu.load.split(" ").slice(0, 3).join(" · ")], ["Clock", d.cpu.mhz + " MHz"], ["Uptime", fmtUp(d.uptime_s)]])}`),
+    card(3, "Memory", `<div class="big ${memC}">${Math.round(memPct)}<small>%</small></div><div class="bar"><div style="width:${memPct}%"></div></div>
+      ${kvs([["Used", `${m.used_mb} / ${m.total_mb} MB`], ["Available", m.available_mb + " MB"], ["Swap used", `${m.swap_used_mb} / ${m.swap_total_mb} MB`, m.swap_used_mb > 100 ? "warn" : ""],
+             ["deckdash heap", `${d.deckdash_jvm.heap_used_mb} / ${d.deckdash_jvm.heap_max_mb} MB`]])}`),
+    card(4, "Storage", `<div class="big ${diskC}">${d.disk.free_gb}<small>GB free</small></div>
+      <div class="bar"><div style="width:${(1 - d.disk.free_gb / d.disk.total_gb) * 100}%"></div></div>
+      ${kvs([["Total", d.disk.total_gb + " GB"], ["Set recordings", `${d.disk.recordings_gb} GB · ${d.disk.recordings_files} files`]])}`),
+    card(5, "Network", kvs([
+      ["Wi-Fi signal", sig ? `${sig} dBm · ${wifi.quality_pct}%` : "–", sigC],
+      ...d.network.interfaces.map(i => [i.name === "wlan0" ? "Wi-Fi (fixtures)" : "Ethernet (decks)",
+        `${i.up ? "" : "DOWN · "}${i.addresses || "no address"}<div class="muted">↓ ${i.rx_kbps >= 1000 ? (i.rx_kbps / 1000).toFixed(1) + " Mb/s" : i.rx_kbps + " kb/s"} · ↑ ${i.tx_kbps >= 1000 ? (i.tx_kbps / 1000).toFixed(1) + " Mb/s" : i.tx_kbps + " kb/s"}</div>`,
+        i.up ? "" : "bad"])])),
+    card(6, "Services", `<table><tr><th>Service</th><th>State</th><th>CPU</th><th>Mem</th><th>Restarts</th></tr>${svcRows}</table>`),
+    card(7, "Clients", `<div class="big">${cl.devices}<small>devices</small></div>
+      <p class="muted">${cl.dashboard_streams} live dashboard stream${cl.dashboard_streams === 1 ? "" : "s"}</p>
+      <table><tr><th>Page</th><th>Devices</th><th>From</th></tr>${clRows}</table>`),
+    card(8, "Hardware", kvs([
+      ["DJ Link devices", d.djlink_devices],
+      ...(d.usb || []).map(x => [x.name, `<span class="muted">${x.id}</span>`]),
+      !(d.usb || []).some(x => x.id === "2b73:0013") && ["DJM-450", "not connected", "warn"],
+      !(d.usb || []).some(x => x.id === "16c0:05dc") && ["uDMX (par can)", "not connected", "warn"]])),
+  ].join("");
+}
+async function sysPoll() {
+  try {
+    const d = await (await fetch("/api/system", { cache: "no-store" })).json();
+    if (!d.ready) return;
+    sysLast = d;
+    const h = sysHealth(d), dot = document.getElementById("hdot");
+    dot.className = "hdot " + h;
+    dot.title = h === "ok" ? "System healthy" : h === "warn" ? "System: needs a look" : "System: problem";
+    if (sysEl.classList.contains("open")) { sysRender(d); document.getElementById("sysAge").textContent = "updated " + new Date(d.ts).toLocaleTimeString(); }
+  } catch (e) { document.getElementById("hdot").className = "hdot bad"; }
+}
+function sysOpen(on) {
+  sysEl.classList.toggle("open", on); sysEl.setAttribute("aria-hidden", on ? "false" : "true");
+  clearInterval(sysTimer);
+  sysTimer = setInterval(sysPoll, on ? 2000 : 10000);
+  if (on) { if (sysLast) sysRender(sysLast); sysPoll(); }
+}
+document.getElementById("logo").addEventListener("click", () => sysOpen(!sysEl.classList.contains("open")));
+document.getElementById("sysClose").addEventListener("click", () => sysOpen(false));
+addEventListener("keydown", e => { if (e.key === "Escape" && sysEl.classList.contains("open")) sysOpen(false); });
+sysOpen(false); sysPoll();
 </script>
 </body>
 </html>
