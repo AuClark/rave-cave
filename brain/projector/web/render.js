@@ -1,4 +1,4 @@
-// Rave Cave projection renderer: shared by the projector output (index.html) and the
+// Sektor5 projection renderer: shared by the projector output (index.html) and the
 // editor's live preview (edit.html).
 //
 // Each surface is a quad given by four corners in normalised screen coordinates
@@ -319,7 +319,7 @@ class MapRenderer {
     const c = this.titleCanvas, g = c.getContext("2d");
     g.fillStyle = "#000"; g.fillRect(0, 0, c.width, c.height);
     g.fillStyle = "#fff"; g.textAlign = "center"; g.textBaseline = "middle";
-    let size = 120, text = this.clock.title || "RAVE CAVE";
+    let size = 120, text = this.clock.title || "SEKTOR5";
     g.font = `900 ${size}px system-ui, sans-serif`;
     while (g.measureText(text).width > c.width * 0.92 && size > 30) { size -= 6; g.font = `900 ${size}px system-ui, sans-serif`; }
     g.fillText(text, c.width / 2, c.height / 2);

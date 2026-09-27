@@ -14,7 +14,7 @@ import socket
 import sys
 import time
 
-HOST = sys.argv[1] if len(sys.argv) > 1 else os.environ.get("RAVE_TUBE1_HOST", "rave-tube-1.local")
+HOST = sys.argv[1] if len(sys.argv) > 1 else os.environ.get("S5_TUBE1_HOST", os.environ.get("RAVE_TUBE1_HOST", "rave-tube-1.local"))
 BPM = float(sys.argv[2]) if len(sys.argv) > 2 else 128.0
 N = int(sys.argv[3]) if len(sys.argv) > 3 else 60
 FPS = 60

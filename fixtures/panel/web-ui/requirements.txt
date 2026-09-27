@@ -1,4 +1,4 @@
-# Rave Cave Panel Controller Dependencies
+# Sektor5 Panel Controller Dependencies
 #
 # Prefer system packages where available (faster, smaller):
 #   sudo apt install python3-flask python3-picamera2 python3-pil i2c-tools

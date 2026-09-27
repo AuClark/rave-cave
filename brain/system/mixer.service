@@ -1,5 +1,5 @@
 [Unit]
-Description=Rave Cave DJM-450 mixer bridge (USB levels + MIDI)
+Description=Sektor5 DJM-450 mixer bridge (USB levels + MIDI)
 After=sound.target
 
 [Service]

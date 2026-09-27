@@ -1,5 +1,5 @@
 [Unit]
-Description=Rave Cave generative visuals (control page + live params on :8110)
+Description=Sektor5 generative visuals (control page + live params on :8110)
 After=showbrain.service network-online.target
 
 [Service]

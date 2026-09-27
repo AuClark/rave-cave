@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Rave Cave projector host: projection mapping on :8100.
+"""Sektor5 projector host: projection mapping on :8100.
 
   /                 the output page, opened full-screen in Chrome on the projector
   /edit             the mapping editor, for a phone or laptop

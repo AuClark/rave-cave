@@ -1,6 +1,6 @@
 # Show engine: read-ahead lighting from the decks
 
-How the Rave Cave CM4 (`ravecave`) turns Pro DJ Link data from the XDJ-700s into lighting that anticipates the music: it detects drops ahead of time, builds suspense into them, and hits the drop on the beat.
+How the Sektor5 CM4 (`ravecave`) turns Pro DJ Link data from the XDJ-700s into lighting that anticipates the music: it detects drops ahead of time, builds suspense into them, and hits the drop on the beat.
 
 Code: [`brain/deckdash/`](../brain/deckdash/) (deck data, timelines, dashboard) and [`brain/showbrain/`](../brain/showbrain/) (scenes, looks, Commander).
 
@@ -212,10 +212,10 @@ Beat FX and filter need their MIDI controls mapped in `config.json`:
 Those values are examples, not the DJM-450's. To find the real ones, move one control at a time and read the MIDI line in the dashboard's Mixer panel: each message is `status control value`, and the mapping is the first two bytes. `fx_on` is on when the value is 64 or more. A filter is centred at 64.
 
 **Set recording** (`rec` in the mixer message, shown as **● REC** in the dashboard's Mixer panel):
-- The master mix (Rec Out) is written to `/srv/rave/recordings` (`RAVE_REC_DIR`) as 24-bit 48 kHz **FLAC**, about 0.5 GB an hour. It needs `sudo apt install flac` on the brain. Without that it writes WAV, about 1 GB an hour.
+- The master mix (Rec Out) is written to `/srv/rave/recordings` (`S5_REC_DIR`) as 24-bit 48 kHz **FLAC**, about 0.5 GB an hour. It needs `sudo apt install flac` on the brain. Without that it writes WAV, about 1 GB an hour.
 - Recording starts after 3 s of music (keeping 3 s of pre-roll) and stops after 90 s of silence. It won't start with less than 2 GB free.
 - Next to each recording it writes a tracklist, `set-….txt` and `set-….cue`, of the deck the lights follow, with timestamps.
-- `RAVE_REC=off` in the mixer service's environment turns it off.
+- `S5_REC=off` in the mixer service's environment turns it off.
 
 ## Smoke safety (non-negotiable)
 

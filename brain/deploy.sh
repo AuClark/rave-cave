@@ -25,8 +25,11 @@
 set -euo pipefail
 cd "$(dirname "$0")/.."
 [[ -f .env ]] && set -a && . ./.env && set +a
-BRAIN=${PI:-pi@${RAVE_BRAIN_HOST:-ravecave.local}}
-BOX=${BOX:-raver@${RAVE_BOX_HOST:-rave-box.local}}
+# Settings renamed RAVE_* -> S5_* (Sektor5); the old names still work.
+S5_BRAIN_HOST=${S5_BRAIN_HOST:-${RAVE_BRAIN_HOST:-}}
+S5_BOX_HOST=${S5_BOX_HOST:-${RAVE_BOX_HOST:-}}
+BRAIN=${PI:-pi@${S5_BRAIN_HOST:-ravecave.local}}
+BOX=${BOX:-raver@${S5_BOX_HOST:-rave-box.local}}
 
 force=0 src=here
 while [[ $# -gt 0 ]]; do
@@ -101,7 +104,7 @@ if [[ $what == web ]]; then       # page only: no compile, no restart (the page 
 fi
 
 if [[ $what == preview ]]; then   # work-in-progress page at http://ravecave.local:8080/preview/
-  rsync -rlt --omit-dir-times brain/deckdash/web/ "$BRAIN":/srv/rave/deckdash-preview/ && echo "preview updated: http://${RAVE_BRAIN_HOST:-ravecave.local}:8080/preview/"
+  rsync -rlt --omit-dir-times brain/deckdash/web/ "$BRAIN":/srv/rave/deckdash-preview/ && echo "preview updated: http://${S5_BRAIN_HOST:-ravecave.local}:8080/preview/"
 fi
 
 if [[ $what == all || $what == showbrain ]]; then

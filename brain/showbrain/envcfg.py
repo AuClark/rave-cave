@@ -24,8 +24,12 @@ def load_env(*extra):
                 continue
             k, v = line.split("=", 1)
             os.environ.setdefault(k.strip(), v.strip().strip('"').strip("'"))
+    # Settings were renamed RAVE_* -> S5_* (Sektor5 rebrand). Accept either name.
+    for k in list(os.environ):
+        if k.startswith("RAVE_"):
+            os.environ.setdefault("S5_" + k[5:], os.environ[k])
 
 
 def expand(text):
     """Replace ${VAR} / ${VAR:-default} with environment values."""
-    return _VAR.sub(lambda m: os.environ.get(m.group(1), m.group(2) or ""), text)
+    return _VAR.sub(lambda m: os.environ.get(m.group(1)) or m.group(2) or "", text)   # empty = unset, like ${VAR:-x}

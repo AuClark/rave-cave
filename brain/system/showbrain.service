@@ -1,5 +1,5 @@
 [Unit]
-Description=Rave Cave show brain (scene engine + commander)
+Description=Sektor5 show brain (scene engine + commander)
 After=deckdash.service network-online.target
 Wants=deckdash.service
 

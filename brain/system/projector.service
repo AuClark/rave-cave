@@ -1,5 +1,5 @@
 [Unit]
-Description=Rave Cave projector page (projection mapping host on :8100)
+Description=Sektor5 projector page (projection mapping host on :8100)
 After=showbrain.service network-online.target
 
 [Service]
