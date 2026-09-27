@@ -31,4 +31,20 @@ git merge origin/main        # or: git rebase origin/main
 
 - Layout and docs: see the [README](README.md). Code for a part goes in `brain/` or `fixtures/`; its documentation goes in `docs/`.
 - Secrets and site values (Wi-Fi SSID/password, IP overrides) go in `.env` (git-ignored, see `.env.example`), never in commits.
-- Test on the rig before asking for review: `brain/deploy.sh` pushes brain code to the CM4.
+- Test on the rig before asking for review (see below).
+
+## Deploying to the rig
+
+`brain/deploy.sh` only deploys code that's on GitHub, so the rig always runs a known commit:
+
+```bash
+brain/deploy.sh --pr 6 deckdash   # test PR #6 on the rig (a clean checkout of its latest commit)
+brain/deploy.sh live deckdash     # put reviewed main back
+brain/deploy.sh deckdash          # from your checkout: only if it's a clean main matching origin/main
+```
+
+- `--pr` is for testing in the workshop, never during a show. Once the PR is merged, run `brain/deploy.sh live`.
+- Push your branch and open the PR first; `--pr` deploys what's on GitHub, not your local changes.
+- See what's running: `ssh pi@ravecave.local 'grep . ~/.deployed/*'`
+- Dashboard page tweaks can go to `/preview/` from any branch, no PR or checks: `brain/deploy.sh preview`.
+- `--force` skips the checks and deploys your checkout as-is. Emergencies only; say so in the PR.
