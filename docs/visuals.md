@@ -47,7 +47,7 @@ Add two files to `brain/visuals/sketches/`:
 - **`NAME.glsl`**: declares `uniform float p_<id>;` for each parameter and defines `vec3 content(vec2 uv)`. `uv` is 0..1 across the surface. It can use everything the projector's shaders get: `u_beat`, `u_frac`, `kick()` (1 on the beat, decaying), `u_hue`, `u_energy`, `u_scene`, `u_aspect`, `hsv()`, `hash()`, and `wave(beat)`: the live track's waveform (see below). See [`render.js`](../brain/projector/web/render.js) (`COMMON`).
 - **`NAME.json`**: title, description and parameter groups, each parameter with `id`, `label`, `min`, `max`, `step` and `default`. The control page builds its sliders from this.
 
-Deploy with `brain/deploy.sh visuals` and pick it from the menu at the top of the control page. If the shader doesn't compile, the control page shows the error and the projector keeps the last working sketch.
+Deploy with `brain/deploy.sh visuals` and pick it in the Sketch card on the control page. If the shader doesn't compile, the control page shows the error and the projector keeps the last working sketch.
 
 ## Conspiracy set
 
