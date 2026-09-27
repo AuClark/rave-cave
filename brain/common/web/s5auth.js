@@ -4,13 +4,56 @@
 // admin cookie gets 401). This script shows VIEW ONLY / ADMIN, asks for the PIN when a change is
 // refused, and retries the change once unlocked. The cookie lasts 5 years, per browser and host.
 //
-// It also wires links to the other control pages (<a data-port="8090" data-path="/">, e.g. the top
+// It also sets up the shared top bar (.s5bar, logo in .s5home, which opens the System view from
+// /s5system.js) and wires links to the other control pages (<a data-port="8090" data-path="/">, e.g. the top
 // bar): greyed out for viewers, and for admins greyed out only if that page can't be reached from
 // here (the public link publishes just the dashboard; the rest need the LAN or Tailscale).
 (() => {
   "use strict";
-  const S5 = (window.S5AUTH = { enabled: false, admin: true, ready: false });
+  // Start from the last known state so the page draws right first time (no re-greying after load).
+  let last = {};
+  try { last = JSON.parse(localStorage.getItem("s5auth") || "{}"); } catch (e) { /* private mode */ }
+  const S5 = (window.S5AUTH = { enabled: !!last.enabled, admin: last.admin !== false, ready: false });
   const rawFetch = window.fetch.bind(window);
+
+  // The top bar (.s5bar) is identical on every page: same height, logo and page links in the same
+  // place, nothing wraps. Page-specific bits in the bar, and the page below it, fade in. Added here,
+  // in <head>, so it applies before the first paint.
+  const FONT = `"Montserrat", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif`;
+  const barCss = `
+  html { scrollbar-gutter: stable; }
+  .s5bar { box-sizing: border-box; position: sticky; top: 0; z-index: 40; display: flex; flex-wrap: nowrap; align-items: center; gap: 20px;
+    height: 64px; min-height: 64px; max-height: 64px; margin: 0; padding: 0 24px; background: #242424; border: 0; border-bottom: 1px solid #3e3e3e;
+    font: 500 14px/1 ${FONT}; letter-spacing: .01em; text-transform: none; backdrop-filter: none;
+    overflow-x: auto; overflow-y: hidden; scrollbar-width: none; }
+  .s5bar::-webkit-scrollbar { display: none; }
+  .s5bar > * { flex-shrink: 0; }
+  .s5bar > .s5home { flex: 0 0 96px; width: 96px; height: 100%; margin: 0; padding: 0; display: flex; align-items: center; position: relative;
+    cursor: pointer; user-select: none; font-size: 14px; line-height: 1; }
+  .s5bar > .s5home .s5logo { display: flex; align-items: center; line-height: 1; }
+  .s5bar > nav.pages { align-self: stretch; height: 100%; display: flex; gap: 2px; margin: 0; padding: 0; }
+  .s5bar > nav.pages a { display: flex; align-items: center; padding: 0 12px; margin: 0; font: 500 14px/1 ${FONT}; letter-spacing: .01em;
+    text-transform: none; color: #9a9a9a; text-decoration: none; border-top: 3px solid transparent; border-bottom: 3px solid transparent;
+    transition: color .15s, opacity .2s; }
+  .s5bar > nav.pages a:hover { color: #f2f2f2; }
+  .s5bar > nav.pages a.here { color: #f2f2f2; border-bottom-color: #ff5a1f; }
+  html.s5-fontwait .s5bar > nav.pages { visibility: hidden; }
+  .s5bar > :not(.s5home):not(nav.pages) { animation: s5in .45s ease; }
+  .s5bar ~ * { animation: s5in .35s ease; }   /* no fill: nothing lingers (stacking) once faded */
+  @keyframes s5in { from { opacity: 0; } to { opacity: 1; } }`;
+  S5.barCss = barCss;   // the System view (s5system.js) reuses it inside its shadow root
+  const barStyle = document.createElement("style");
+  barStyle.textContent = barCss;
+  document.head.appendChild(barStyle);
+  document.documentElement.classList.toggle("s5-viewer", S5.enabled && !S5.admin);
+  document.documentElement.classList.toggle("s5-admin", S5.enabled && S5.admin);
+  // Page links are drawn in Montserrat: wait for it (cached after the first page) so they don't
+  // shift when it swaps in. Offline, fall back to the system font after a moment.
+  if (document.fonts && document.fonts.load) {
+    document.documentElement.classList.add("s5-fontwait");
+    const shown = () => document.documentElement.classList.remove("s5-fontwait");
+    Promise.race([document.fonts.load(`500 14px "Montserrat"`), new Promise(r => setTimeout(r, 700))]).then(shown, shown);
+  }
   let quietUntil = 0, pending = null;
 
   const css = `
@@ -86,7 +129,10 @@
   async function status() {
     try {
       const r = await rawFetch("/api/auth", { cache: "no-store", credentials: "same-origin" });
-      if (r.ok) Object.assign(S5, await r.json());
+      if (r.ok) {
+        Object.assign(S5, await r.json());
+        try { localStorage.setItem("s5auth", JSON.stringify({ enabled: S5.enabled, admin: S5.admin })); } catch (e) { /* private mode */ }
+      }
     } catch (e) { /* offline: keep last known */ }
     S5.ready = true;
     render();
@@ -161,4 +207,14 @@
   }
   if (document.body) mount(); else document.addEventListener("DOMContentLoaded", mount);
   if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", links);
+
+  // The System view (click the logo) lives on the dashboard; every page loads it from there.
+  function loadSystem() {
+    if (!document.querySelector(".s5bar .s5home") || window.S5SYS) return;
+    const sc = document.createElement("script");
+    sc.src = S5.url(8080, "/s5system.js");
+    sc.async = true;
+    document.head.appendChild(sc);
+  }
+  if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", loadSystem); else loadSystem();
 })();
