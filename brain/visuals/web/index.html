@@ -112,6 +112,9 @@
   /* Section tabs (under the display, pinned with it): one section of controls at a time. */
   .hero > .s5sect { margin: 0 -24px; }
   .panel.tabbed { display: block; max-width: 860px; margin: 0 auto; }
+  /* The tab says which section this is: hide the heading text, keep its "random" button. */
+  .panel.tabbed .card > h3 { font-size: 0; margin: 0; justify-content: flex-end; min-height: 0; }
+  .panel.tabbed .card > h3 button { font-size: 11px; margin-bottom: 10px; }
   .panel.tabbed > .card, .panel.tabbed > #groups > .card { border-right: 0; }
   @media (max-width: 760px) { .hero > .s5sect { margin: 0; } }
 </style>
