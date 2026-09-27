@@ -7,6 +7,7 @@
 // polygons drawn on top. All content is beat-locked to the show engine's state.
 // Surfaces can have rounded corners and a border band drawn over their content.
 // Content "gen" is the live generative sketch from the visuals service (:8110).
+// Sketches can also read the live track's waveform by beat: wave(beat) (see COMMON).
 
 "use strict";
 
@@ -108,6 +109,22 @@ uniform float u_opacity, u_bright, u_sel, u_time;
 uniform float u_radius, u_border, u_bbright, u_bsat, u_bpulse;
 uniform float u_px;   // one output pixel in surface units (surface height = 1), for anti-aliasing
 uniform sampler2D u_tex;
+// The live track's waveform, resampled per beat by the visuals service (trackwave.py).
+// u_wv = (texture width, height, samples per beat, beats; 0 = none). u_wloop = 1 for the demo/sample.
+uniform sampler2D u_wave; uniform vec4 u_wv; uniform float u_wloop;
+vec4 waveTexel(float i) {
+  return texture2D(u_wave, (vec2(mod(i, u_wv.x), floor(i / u_wv.x)) + 0.5) / u_wv.xy);
+}
+// (height, bass, mids, highs), each 0..1, at a beat position in the track (1 = its first beat).
+vec4 wave(float beat) {
+  float n = u_wv.w * u_wv.z;
+  if (n < 1.0) return vec4(0.0);
+  float i = (beat - 1.0) * u_wv.z;
+  if (u_wloop > 0.5) i = mod(i, n);
+  if (i < 0.0 || i > n - 1.0) return vec4(0.0);
+  float i0 = floor(i);
+  return mix(waveTexel(i0), waveTexel(min(i0 + 1.0, n - 1.0)), i - i0);
+}
 vec3 hsv(float h, float s, float v) {
   vec3 k = clamp(abs(mod(h * 6.0 + vec3(0.0, 4.0, 2.0), 6.0) - 3.0) - 1.0, 0.0, 1.0);
   return v * mix(vec3(1.0), k, s);
@@ -248,6 +265,20 @@ class MapRenderer {
     this.clock = new ShowClock();
     this.genParams = {};      // live values from the visuals service
     this.genError = null;
+    this.wave = null;         // the live track's waveform (setWave)
+    this.waveTex = gl.createTexture();
+  }
+
+  // The live track's waveform from the visuals service: RGBA bytes (height, bass, mids, highs), base64.
+  setWave(w) {
+    const gl = this.gl, bin = atob(w.data), px = new Uint8Array(bin.length);
+    for (let i = 0; i < bin.length; i++) px[i] = bin.charCodeAt(i);
+    gl.bindTexture(gl.TEXTURE_2D, this.waveTex);
+    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, w.w, w.h, 0, gl.RGBA, gl.UNSIGNED_BYTE, px);
+    for (const [k, v] of [[gl.TEXTURE_MIN_FILTER, gl.NEAREST], [gl.TEXTURE_MAG_FILTER, gl.NEAREST],
+                          [gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE], [gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE]])
+      gl.texParameteri(gl.TEXTURE_2D, k, v);
+    this.wave = { w: w.w, h: w.h, spb: w.spb, beats: w.beats, loop: w.loop ? 1 : 0, title: w.title, source: w.source };
   }
 
   // Compile the visuals service's sketch as content "gen". A broken sketch keeps the last good one.
@@ -276,7 +307,8 @@ class MapRenderer {
     const u = {};
     for (const n of ["u_res", "u_Hinv", "u_aspect", "u_beat", "u_frac", "u_bwb", "u_bar", "u_hue", "u_scene", "u_progress",
                      "u_since", "u_energy", "u_sp", "u_opacity", "u_bright", "u_sel", "u_time", "u_tex",
-                     "u_radius", "u_border", "u_bbright", "u_bsat", "u_bpulse", "u_px", "u_box", ...extra])
+                     "u_radius", "u_border", "u_bbright", "u_bsat", "u_bpulse", "u_px", "u_box",
+                     "u_wave", "u_wv", "u_wloop", ...extra])
       u[n] = gl.getUniformLocation(p, n);
     return { p, u, a: gl.getAttribLocation(p, "a") };
   }
@@ -345,6 +377,10 @@ class MapRenderer {
       gl.uniform1f(u.u_bbright, s.border_bright ?? 1); gl.uniform1f(u.u_bsat, s.border_sat ?? 0);
       gl.uniform1f(u.u_bpulse, s.border_pulse ?? 0);
       if (pr.ids) for (const id of pr.ids) gl.uniform1f(u["p_" + id], this.genParams[id] ?? 0);
+      const wv = this.wave;
+      gl.activeTexture(gl.TEXTURE1); gl.bindTexture(gl.TEXTURE_2D, wv ? this.waveTex : this.tex); gl.uniform1i(u.u_wave, 1);
+      gl.uniform4f(u.u_wv, wv ? wv.w : 1, wv ? wv.h : 1, wv ? wv.spb : 0, wv ? wv.beats : 0);
+      gl.uniform1f(u.u_wloop, wv ? wv.loop : 0);
       gl.activeTexture(gl.TEXTURE0); gl.bindTexture(gl.TEXTURE_2D, this.tex); gl.uniform1i(u.u_tex, 0);
       gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
     }
@@ -419,6 +455,7 @@ function connectEvents(renderer, { onLayout, onScreen, onStatus, onSketch, onPar
       else if (m.t === "screen" && onScreen) onScreen(m.screen);
       else if (m.t === "sketch") { renderer.setSketch(m.sketch); onSketch && onSketch(m.sketch); }
       else if (m.t === "params") { renderer.genParams = m.params; onParams && onParams(m.params); }
+      else if (m.t === "wave") renderer.setWave(m.wave);
     };
   };
   open();
