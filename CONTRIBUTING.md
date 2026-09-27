@@ -1,6 +1,6 @@
 # Contributing
 
-`main` is protected. All changes come in through a pull request that the repo owner approves.
+`main` is protected. All changes come in through a pull request. Collaborators merge their own PRs once they're ready; no approval is required.
 
 ## Workflow
 
@@ -14,8 +14,8 @@
    git push -u origin your-name/short-description
    ```
 3. Open a pull request into `main` (GitHub offers a link after the push, or run `gh pr create`). Fill in the template.
-4. The owner (@AuClark) reviews. Pushing new commits resets any approval, so it's re-reviewed.
-5. Once approved and all review comments are resolved, it's merged and the branch is deleted automatically.
+4. Check it works on the rig (see below), and that all review comments on the PR are resolved.
+5. Merge it yourself. The branch is deleted automatically. Ask for a review (@AuClark) for anything risky, e.g. changes that control the decks or the show engine.
 
 Direct pushes, force-pushes and deleting `main` are blocked.
 
