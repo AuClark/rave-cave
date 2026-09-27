@@ -197,6 +197,15 @@
   .viewctl .sep { background: var(--line); height: 28px; margin: 0 8px; }
   .masterbox .big { font-weight: 300; font-size: 40px; letter-spacing: -.01em; }
   .masterbox .lbl { letter-spacing: .18em; }
+  /* Phones: one column that never gets wider than the screen (the library table scrolls sideways
+     inside its panel), and no zoom buttons in the bar (pinch the waveforms instead). */
+  @media (max-width: 760px) {
+    .libbody, .row2, .row3, .players { grid-template-columns: minmax(0, 1fr) !important; }
+    main, section.panel, .tracks { min-width: 0; }
+    .tracks { overflow-x: auto; }
+    .viewctl .sep, #zOut, #zIn, #zLbl { display: none; }
+    .masterrow { padding: 10px 12px 6px; }
+  }
   /* Master BPM sits just under the top bar (the bar itself is the same on every page). */
   .masterrow { display: flex; justify-content: flex-end; max-width: 1680px; margin: 0 auto; padding: 14px 24px 10px; }
   main { padding: 0; gap: 0; border-left: 1px solid var(--line); border-right: 1px solid var(--line); max-width: 1680px; margin: 0 auto; }
