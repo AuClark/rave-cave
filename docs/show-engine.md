@@ -153,7 +153,7 @@ API: `POST /api/cmd {"cmd": ..., "value": ...}` with `mode`, `follow`, `intensit
 ## Dashboard: waveforms and library
 
 `http://ravecave.local:8080`:
-- **STACKED** (the default) gives one scrolling waveform lane per deck, deck 1 on top, like the XDJ and rekordbox. A phase meter between the lanes shows each deck's beat in the bar and its phase against the master. **OVERLAY** puts every deck in one lane for close beat matching.
+- **Waveforms:** one lane per deck, deck 1 on top, like the XDJ and rekordbox. Each lane has everything the old deck cards showed: artwork; title, artist, album, genre, label, rating and bitrate; status tags (PLAYING, CUED, LOOP, SYNC, MASTER, END); key, drop countdown, track BPM, pitch and effective BPM; the scrolling waveform with the beat grid and hot/memory cues in their rekordbox colours; and a whole-track overview with sections, drops, cues, playhead, and elapsed · bar · remaining. A phase meter between the lanes shows each deck's beat in the bar and its phase against the master.
 - **LIBRARY** is a Serato-style browser for the rekordbox export on the USB/SD in the players (read with CrateDigger). It has crates and playlists on the left, and search, genre, "BPM ≈ master" and "key match" (Camelot) filters with sortable columns. Tracks already loaded on a deck and tracks already played are marked.
   - **Load** with the per-row deck buttons, a double-click (loads the first deck that isn't playing), or ↑/↓ then Shift+←/→ for deck 1/2. `/` focuses search and Esc clears it. Loading onto a playing deck asks for confirmation first, and the server refuses unless it's forced.
   - **Deck strip:** PLAY/STOP (DJ Link fader start), SYNC, MASTER.
