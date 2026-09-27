@@ -33,6 +33,7 @@ Everything is beat-locked: speeds are in cycles per beat, and **Beat punch** set
 | `orb` | A black glass orb with a pearl circling inside on vintage paper (after Whiskas fx's Harmonisch Serie video). Size, wobble, pearl size, orbit, gloss; paper, mirror into four or tile, RGB split on the kick, pearl tint. |
 | `pipes` | White square pipes in a grey tiled room (after Graphset's Echoes Reality video). Cells, pipe width, density, round to square corners, one or two drifting layers, re-roll every few bars, shadows, room tiles, tint. |
 | `wavelength` | Lines made of waves. Mode 0 ridgeline (stacked waveforms, each hiding the ones behind, like Unknown Pleasures), 1 flowing sine lines, 2 an oscilloscope trace with harmonics. Lines, amplitude, frequency, detail, ridge width, speed in cycles per beat, phase per line, width, glow, colour or a rainbow in the colours of visible light. Presets: unknown-pleasures, ridge-spectrum, ridge-gold, spectrum, moire, scope, scope-rgb. |
+| `track` | The waveform of the song actually playing, from the decks. Mode 0 terrain (Unknown Pleasures made of the song: each ridge is a bar, the front one playing now, the bars to come rolling in, so drops are visible before they land), 1 scrolling colour waveform past a playhead, 2 ring (the current stretch round a circle with a sweeping hand), 3 bass/mids/highs meters. Bars shown, beats shown, playhead, brightness of what has played, height, contrast, width, glow, the track's own colours or a tint. Presets: terrain, terrain-gold, terrain-white, scroll, scroll-show, ring, meters. |
 
 Low sides with no roundness, zero wave frequency and some twist gives the stacked, rotating-polygon spirograph look. High frequency with small amplitude gives rippling contour lines. In `field`, turning up Links with some Wander gives a drifting net; Wave with no Wander gives a clean grid of dots swelling in bands.
 
@@ -40,7 +41,7 @@ Low sides with no roundness, zero wave frequency and some twist gives the stacke
 
 Add two files to `brain/visuals/sketches/`:
 
-- **`NAME.glsl`**: declares `uniform float p_<id>;` for each parameter and defines `vec3 content(vec2 uv)`. `uv` is 0..1 across the surface. It can use everything the projector's shaders get: `u_beat`, `u_frac`, `kick()` (1 on the beat, decaying), `u_hue`, `u_energy`, `u_scene`, `u_aspect`, `hsv()`, `hash()`. See [`render.js`](../brain/projector/web/render.js) (`COMMON`).
+- **`NAME.glsl`**: declares `uniform float p_<id>;` for each parameter and defines `vec3 content(vec2 uv)`. `uv` is 0..1 across the surface. It can use everything the projector's shaders get: `u_beat`, `u_frac`, `kick()` (1 on the beat, decaying), `u_hue`, `u_energy`, `u_scene`, `u_aspect`, `hsv()`, `hash()`, and `wave(beat)`: the live track's waveform (see below). See [`render.js`](../brain/projector/web/render.js) (`COMMON`).
 - **`NAME.json`**: title, description and parameter groups, each parameter with `id`, `label`, `min`, `max`, `step` and `default`. The control page builds its sliders from this.
 
 Deploy with `brain/deploy.sh visuals` and pick it from the menu at the top of the control page. If the shader doesn't compile, the control page shows the error and the projector keeps the last working sketch.
@@ -86,6 +87,15 @@ Simplified takes on five Max Cooper videos, each a sketch with presets:
 | Echoes Reality (Graphset) | `pipes` | echoes, maze, round, blue-steel |
 
 `emergence` (Order From Chaos, Maxime Causeret) is the sixth.
+## The live track's waveform
+
+Sketches can draw the song that's playing. rekordbox analyses every track when the USB is prepared, the decks share that colour waveform over Pro DJ Link, and deckdash already fetches it with the beat grid (`/api/wavedetail/N`, `/api/timeline/N`). Nothing has to be uploaded per song; it works for any track loaded from rekordbox media.
+
+- `trackwave.py` in the visuals service follows showbrain's live deck. When its track changes (deckdash's `waveformKey`), it fetches the waveform and beat grid and resamples the waveform onto the grid, 8 samples per beat, keeping the loudest frame in each slice. It pushes the result to every page once per track as a `wave` event: RGBA bytes (height, bass, mids, highs) in a 256-wide texture.
+- `render.js` uploads it as a texture and gives every sketch `vec4 wave(float beat)`: height, bass, mids and highs (0..1) at any beat of the track, where 1 is the first beat. Sketches look it up with `u_beat`, so it stays on the beat through tempo changes and can read ahead (`wave(u_beat + 16.0)` is four bars from now). Outside the track it returns 0.
+- The `track` sketch uses it (terrain, scroll, ring, meters).
+- **At home** (no decks) it plays a demo track, looped. To test with a real track, capture one on the rig with a track loaded: `python3 brain/visuals/tools/capture_wave.py http://<brain IP>:8080`. That saves `brain/visuals/state/wave-sample.*` (not in git), which is then used, looped, whenever no deck is live.
+- `GET /api/wave` returns the current waveform message (`source`: `live`, `sample` or `demo`; `title`, `beats`, `spb`, `w`, `h`, `data`).
 
 ## How it works
 
@@ -98,4 +108,4 @@ Simplified takes on five Max Cooper videos, each a sketch with presets:
 
 ## API (on :8110)
 
-`GET /api/events` (SSE: `sketch`, `params`, `state`), `GET /api/sketch`, `GET /api/sketches`, `GET/POST /api/params` (POST any subset, values are clamped to their ranges), `POST /api/select {"sketch": NAME}`, `GET /api/presets`, `GET/POST /api/presets/NAME`, `POST /api/presets/NAME/load`.
+`GET /api/events` (SSE: `sketch`, `params`, `state`, and `wave` once per track), `GET /api/wave`, `GET /api/sketch`, `GET /api/sketches`, `GET/POST /api/params` (POST any subset, values are clamped to their ranges), `POST /api/select {"sketch": NAME}`, `GET /api/presets`, `GET/POST /api/presets/NAME`, `POST /api/presets/NAME/load`.

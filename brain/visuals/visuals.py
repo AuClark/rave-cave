@@ -8,7 +8,9 @@ change to the projector and to the control page.
 
   /                 control page (sliders, randomise, presets, live preview)
   /render.js        the projector's renderer, reused for the preview
-  /api/events       Server-Sent Events: {"t":"sketch"}, {"t":"params"}, {"t":"state"} ~20x/s
+  /api/events       Server-Sent Events: {"t":"sketch"}, {"t":"params"}, {"t":"state"} ~20x/s,
+                    {"t":"wave"} once per track (the live track's waveform, see trackwave.py)
+  /api/wave         GET the current waveform message
   /api/sketch       GET the active sketch (name, schema, glsl)
   /api/sketches     GET sketch names
   /api/params       GET current values; POST {"id": value, ...} to change some
@@ -33,6 +35,8 @@ import urllib.request
 from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 
+import trackwave
+
 HERE = Path(__file__).resolve().parent
 WEB = HERE / "web"
 SKETCHES = HERE / "sketches"
@@ -40,6 +44,7 @@ STATE = HERE / "state"
 RENDER_JS = HERE.parent / "projector" / "web" / "render.js"   # brain/projector in the repo, ~/projector on the Pi
 PORT = int(sys.argv[1]) if len(sys.argv) > 1 else 8110
 SHOWBRAIN = "http://127.0.0.1:8090/api/state"
+DECKDASH = "http://127.0.0.1:8080"
 STATE_HZ = 20
 SAFE_NAME = re.compile(r"^[A-Za-z0-9 _.-]{1,40}$")
 
@@ -48,6 +53,7 @@ clients = []            # queue.Queue per connected page
 sketch = None           # {"name", "title", "about", "groups", "glsl"}
 values = {}             # param id -> float
 last_state = b"null"
+wave = None             # the live track's waveform message (trackwave.py)
 
 
 def code_version():
@@ -123,6 +129,21 @@ def broadcast(obj):
     push(("data: " + json.dumps(obj, separators=(",", ":")) + "\n\n").encode())
 
 
+def live_player():
+    """showbrain's live deck, from the last state we polled."""
+    try:
+        return (json.loads(last_state) or {}).get("live")
+    except ValueError:
+        return None
+
+
+def set_wave(msg):
+    global wave
+    wave = msg
+    log(f"waveform: {msg['source']} {msg.get('title')!r} ({msg['beats']} beats)")
+    broadcast({"t": "wave", "wave": msg})
+
+
 def state_pump():
     """Poll showbrain for the preview's beat clock, only while someone is watching."""
     global last_state
@@ -196,6 +217,8 @@ class H(SimpleHTTPRequestHandler):
         with lock:
             if path == "/api/sketch":
                 return self._json(200, sketch)
+            if path == "/api/wave":
+                return self._json(200 if wave else 404, wave or {"error": "no waveform yet"})
             if path == "/api/sketches":
                 return self._json(200, {"sketches": sketch_names(), "active": sketch["name"]})
             if path == "/api/params":
@@ -265,7 +288,8 @@ class H(SimpleHTTPRequestHandler):
             clients.append(q)
             first = ("data: " + json.dumps({"t": "hello", "version": code_version()}) + "\n\n"
                      "data: " + json.dumps({"t": "sketch", "sketch": sketch}) + "\n\n"
-                     "data: " + json.dumps({"t": "params", "params": values}) + "\n\n").encode()
+                     "data: " + json.dumps({"t": "params", "params": values}) + "\n\n"
+                     + ("data: " + json.dumps({"t": "wave", "wave": wave}) + "\n\n" if wave else "")).encode()
         try:
             self.wfile.write(first)
             self.wfile.flush()
@@ -293,5 +317,6 @@ if __name__ == "__main__":
         active = ""
     select(active if active in names else names[0])
     threading.Thread(target=state_pump, daemon=True).start()
+    trackwave.Follower(DECKDASH, STATE, live_player, set_wave).start()
     log(f"visuals up on :{PORT} (sketch {sketch['name']}; {len(names)} available)")
     ThreadingHTTPServer(("0.0.0.0", PORT), H).serve_forever()
