@@ -136,7 +136,7 @@ fi
 
 if [[ $what == all || $what == tools ]]; then     # brain/tools/ (set_pin.py etc.) to ~/tools on the brain
   ssh "$BRAIN" 'mkdir -p ~/tools'
-  rsync -a brain/tools/ brain/common/s5auth.py "$BRAIN":tools/ && echo "tools updated (set the PIN: ssh -t $BRAIN python3 ~/tools/set_pin.py)"
+  rsync -a brain/tools/ brain/common/s5auth.py "$BRAIN":tools/ && echo "tools updated (set the PIN: ssh -t $BRAIN \"python3 ~/tools/set_pin.py\")"
 fi
 
 if [[ $what == pyramid ]]; then

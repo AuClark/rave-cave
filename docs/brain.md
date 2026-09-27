@@ -120,7 +120,7 @@ Anyone can open the pages and watch. **Changing anything needs admin**: loading 
 - **Set or change the PIN** (hidden input, stored only as a salted PBKDF2 hash in `/srv/rave/auth.json`, group `rave`, mode 640):
   ```bash
   brain/deploy.sh tools                                # once, copies set_pin.py to the brain
-  ssh -t pi@ravecave.local python3 ~/tools/set_pin.py
+  ssh -t pi@ravecave.local 'python3 ~/tools/set_pin.py'
   ```
   Changing the PIN signs every browser out. `--sign-out` keeps the PIN and signs everyone out (lost phone); `--off` removes it. Services pick changes up immediately.
 - **Brute force:** each check takes about 0.5 s, and 8 wrong PINs in 10 minutes lock PIN entry for 10 minutes (per service). Use 6+ digits if the rig is on a public link.
