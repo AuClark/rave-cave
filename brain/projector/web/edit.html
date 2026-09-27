@@ -1,0 +1,273 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no">
+<title>Rave Cave · Projection mapping</title>
+<style>
+  :root { --bg:#07070c; --panel:#12131d; --line:#262a3d; --text:#e8e9f3; --dim:#8a8fa8; --cyan:#2fe6ff; --pink:#ff2fd0; }
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  body { margin: 0; background: var(--bg); color: var(--text); font: 14px/1.4 system-ui, -apple-system, sans-serif; }
+  header { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; padding: 10px 14px; border-bottom: 1px solid var(--line); }
+  header b { letter-spacing: .15em; } header b span { color: var(--pink); }
+  .pill { font-size: 12px; padding: 2px 8px; border-radius: 999px; border: 1px solid var(--line); color: var(--dim); }
+  .pill.ok { color: #000; background: #3dff8b; border-color: #3dff8b; }
+  main { display: grid; grid-template-columns: minmax(0, 1fr) 320px; gap: 14px; padding: 14px; }
+  @media (max-width: 900px) { main { grid-template-columns: 1fr; } }
+  #stage { position: relative; width: 100%; background: #000; border: 1px solid var(--line); border-radius: 10px; overflow: hidden; touch-action: none; }
+  #stage canvas { position: absolute; inset: 0; width: 100%; height: 100%; }
+  .card { background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 12px; margin-bottom: 12px; }
+  .card h3 { margin: 0 0 8px; font-size: 12px; letter-spacing: .12em; text-transform: uppercase; color: var(--dim); }
+  button, select, input { font: inherit; color: var(--text); background: #1b1e2e; border: 1px solid var(--line); border-radius: 8px; padding: 7px 10px; }
+  button { cursor: pointer; font-weight: 700; }
+  button.on { background: var(--cyan); color: #000; border-color: var(--cyan); }
+  button.warn { border-color: #ff4d5e; color: #ff8c96; }
+  .row { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; margin-bottom: 6px; }
+  .row > * { flex: 0 0 auto; }
+  .grow { flex: 1 1 auto !important; min-width: 0; }
+  label { color: var(--dim); font-size: 12px; }
+  input[type=range] { width: 100%; padding: 0; }
+  .list div { display: flex; justify-content: space-between; align-items: center; padding: 6px 8px; border-radius: 8px; cursor: pointer; }
+  .list div.sel { background: #1d2b36; outline: 1px solid var(--cyan); }
+  .list div.selm { background: #2b1d33; outline: 1px solid var(--pink); }
+  .hint { color: var(--dim); font-size: 12px; }
+</style>
+</head>
+<body>
+<header>
+  <b>RAVE <span>CAVE</span> · MAPPING</b>
+  <span id="conn" class="pill">connecting</span>
+  <span id="scr" class="pill"></span>
+  <span id="show" class="pill"></span>
+  <span class="grow"></span>
+  <button id="bEdit">Handles on wall</button>
+  <button id="bTest">Test pattern</button>
+</header>
+<main>
+  <div>
+    <div id="stage"><canvas id="gl"></canvas><canvas id="ov"></canvas></div>
+    <p class="hint">Drag corner dots to pin a surface to its real-world shape; drag inside a surface to move it.
+      Arrow keys nudge the selected corner (Shift = 10×). The projector updates live.</p>
+  </div>
+  <div>
+    <div class="card">
+      <h3>Surfaces</h3>
+      <div class="list" id="surfaces"></div>
+      <div class="row" style="margin-top:8px"><button id="bAdd">+ Surface</button><button id="bDup">Duplicate</button><button id="bDel" class="warn">Delete</button></div>
+    </div>
+    <div class="card" id="props">
+      <h3>Selected surface</h3>
+      <div class="row"><input id="pName" class="grow" placeholder="Name"></div>
+      <div class="row"><label>Content</label>
+        <select id="pContent" class="grow">
+          <option value="show">show — follows the scene engine</option>
+          <option value="pulse">pulse — beat flash</option>
+          <option value="tunnel">tunnel</option>
+          <option value="bars">bars</option>
+          <option value="title">title — track name</option>
+          <option value="solid">solid colour</option>
+          <option value="test">test grid</option>
+        </select></div>
+      <label>Opacity <span id="vOp"></span></label><input id="pOp" type="range" min="0" max="1" step="0.05">
+      <label>Hue shift <span id="vHue"></span></label><input id="pHue" type="range" min="-0.5" max="0.5" step="0.01">
+      <div class="row" style="margin-top:6px"><button id="bFill">Fill screen</button><button id="bReset">Reset corners</button><button id="bSel">Next corner ↻</button></div>
+    </div>
+    <div class="card">
+      <h3>Masks</h3>
+      <div class="list" id="masks"></div>
+      <div class="row" style="margin-top:8px"><button id="bMask">+ Draw mask</button><button id="bMaskDone" style="display:none">Finish mask</button><button id="bMaskDel" class="warn">Delete mask</button></div>
+      <p class="hint" id="maskHint" style="display:none">Tap points around the area to black out, then Finish.</p>
+    </div>
+    <div class="card">
+      <h3>Output</h3>
+      <label>Latency compensation <span id="vLead"></span> ms</label><input id="pLead" type="range" min="0" max="300" step="5">
+      <label>Brightness <span id="vBr"></span></label><input id="pBr" type="range" min="0" max="1" step="0.05">
+    </div>
+    <div class="card">
+      <h3>Presets</h3>
+      <div class="row"><input id="presetName" class="grow" placeholder="e.g. workshop-back-wall"><button id="bSave">Save</button></div>
+      <div class="row"><select id="presetList" class="grow"></select><button id="bLoad">Load</button></div>
+    </div>
+  </div>
+</main>
+<script src="render.js"></script>
+<script>
+const $ = id => document.getElementById(id);
+const stage = $("stage");
+const R = new MapRenderer($("gl"), $("ov"));
+let L = null, screen = { w: 1920, h: 1080 }, dragging = null, draft = null, selCorner = 0, pushTimer = null, lastPush = 0;
+
+// ---------- sync with the projector host
+connectEvents(R, {
+  onLayout: l => { if (!dragging) { L = l; R.layout = L; ui(); } },
+  onScreen: s => { screen = s; sizeStage(); },
+  onStatus: ok => { $("conn").textContent = ok ? "live" : "reconnecting"; $("conn").className = "pill" + (ok ? " ok" : ""); },
+});
+function push(immediate) {
+  R.layout = L;
+  clearTimeout(pushTimer);
+  const send = () => { lastPush = performance.now(); fetch("/api/layout", { method: "POST", body: JSON.stringify(L) }); };
+  if (immediate || performance.now() - lastPush > 60) send(); else pushTimer = setTimeout(send, 60);
+}
+
+// ---------- stage sizing: same aspect as the projector
+function sizeStage() {
+  const w = stage.clientWidth, h = Math.round(w * screen.h / screen.w);
+  stage.style.height = h + "px";
+  const d = devicePixelRatio || 1;
+  R.resize(Math.round(w * d), Math.round(h * d));
+  $("scr").textContent = `projector ${screen.w}×${screen.h}`;
+}
+addEventListener("resize", sizeStage);
+sizeStage();
+
+// ---------- helpers
+const sel = () => L && L.surfaces.find(s => s.id === L.selected);
+const selMask = () => L && L.masks.find(m => m.id === L.selected);
+const newId = (p, arr) => { let i = 1; while (arr.some(x => x.id === p + i)) i++; return p + i; };
+function toNorm(e) {
+  const r = stage.getBoundingClientRect();
+  return [(e.clientX - r.left) / r.width, (e.clientY - r.top) / r.height];
+}
+function inQuad(p, c) {
+  let inside = false;
+  for (let i = 0, j = c.length - 1; i < c.length; j = i++) {
+    const [xi, yi] = c[i], [xj, yj] = c[j];
+    if ((yi > p[1]) !== (yj > p[1]) && p[0] < (xj - xi) * (p[1] - yi) / (yj - yi) + xi) inside = !inside;
+  }
+  return inside;
+}
+
+// ---------- pointer editing
+stage.addEventListener("pointerdown", e => {
+  if (!L) return;
+  const p = toNorm(e), r = stage.getBoundingClientRect(), tol = 22 / r.width;
+  if (draft) { draft.push(p); return; }
+  // nearest handle (selected surface first, then any surface, then mask points)
+  let best = null, bd = tol * tol;
+  const consider = (kind, obj, i, pt) => {
+    const d = (pt[0] - p[0]) ** 2 + ((pt[1] - p[1]) * r.height / r.width) ** 2;
+    if (d < bd) { bd = d; best = { kind, obj, i }; }
+  };
+  L.surfaces.forEach(s => s.corners.forEach((c, i) => consider("corner", s, i, c)));
+  L.masks.forEach(m => m.points.forEach((c, i) => consider("mpoint", m, i, c)));
+  if (!best) {
+    const s = [...L.surfaces].reverse().find(s => inQuad(p, s.corners));
+    const m = [...L.masks].reverse().find(m => inQuad(p, m.points));
+    if (m && (!s || L.selected === m.id)) best = { kind: "mmove", obj: m, start: p, orig: m.points.map(c => [...c]) };
+    else if (s) best = { kind: "move", obj: s, start: p, orig: s.corners.map(c => [...c]) };
+  }
+  if (!best) return;
+  L.selected = best.obj.id;
+  if (best.kind === "corner") selCorner = best.i;
+  dragging = best;
+  stage.setPointerCapture(e.pointerId);
+  ui(); push(true);
+});
+stage.addEventListener("pointermove", e => {
+  if (!dragging) return;
+  const p = toNorm(e), d = dragging;
+  if (d.kind === "corner") d.obj.corners[d.i] = p;
+  else if (d.kind === "mpoint") d.obj.points[d.i] = p;
+  else {
+    const dx = p[0] - d.start[0], dy = p[1] - d.start[1];
+    const tgt = d.kind === "move" ? d.obj.corners : d.obj.points;
+    d.orig.forEach((c, i) => (tgt[i] = [c[0] + dx, c[1] + dy]));
+  }
+  push();
+});
+const endDrag = () => { if (dragging) { dragging = null; push(true); } };
+stage.addEventListener("pointerup", endDrag);
+stage.addEventListener("pointercancel", endDrag);
+
+addEventListener("keydown", e => {
+  const s = sel();
+  if (!s || document.activeElement.tagName === "INPUT") return;
+  const step = (e.shiftKey ? 10 : 1);
+  const d = { ArrowLeft: [-step / screen.w, 0], ArrowRight: [step / screen.w, 0], ArrowUp: [0, -step / screen.h], ArrowDown: [0, step / screen.h] }[e.key];
+  if (!d) return;
+  e.preventDefault();
+  s.corners[selCorner] = [s.corners[selCorner][0] + d[0], s.corners[selCorner][1] + d[1]];
+  push();
+});
+
+// ---------- panel actions
+$("bEdit").onclick = () => { L.edit = !L.edit; push(true); ui(); };
+$("bTest").onclick = () => { L.test = !L.test; push(true); ui(); };
+$("bAdd").onclick = () => {
+  const id = newId("s", L.surfaces), o = 0.04 * (L.surfaces.length % 5);
+  L.surfaces.push({ id, name: `Surface ${L.surfaces.length + 1}`, content: "show", opacity: 1, hue_shift: 0,
+                    corners: [[0.3 + o, 0.3 + o], [0.7 + o, 0.3 + o], [0.7 + o, 0.7 + o], [0.3 + o, 0.7 + o]] });
+  L.selected = id; push(true); ui();
+};
+$("bDup").onclick = () => {
+  const s = sel(); if (!s) return;
+  const id = newId("s", L.surfaces);
+  L.surfaces.push(Object.assign(JSON.parse(JSON.stringify(s)), { id, name: s.name + " copy", corners: s.corners.map(([x, y]) => [x + 0.03, y + 0.03]) }));
+  L.selected = id; push(true); ui();
+};
+$("bDel").onclick = () => { const s = sel(); if (!s) return; L.surfaces = L.surfaces.filter(x => x !== s); L.selected = null; push(true); ui(); };
+$("bFill").onclick = () => { const s = sel(); if (s) { s.corners = [[0, 0], [1, 0], [1, 1], [0, 1]]; push(true); } };
+$("bReset").onclick = () => { const s = sel(); if (s) { s.corners = [[0.25, 0.25], [0.75, 0.25], [0.75, 0.75], [0.25, 0.75]]; push(true); } };
+$("bSel").onclick = () => { selCorner = (selCorner + 1) % 4; };
+$("pName").oninput = e => { const s = sel(); if (s) { s.name = e.target.value; push(); renderLists(); } };
+$("pContent").onchange = e => { const s = sel(); if (s) { s.content = e.target.value; push(true); renderLists(); } };
+$("pOp").oninput = e => { const s = sel(); if (s) { s.opacity = +e.target.value; $("vOp").textContent = Math.round(s.opacity * 100) + "%"; push(); } };
+$("pHue").oninput = e => { const s = sel(); if (s) { s.hue_shift = +e.target.value; $("vHue").textContent = s.hue_shift.toFixed(2); push(); } };
+$("pLead").oninput = e => { L.lead_ms = +e.target.value; $("vLead").textContent = L.lead_ms; push(); };
+$("pBr").oninput = e => { L.brightness = +e.target.value; $("vBr").textContent = Math.round(L.brightness * 100) + "%"; push(); };
+
+$("bMask").onclick = () => { draft = []; $("bMask").style.display = "none"; $("bMaskDone").style.display = ""; $("maskHint").style.display = ""; };
+$("bMaskDone").onclick = () => {
+  if (draft && draft.length >= 3) { const id = newId("m", L.masks); L.masks.push({ id, points: draft }); L.selected = id; push(true); }
+  draft = null; $("bMask").style.display = ""; $("bMaskDone").style.display = "none"; $("maskHint").style.display = "none"; ui();
+};
+$("bMaskDel").onclick = () => { const m = selMask(); if (!m) return; L.masks = L.masks.filter(x => x !== m); L.selected = null; push(true); ui(); };
+
+async function refreshPresets() {
+  const r = await (await fetch("/api/layouts")).json();
+  $("presetList").innerHTML = r.presets.map(n => `<option>${n}</option>`).join("") || "<option value=''>(none saved)</option>";
+}
+$("bSave").onclick = async () => {
+  const n = $("presetName").value.trim(); if (!n) return;
+  const r = await fetch(`/api/layouts/${encodeURIComponent(n)}`, { method: "POST" });
+  if (!r.ok) alert((await r.json()).error); refreshPresets();
+};
+$("bLoad").onclick = async () => {
+  const n = $("presetList").value; if (!n) return;
+  if (confirm(`Load "${n}"? This replaces the current layout.`)) await fetch(`/api/layouts/${encodeURIComponent(n)}/load`, { method: "POST" });
+};
+refreshPresets();
+
+// ---------- UI refresh
+function renderLists() {
+  $("surfaces").innerHTML = L.surfaces.map(s => `<div data-id="${s.id}" class="${s.id === L.selected ? "sel" : ""}"><span>${s.name || s.id}</span><span class="hint">${s.content}</span></div>`).join("") || "<p class='hint'>No surfaces yet.</p>";
+  $("masks").innerHTML = L.masks.map(m => `<div data-id="${m.id}" class="${m.id === L.selected ? "selm" : ""}"><span>${m.id}</span><span class="hint">${m.points.length} points</span></div>`).join("") || "<p class='hint'>No masks.</p>";
+  document.querySelectorAll(".list div[data-id]").forEach(el => el.onclick = () => { L.selected = el.dataset.id; push(true); ui(); });
+}
+function ui() {
+  if (!L) return;
+  $("bEdit").classList.toggle("on", !!L.edit);
+  $("bTest").classList.toggle("on", !!L.test);
+  renderLists();
+  const s = sel();
+  $("props").style.opacity = s ? 1 : 0.4;
+  if (s) {
+    if (document.activeElement !== $("pName")) $("pName").value = s.name || "";
+    $("pContent").value = s.content; $("pOp").value = s.opacity; $("pHue").value = s.hue_shift || 0;
+    $("vOp").textContent = Math.round(s.opacity * 100) + "%"; $("vHue").textContent = (s.hue_shift || 0).toFixed(2);
+  }
+  $("pLead").value = L.lead_ms; $("vLead").textContent = L.lead_ms;
+  $("pBr").value = L.brightness; $("vBr").textContent = Math.round(L.brightness * 100) + "%";
+}
+
+function frame(now) {
+  R.draw(now, { handles: true, draft });
+  const st = R.clock.s;
+  $("show").textContent = st ? `${st.scene} · deck ${st.live ?? "-"} · ${st.bpm ? st.bpm.toFixed(1) : "-"} BPM` : "show engine offline";
+  requestAnimationFrame(frame);
+}
+requestAnimationFrame(frame);
+</script>
+</body>
+</html>

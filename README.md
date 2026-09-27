@@ -27,11 +27,13 @@ flowchart LR
     tubes["tubes/<br/>rave-tube-1 · rave-tube-2<br/>ESP32 + WLED, 60 LEDs each"]
     pyr["pyramid/<br/>rave-box (Pi 3 A+) → SP901E<br/>600 × WS2815"]
     par["parcan/<br/>RGBWA+UV uplight"]
+    proj["brain/projector/<br/>projection mapping :8100"]
     panel["panel/<br/>HUB75 panels (retired)"]
   end
   sb -->|"DDP over Wi-Fi"| tubes
   sb -->|"DDP over Wi-Fi"| pyr
   sb -->|"USB DMX (uDMX)"| par
+  sb -->|"scene state"| proj
   sb -.->|"DDP"| panel
 ```
 
@@ -53,6 +55,8 @@ Every box in the diagram is a folder in this repo.
 | [`brain/showbrain/`](brain/showbrain/) | Python scene engine, looks, fixture outputs, Commander, `config.json` | [docs/show-engine.md](docs/show-engine.md) |
 | [`brain/provision/`](brain/provision/) | Cloud-init generator for flashing the CM4 | [docs/brain.md](docs/brain.md#build-it-from-scratch) |
 | [`brain/system/`](brain/system/) | systemd units, udev rule, journald config | [docs/brain.md](docs/brain.md#3-packages-and-system-config) |
+| [`brain/projector/`](brain/projector/) | Projection mapping: output page and editor on :8100 | [docs/fixtures/projector.md](docs/fixtures/projector.md) |
+| [`brain/mixer/`](brain/mixer/) | DJM-450 USB bridge (post-fader levels, master, MIDI) | [docs/show-engine.md](docs/show-engine.md#which-deck-drives-the-lights) |
 | [`brain/tools/`](brain/tools/) | Receive-only Pro DJ Link decoder | |
 | [`brain/deploy.sh`](brain/deploy.sh) | Push code to the rig and restart services | |
 | [`fixtures/tubes/`](fixtures/tubes/) | Floor tube tools (WLED setup, Bluetooth probes) and enclosure CAD | [docs/fixtures/tubes.md](docs/fixtures/tubes.md), [tube-enclosure.md](docs/fixtures/tube-enclosure.md) |
@@ -71,13 +75,16 @@ Every box in the diagram is a folder in this repo.
 | 2 × 103 cm RGB floor tubes, each with an ESP32 running WLED | `rave-tube-1`, `rave-tube-2` |
 | Raspberry Pi 3 A+, SP901E amplifier, 2 × 5 m WS2815 (12 V) | LED pyramid (`rave-box`) |
 | Battery RGBWA+UV uplight, anyma uDMX | Par can, 10-channel DMX at address 1 |
+| Projector with Chrome | Projection mapping from `brain/projector` (:8100) |
+| Pioneer DJM-450 (USB to the brain) | Mixer levels: the lights follow the deck that owns the mix |
 | 4 × 32×16 HUB75 panels | Retired (faults on three panels) |
 
 ## Running it
 
 - **Dashboard:** `http://ravecave.local:8080`. Live decks, artwork, waveforms with predicted sections and drops, and a stacked scrolling two-deck view.
 - **Commander:** `http://ravecave.local:8090`. DROP NOW, BUILD, HOLD, STROBE, BLACKOUT, skip or mark drops (saved per track), follow deck, intensity, latency.
-- **Deploy changes:** `brain/deploy.sh` (both brain services), or `brain/deploy.sh showbrain | deckdash | mixer | web | preview | pyramid | panel`.
+- **Projection mapping:** `http://ravecave.local:8100/` on the projector, `http://ravecave.local:8100/edit` on your phone to set it up.
+- **Deploy changes:** `brain/deploy.sh` (both brain services), or `brain/deploy.sh showbrain | deckdash | mixer | projector | web | preview | pyramid | panel`.
 - **Dashboard preview:** `http://ravecave.local:8080/preview/` for testing page changes against live data. See [docs/brain.md](docs/brain.md#access-for-collaborators).
 - **Add a fixture:** add it to [`brain/showbrain/config.json`](brain/showbrain/config.json) (`strip`, `panel` or `dmx_par`) and deploy.
 

@@ -1,0 +1,13 @@
+[Unit]
+Description=Rave Cave projector page (projection mapping host on :8100)
+After=showbrain.service network-online.target
+
+[Service]
+User=pi
+WorkingDirectory=/home/pi/projector
+ExecStart=/usr/bin/python3 -u projector.py 8100
+Restart=always
+RestartSec=2
+
+[Install]
+WantedBy=multi-user.target
