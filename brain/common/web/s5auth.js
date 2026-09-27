@@ -38,8 +38,8 @@
   .s5bar > nav.pages a:hover { color: #f2f2f2; }
   .s5bar > nav.pages a.here { color: #f2f2f2; border-bottom-color: #ff5a1f; }
   html.s5-fontwait .s5bar > nav.pages { visibility: hidden; }
-  .s5bar > :not(.s5home):not(nav.pages) { animation: s5in .45s ease both; }
-  .s5bar ~ * { animation: s5in .35s ease both; }
+  .s5bar > :not(.s5home):not(nav.pages) { animation: s5in .45s ease; }
+  .s5bar ~ * { animation: s5in .35s ease; }   /* no fill: nothing lingers (stacking) once faded */
   @keyframes s5in { from { opacity: 0; } to { opacity: 1; } }`;
   S5.barCss = barCss;   // the System view (s5system.js) reuses it inside its shadow root
   const barStyle = document.createElement("style");

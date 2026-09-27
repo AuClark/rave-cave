@@ -17,9 +17,9 @@
   #sys *, #sys *::before { box-sizing: border-box; }
   .s5logo { display: flex; align-items: center; line-height: 1; } .s5logo .s5word { color: #f2f2f2; display: block; flex: none; }
   .s5logo .s5five { fill: #ff5a1f; }
-  #sys.open { animation: s5in .25s ease both; }
+  #sys.open { animation: s5in .25s ease; }
   #sys.open { display: block; }
-    #sys .sys-title { animation: s5in .3s ease both; font-weight: 500; font-size: 13px; letter-spacing: .16em; text-transform: uppercase; color: var(--text);
+    #sys .sys-title { animation: s5in .3s ease; font-weight: 500; font-size: 13px; letter-spacing: .16em; text-transform: uppercase; color: var(--text);
                     padding-left: 20px; border-left: 1px solid var(--line); line-height: 28px; }
   #sys .sys-top .sp { flex: 1; }
   #sys .sys-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(340px, 1fr)); border-left: 1px solid var(--line);
@@ -63,6 +63,7 @@
   // The view lives in a shadow root so each page's own CSS (h2 counters, .card, button, a…) can't leak in.
   const hostEl = document.createElement("div");
   hostEl.id = "s5sys";
+  hostEl.style.cssText = "position: relative; z-index: 9990;";   // above every page's sticky bar
   const root = hostEl.attachShadow({ mode: "open" });
   root.innerHTML = `<style>:host { all: initial; } ${(window.S5AUTH && S5AUTH.barCss) || ""} ${css}</style>` +
     `<div id="sys" aria-hidden="true"><div class="s5bar sys-top"><div class="s5home" id="sysLogo" title="Back to the app"></div>` +
