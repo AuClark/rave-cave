@@ -706,6 +706,27 @@ class Fixture:
         return self.kind == "dmx_par"
 
     def render(self, ctx, fx, ctl, preview=False):
+        """Render this fixture; a failing look blacks out this fixture only, never the whole show."""
+        try:
+            return self._render(ctx, fx, ctl, preview)
+        except Exception as e:                      # noqa: BLE001 - one bad look must not stop the show
+            key = f"{type(e).__name__}: {e}"
+            if key != getattr(self, "_last_err", None):
+                self._last_err = key
+                log(f"fixture {self.cfg.get('name')}: {key} (blacked out, show continues)")
+            self.state.clear()
+            try:
+                if self.kind == "dmx_par":
+                    self._send([0] * max(self.chans.values()))
+                elif getattr(self, "out", None) is not None:
+                    import numpy as np
+                    n = self.cfg["leds"] if self.kind == "strip" else self.w * self.h
+                    self.out.send_array(np.zeros((n, 3), np.float32))
+            except Exception:
+                pass
+            return None
+
+    def _render(self, ctx, fx, ctl, preview=False):
         """fx: Engine.output_fx(); ctl: this fixture's {"on", "level"} from the Commander."""
         level = 0.0 if (fx["black"] or not ctl["on"]) else fx["intensity"] * ctl["level"]
         if self.kind == "dmx_par":

@@ -236,9 +236,10 @@ def strip_breakdown(ctx, n, role, state, x, beat):
         for px in rng.integers(0, n, size=count):
             sparks.append([int(px), e / 2.0, strength])
     state["eighth"] = e
-    sparks[:] = [sk for sk in sparks if beat - sk[1] < 0.5]
+    # Keep sparks spawned in the last half beat; drop any 'from the future' after a jump back (loop, hot cue).
+    sparks[:] = [sk for sk in sparks if 0.0 <= beat - sk[1] < 0.5]
     for px, b0, st in sparks:
-        v = st * math.exp(-(beat - b0) * 9)
+        v = st * math.exp(-min(50.0, max(0.0, beat - b0)) * 9)
         c = hsv(hue + 0.5 * ((px * 7) % 3 == 0) + flip * 0.2, 0.25, v)
         out[px] = np.maximum(out[px], c)
 
@@ -252,7 +253,9 @@ def strip_breakdown(ctx, n, role, state, x, beat):
     for b0, dh in state.get("drops", []):
         pos = 1.05 - (beat - b0) * (0.5 + 0.3 * sp)
         if beat < b0:
-            keep.append([b0, dh]); continue
+            if b0 - beat < 4:          # launching this bar; anything further ahead is from before a jump back
+                keep.append([b0, dh])
+            continue
         if pos < -0.3:
             continue
         keep.append([b0, dh])
