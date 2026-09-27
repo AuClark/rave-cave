@@ -95,6 +95,7 @@ public class DeckDash {
         http.createContext("/api/events", DeckDash::events);
         http.createContext("/api/auth", Auth::handle);
         http.createContext("/s5auth.js", ex -> send(ex, 200, "text/javascript", Files.readAllBytes(WEB.resolve("s5auth.js"))));
+        http.createContext("/s5system.js", ex -> send(ex, 200, "text/javascript", Files.readAllBytes(WEB.resolve("s5system.js"))));
         http.createContext("/api/system", ex -> send(ex, 200, "application/json", SystemInfo.json().getBytes(StandardCharsets.UTF_8)));
         http.createContext("/api/system/tailscale", Tailscale::handle);
         http.createContext("/api/art/", DeckDash::art);
@@ -263,12 +264,31 @@ public class DeckDash {
     }
 
     static void send(HttpExchange ex, int code, String type, byte[] body) throws IOException {
-        ex.getResponseHeaders().add("Access-Control-Allow-Origin", "*");
+        // Any origin can read; the rig's own pages on other ports (same host) can also send the admin
+        // cookie, e.g. the System view's Tailscale buttons on the Lighting page.
+        String origin = ex.getRequestHeaders().getFirst("Origin"), host = ex.getRequestHeaders().getFirst("Host");
+        if (origin != null && host != null && sameHost(origin, host)) {
+            ex.getResponseHeaders().add("Access-Control-Allow-Origin", origin);
+            ex.getResponseHeaders().add("Access-Control-Allow-Credentials", "true");
+            ex.getResponseHeaders().add("Vary", "Origin");
+        } else {
+            ex.getResponseHeaders().add("Access-Control-Allow-Origin", "*");
+        }
         ex.getResponseHeaders().add("Content-Type", type);
         ex.getResponseHeaders().add("Cache-Control", "no-cache");
         ex.sendResponseHeaders(code, body.length);
         try (OutputStream out = ex.getResponseBody()) {
             out.write(body);
+        }
+    }
+
+    static boolean sameHost(String origin, String host) {
+        try {
+            String o = java.net.URI.create(origin).getHost();
+            String h = host.replaceAll(":\\d+$", "").replaceAll("^\\[|\\]$", "");
+            return o != null && o.equalsIgnoreCase(h);
+        } catch (IllegalArgumentException e) {
+            return false;
         }
     }
 
