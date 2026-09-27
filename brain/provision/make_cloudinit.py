@@ -6,6 +6,11 @@ user-data + network-config to ~/tools/rpi/cloudinit/, outside the repo so
 the password never gets committed.
 
     python3 brain/provision/make_cloudinit.py
+    python3 brain/provision/make_cloudinit.py --add-wifi    # add another network (e.g. home) to the existing files
+
+The brain can know several Wi-Fi networks (workshop, home…) and joins whichever is in range:
+S5_WIFI_SSID / S5_WIFI_PASSWORD, plus S5_WIFI2_SSID / S5_WIFI2_PASSWORD, S5_WIFI3_… in .env, or
+answer the prompts. --add-wifi keeps the networks already in network-config and prompts for one more.
 
 Then flash with:
 
@@ -17,6 +22,8 @@ Then flash with:
 import getpass
 import json
 import os
+import re
+import sys
 from pathlib import Path
 
 # Site values from the repo-root .env (git-ignored), found by walking up to .env.example.
@@ -76,24 +83,67 @@ NETWORK_CONFIG = """network:
       optional: true
       regulatory-domain: "{country}"
       access-points:
-        {ssid}:
+{access_points}"""
+
+AP = """        {ssid}:
           password: {password}
 """
 
 
+def env(*names):
+    return next((os.environ[n] for n in names if os.environ.get(n)), None)
+
+
+def networks_from_env():
+    """[(ssid, password)] from S5_WIFI_* then S5_WIFI2_*, S5_WIFI3_… (old RAVE_* names too)."""
+    nets = []
+    for i in ["", "2", "3", "4", "5"]:
+        ssid = env(f"S5_WIFI{i}_SSID", f"RAVE_WIFI{i}_SSID")
+        if ssid:
+            nets.append((ssid, env(f"S5_WIFI{i}_PASSWORD", f"RAVE_WIFI{i}_PASSWORD") or getpass.getpass(f"Password for {ssid} (hidden): ")))
+    return nets
+
+
+def networks_from_file(path):
+    """The access points already in a network-config this script wrote (values are JSON-quoted)."""
+    if not path.is_file():
+        return []
+    return [(json.loads(a), json.loads(b)) for a, b in
+            re.findall(r'^\s+("(?:[^"\\]|\\.)*"):\n\s+password: ("(?:[^"\\]|\\.)*")$', path.read_text(), re.M)]
+
+
+def prompt_network(first=True):
+    ssid = input("Wi-Fi SSID: " if first else "Another Wi-Fi SSID (Enter to finish): ").strip()
+    return (ssid, getpass.getpass(f"Password for {ssid} (hidden): ")) if ssid else None
+
+
+def write_network_config(nets):
+    aps = "".join(AP.format(ssid=json.dumps(s), password=json.dumps(p)) for s, p in nets)   # json.dumps: safely quoted YAML
+    (OUT / "network-config").write_text(NETWORK_CONFIG.format(country=COUNTRY, access_points=aps))
+    (OUT / "network-config").chmod(0o600)
+    print(f"Wrote {OUT}/network-config with {len(nets)} Wi-Fi network(s): " + ", ".join(s for s, _ in nets))
+
+
 def main():
-    pubkey = PUBKEY.read_text().strip()
-    ssid = os.environ.get("S5_WIFI_SSID", os.environ.get("RAVE_WIFI_SSID")) or input("Wi-Fi SSID: ").strip()
-    password = os.environ.get("S5_WIFI_PASSWORD", os.environ.get("RAVE_WIFI_PASSWORD")) or getpass.getpass("Wi-Fi password (hidden): ")
     OUT.mkdir(parents=True, exist_ok=True)
+    if "--add-wifi" in sys.argv:
+        nets = networks_from_file(OUT / "network-config")
+        new = prompt_network()
+        if new:
+            nets = [n for n in nets if n[0] != new[0]] + [new]   # re-adding a network replaces its password
+        write_network_config(nets)
+        return
+    pubkey = PUBKEY.read_text().strip()
+    nets = networks_from_env()
+    if not nets:
+        n = prompt_network()
+        while n:
+            nets.append(n)
+            n = prompt_network(first=False)
     (OUT / "user-data").write_text(USER_DATA.format(
         hostname=HOSTNAME, timezone=TIMEZONE, user=USER, pubkey=pubkey))
-    # json.dumps gives a safely quoted YAML scalar for odd characters.
-    (OUT / "network-config").write_text(NETWORK_CONFIG.format(
-        country=COUNTRY, ssid=json.dumps(ssid), password=json.dumps(password)))
-    (OUT / "network-config").chmod(0o600)
-    print(f"Wrote {OUT}/user-data and {OUT}/network-config")
-    print(f"Host {HOSTNAME}, user {USER}, key {PUBKEY.name}, Wi-Fi configured ({COUNTRY}), Ethernet DHCP too.")
+    print(f"Wrote {OUT}/user-data (host {HOSTNAME}, user {USER}, key {PUBKEY.name})")
+    write_network_config(nets)
 
 
 if __name__ == "__main__":
