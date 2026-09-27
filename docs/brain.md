@@ -110,7 +110,7 @@ From [`brain/system/`](../brain/system/):
 | `deckdash.service`, `showbrain.service`, `mixer.service`, `projector.service`, `visuals.service` | `/etc/systemd/system/` | The services (then `sudo systemctl enable deckdash showbrain mixer projector visuals`) |
 | `50-udmx.rules` | `/etc/udev/rules.d/` | Lets the `pi` user drive the uDMX (par can) without root |
 | `journald-rave.conf` | `/etc/systemd/journald.conf.d/rave.conf` | Persistent logs, capped at 100 MB |
-| `argon-fan.service`, `argon_fan.py` | `/etc/systemd/system/`, `/usr/local/lib/sektor5/` | Argon ONE case fan: speed from the CPU temperature over I2C (off below 50 °C, full at 65 °C). Exits quietly without an Argon case. Shown in the System view. |
+| `argon-fan.service`, `argon_fan.py` | `/etc/systemd/system/`, `/usr/local/lib/sektor5/` | Argon ONE case fan: speed from the CPU temperature over I2C (off below 50 °C, full at 65 °C). Installed, not enabled: turn on after testing (see [Argon ONE case](#argon-one-case)). Shown in the System view. |
 | `avahi-alias-ravecave.service` | `/etc/systemd/system/` | Transition only: also answers the old name `ravecave.local` (needs `avahi-utils`). Only on the brain renamed from `ravecave`; remove it once nothing uses the old name. |
 
 ### 4. Code
@@ -209,7 +209,7 @@ The brain was renamed from `ravecave` to `sektor5` on 27 Sep 2026. What that too
 
 `sektor5-2` (the Pi 4) lives in an Argon ONE case. `setup_brain.sh` sets it up; on another board those parts do nothing.
 
-- **Fan:** run by a chip in the case at I2C address `0x1a` (`sudo i2cdetect -y 1` shows `1a`). The `argon-fan` service sets it from the CPU temperature: off below 50 °C, then 25 / 50 / 75 / 100 % from 50 / 55 / 60 / 65 °C, stepping down 3 °C later than up. The System view shows it (Hardware). Logs: `journalctl -u argon-fan`.
+- **Fan:** run by a chip in the case at I2C address `0x1a` (`sudo i2cdetect -y 1` shows `1a`). The speed is one byte, 0-100; other values are commands to the case (0xFF cuts the power), so only `argon_fan.py` should write to it. `setup_brain.sh` installs the `argon-fan` service but doesn't start it: test the fan first (`python3 -c "import smbus; smbus.SMBus(1).write_byte(0x1a, 100)"`, then `0`), then `sudo systemctl enable --now argon-fan`. The service sets it from the CPU temperature: off below 50 °C, then 25 / 50 / 75 / 100 % from 50 / 55 / 60 / 65 °C, stepping down 3 °C later than up. The System view shows it (Hardware). Logs: `journalctl -u argon-fan`.
 - **IR receiver:** on GPIO 23, as `/dev/lirc0`. Test with `sudo ir-keytable -c -p all -t` and press buttons on any remote. The case can't send IR: that needs an IR LED (with a transistor) on a spare GPIO under the case's magnetic top, and the `gpio-ir-tx` overlay.
 - **Power button:** a long press (3 s) cuts power in hardware. Short presses aren't wired to a clean shutdown yet, so use `sudo poweroff` first.
 
