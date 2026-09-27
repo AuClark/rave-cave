@@ -1,0 +1,674 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Rave Cave · Stage</title>
+<style>
+  /* Design system: charcoal, hairline grid, one orange accent, Montserrat (see docs/design.md). */
+  :root { --bg:#242424; --panel:#2b2b2b; --line:#3e3e3e; --line2:#555; --text:#f2f2f2; --dim:#9a9a9a;
+          --accent:#ff5a1f; --good:#7ccf8a; --warn:#f2b84b; --bad:#ef5b5b; --well:#1f1f1f;
+          --font:"Montserrat", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif; }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; background: var(--bg); color: var(--text); font: 400 14px/1.45 var(--font); overscroll-behavior: none; }
+  button, input, select { font-family: var(--font); font-size: 12px; color: var(--text); border-radius: 0; }
+  button { background: transparent; border: 1px solid var(--line2); padding: 7px 10px; font-weight: 600; letter-spacing: .08em; cursor: pointer; }
+  button:hover { border-color: var(--accent); }
+  button.on { background: var(--accent); border-color: var(--accent); color: #fff; }
+  button.warn { border-color: var(--bad); color: var(--bad); }
+  select, input { background: var(--well); border: 1px solid var(--line2); padding: 6px 8px; min-width: 0; }
+  input[type=range] { accent-color: var(--accent); padding: 0; border: 0; background: none; }
+  header { display: flex; align-items: stretch; gap: 20px; padding: 0 24px; min-height: 64px; border-bottom: 1px solid var(--line); flex-wrap: wrap; }
+  .logo { align-self: center; font-weight: 600; letter-spacing: .22em; font-size: 14px; } .logo b { color: var(--accent); font-weight: 600; }
+  nav.pages { display: flex; gap: 2px; }
+  nav.pages a { display: flex; align-items: center; padding: 0 12px; color: var(--dim); text-decoration: none; font-size: 14px; font-weight: 500;
+                border-bottom: 3px solid transparent; border-top: 3px solid transparent; }
+  nav.pages a:hover { color: var(--text); }
+  nav.pages a.here { color: var(--text); border-bottom-color: var(--accent); }
+  .pill { align-self: center; border: 1px solid var(--line2); color: var(--dim); font-weight: 600; font-size: 11px; letter-spacing: .12em; padding: 4px 10px; }
+  .pill.ok { color: var(--good); border-color: var(--good); } .pill.bad { color: var(--bad); border-color: var(--bad); }
+  .hctl { display: flex; gap: 6px; align-items: center; margin-left: auto; flex-wrap: wrap; }
+  .hctl .sep { width: 1px; height: 28px; background: var(--line); margin: 0 6px; }
+  .hctl label { color: var(--dim); font-size: 11px; letter-spacing: .12em; font-weight: 500; }
+  main { display: grid; grid-template-columns: minmax(0, 1fr) 340px; height: calc(100% - 65px); }
+  main.full { grid-template-columns: minmax(0, 1fr) 0; }
+  main.full aside { display: none; }
+  #view { position: relative; min-width: 0; min-height: 0; overflow: hidden; background: #111; }
+  #view canvas { display: block; width: 100%; height: 100%; }
+  #hud { position: absolute; left: 16px; bottom: 14px; font-size: 12px; color: var(--dim); pointer-events: none; text-shadow: 0 1px 2px #000; }
+  #hud b { color: var(--text); font-weight: 600; } #hud .scene { font-weight: 300; font-size: 34px; color: var(--text); display: block; line-height: 1; margin-bottom: 4px; }
+  #hint { position: absolute; right: 16px; bottom: 14px; font-size: 11px; color: #777; pointer-events: none; text-align: right; }
+  aside { border-left: 1px solid var(--line); overflow: auto; background: var(--panel); counter-reset: sec; }
+  aside section { padding: 18px 20px; border-bottom: 1px solid var(--line); }
+  aside h2 { counter-increment: sec; margin: 0 0 12px; font-weight: 500; font-size: 12px; letter-spacing: .16em; color: var(--dim); text-transform: uppercase; }
+  aside h2::before { content: counter(sec, decimal-leading-zero) "  —  "; color: var(--accent); }
+  .list div { display: flex; gap: 10px; align-items: baseline; padding: 6px 8px; cursor: pointer; font-size: 13px; }
+  .list div:hover { background: #313131; }
+  .list div.sel { background: #353535; box-shadow: inset 3px 0 0 var(--accent); }
+  .list .n { color: #6b6b6b; font-size: 11px; width: 18px; }
+  .list .src { margin-left: auto; font-size: 10px; letter-spacing: .1em; font-weight: 600; }
+  .src.live { color: var(--good); } .src.sim { color: #777; }
+  .add { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; }
+  .row { display: grid; grid-template-columns: 70px 1fr; gap: 8px; align-items: center; margin-bottom: 8px; }
+  .row > span { color: var(--dim); font-size: 12px; }
+  .xyz { display: grid; grid-template-columns: repeat(3, 1fr); gap: 4px; }
+  .xyz input { width: 100%; }
+  .btns { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 10px; }
+  .note { color: #777; font-size: 11px; margin-top: 8px; line-height: 1.5; }
+  #props.empty > :not(h2):not(.note) { display: none; }
+  @media (max-width: 900px) { main { grid-template-columns: 1fr; grid-template-rows: 60vh auto; height: auto; } aside { border-left: 0; } }
+</style>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;500;600&display=swap" rel="stylesheet">
+<script type="importmap">{ "imports": { "three": "./vendor/three.module.min.js", "three/addons/": "./vendor/addons/" } }</script>
+</head>
+<body>
+<header>
+  <div class="logo">RAVE <b>CAVE</b></div>
+  <nav class="pages" id="pages"><a data-port="8080" data-path="/">Decks</a><a data-port="8090" data-path="/">Lighting</a><a data-port="8100" data-path="/edit">Projection</a><a data-port="8110" data-path="/">Visuals</a><a class="here" data-port="8100" data-path="/stage.html">Stage</a></nav>
+  <span id="conn" class="pill">CONNECTING</span>
+  <div class="hctl">
+    <label>VIEW</label>
+    <button data-cam="audience" class="on">AUDIENCE</button><button data-cam="dj">DJ</button><button data-cam="top">TOP</button><button data-cam="side">SIDE</button>
+    <span class="sep"></span>
+    <label>HAZE</label><input id="haze" type="range" min="0" max="1" step="0.05" value="0.55" style="width:90px">
+    <button id="bloom" class="on" title="Glow (turn off on slow machines)">GLOW</button>
+    <span class="sep"></span>
+    <button id="design" class="on" title="Show the designer panel">DESIGN</button>
+  </div>
+</header>
+<main id="main">
+  <div id="view">
+    <div id="hud"></div>
+    <div id="hint">drag to orbit · scroll to zoom · right-drag to pan · click a fixture to select</div>
+  </div>
+  <aside>
+    <section>
+      <h2>Rig</h2>
+      <div class="list" id="list"></div>
+    </section>
+    <section>
+      <h2>Add fixture</h2>
+      <div class="add" id="add"></div>
+      <div class="note">New fixtures start centre stage. Link one to a real fixture below to drive it live; otherwise it's simulated from the show (scene, beat, colour, strobe).</div>
+    </section>
+    <section id="props" class="empty">
+      <h2>Selected</h2>
+      <div class="note" id="noSel">Click a fixture in the view or the list.</div>
+      <div class="row"><span>Name</span><input id="pName"></div>
+      <div class="row"><span>Type</span><b id="pType" style="font-weight:500"></b></div>
+      <div class="row"><span>Driven by</span><select id="pSource"></select></div>
+      <div class="row"><span>Position</span><div class="xyz"><input id="px" type="number" step="0.05"><input id="py" type="number" step="0.05"><input id="pz" type="number" step="0.05"></div></div>
+      <div class="row"><span>Aim at</span><div class="xyz"><input id="ax" type="number" step="0.1"><input id="ay" type="number" step="0.1"><input id="az" type="number" step="0.1"></div></div>
+      <div class="row" id="rowAngle"><span id="lAngle">Beam</span><input id="pAngle" type="range" min="2" max="70" step="1"></div>
+      <div class="row" id="rowCount"><span id="lCount">Beams</span><input id="pCount" type="number" min="1" max="240" step="1"></div>
+      <div class="row" id="rowSize"><span>Size</span><div class="xyz" style="grid-template-columns:1fr 1fr"><input id="sw" type="number" step="0.1" min="0.2" max="12"><input id="sh" type="number" step="0.1" min="0.2" max="8"></div></div>
+      <div class="row" id="rowColour"><span>Colour</span><input id="pColour" type="color" style="padding:0;height:30px"></div>
+      <div class="btns">
+        <button id="gMove" class="on" title="Drag the arrows to move it">MOVE</button>
+        <button id="gAim" title="Drag the orange dot to aim it">AIM</button>
+        <button id="bDup">DUPLICATE</button>
+        <button id="bDel" class="warn">DELETE</button>
+      </div>
+      <div class="note">X is left/right, Y is height, Z is towards the audience, in metres (0,0,0 is the front edge of the stage floor, centre).</div>
+    </section>
+    <section>
+      <h2>Layout</h2>
+      <div class="btns" style="margin-top:0">
+        <button id="bExport">EXPORT</button>
+        <button id="bImport">IMPORT</button>
+        <button id="bReset" class="warn">RESET TO MY RIG</button>
+      </div>
+      <div class="note" id="saved">Changes save to the brain and show on every device.</div>
+      <input id="file" type="file" accept="application/json" hidden>
+    </section>
+  </aside>
+</main>
+
+<script>
+// Page links go to the other control pages on this host.
+document.querySelectorAll("#pages a").forEach(a => a.href = `${location.protocol}//${location.hostname}:${a.dataset.port}${a.dataset.path}`);
+// The projector service (:8100) serves this page, its state feed and the projection renderer.
+// When the page is opened from somewhere else (the dashboard's /preview/), use :8100 directly.
+window.PROJ = location.port === "8100" ? "" : `${location.protocol}//${location.hostname}:8100`;
+</script>
+<script type="module">
+import * as THREE from "three";
+import { OrbitControls } from "three/addons/controls/OrbitControls.js";
+import { TransformControls } from "three/addons/controls/TransformControls.js";
+import { EffectComposer } from "three/addons/postprocessing/EffectComposer.js";
+import { RenderPass } from "three/addons/postprocessing/RenderPass.js";
+import { UnrealBloomPass } from "three/addons/postprocessing/UnrealBloomPass.js";
+import { OutputPass } from "three/addons/postprocessing/OutputPass.js";
+
+const $ = s => document.querySelector(s);
+const PROJ = window.PROJ;
+
+// ------------------------------------------------------------------ the rig as it stands
+// Coordinates in metres: x left/right, y up, z towards the audience; (0,0,0) = front edge of the
+// stage floor, centre. The stage is 4.8 m wide, 3 m deep, 0.4 m high; truss at 3.2 m.
+const STAGE = { w: 4.8, d: 3, h: 0.4, trussY: 3.2, trussZ: -1.0, wallZ: -3.1 };
+const TYPES = {
+  tube:      { label: "Tube",        count: 60, angle: 0 },
+  wash:      { label: "Wash",        angle: 22 },
+  strobe:    { label: "Strobe",      angle: 55 },
+  laser:     { label: "Laser",       count: 8, angle: 30, colour: "#19ff4a" },
+  moving:    { label: "Moving head", angle: 9 },
+  projector: { label: "Projector",   angle: 32 },
+  ledbar:    { label: "LED bar",     count: 24, angle: 0 },
+  screen:    { label: "Screen",      size: [2.0, 1.2] },
+};
+const DEFAULT_RIG = () => [
+  { id: "tubeL",  type: "tube",      name: "Tube L",      source: "tube1",  pos: [-1.3, STAGE.h, -1.4], aim: [-1.3, 2, -1.4], count: 60 },
+  { id: "tubeR",  type: "tube",      name: "Tube R",      source: "tube2",  pos: [ 1.3, STAGE.h, -1.4], aim: [ 1.3, 2, -1.4], count: 60 },
+  { id: "projL",  type: "projector", name: "Projector L", source: "projector", pos: [-2.0, 1.3, -0.7], aim: [-1.35, 2.2, STAGE.wallZ + 0.02], angle: 26 },
+  { id: "projR",  type: "projector", name: "Projector R", source: "projector", pos: [ 2.0, 1.3, -0.7], aim: [ 1.35, 2.2, STAGE.wallZ + 0.02], angle: 26 },
+  { id: "screenL", type: "screen",   name: "Screen L",    source: "sim", pos: [-1.35, 2.2, STAGE.wallZ + 0.02], aim: [-1.35, 2.2, 5], size: [2.0, 1.2] },
+  { id: "screenR", type: "screen",   name: "Screen R",    source: "sim", pos: [ 1.35, 2.2, STAGE.wallZ + 0.02], aim: [ 1.35, 2.2, 5], size: [2.0, 1.2] },
+  { id: "laserL", type: "laser",     name: "Laser L",     source: "sim", pos: [-2.2, 3.05, STAGE.trussZ], aim: [-0.8, 2.9, 8], count: 8, angle: 30, colour: "#19ff4a" },
+  { id: "laserR", type: "laser",     name: "Laser R",     source: "sim", pos: [ 2.2, 3.05, STAGE.trussZ], aim: [ 0.8, 2.9, 8], count: 8, angle: 30, colour: "#ff2a2a" },
+  { id: "strobe", type: "strobe",    name: "Strobe",      source: "sim", pos: [-0.4, 3.02, STAGE.trussZ], aim: [0, 0.4, 3], angle: 55 },
+  { id: "wash",   type: "wash",      name: "Wash",        source: "parcan", pos: [ 0.4, 3.02, STAGE.trussZ], aim: [0, 1.0, -1.4], angle: 22 },
+];
+
+// ------------------------------------------------------------------ renderer, scene, camera
+const view = $("#view");
+const renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: "high-performance" });
+renderer.setPixelRatio(Math.min(2, devicePixelRatio || 1));
+renderer.toneMapping = THREE.ACESFilmicToneMapping;
+renderer.toneMappingExposure = 1.1;
+renderer.shadowMap.enabled = true;              // projectors throw their image through a shadow-mapped spotlight
+renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+view.prepend(renderer.domElement);
+
+const scene = new THREE.Scene();
+scene.background = new THREE.Color(0x0a0a0a);
+scene.fog = new THREE.FogExp2(0x0a0a0a, 0.03);
+const camera = new THREE.PerspectiveCamera(50, 1, 0.05, 200);
+const orbit = new OrbitControls(camera, renderer.domElement);
+orbit.enableDamping = true; orbit.dampingFactor = 0.08; orbit.maxPolarAngle = Math.PI * 0.495;
+const CAMS = {
+  audience: { pos: [0, 1.7, 7.5], look: [0, 1.5, -1.2] },
+  dj:       { pos: [0, 1.75, -2.2], look: [0, 1.4, 4] },
+  top:      { pos: [0, 10, 1.5], look: [0, 0, -0.6] },
+  side:     { pos: [7.5, 2.4, 0.5], look: [0, 1.4, -1.2] },
+};
+function setCam(k) {
+  const c = CAMS[k]; camera.position.set(...c.pos); orbit.target.set(...c.look); orbit.update();
+  document.querySelectorAll("[data-cam]").forEach(b => b.classList.toggle("on", b.dataset.cam === k));
+}
+document.querySelectorAll("[data-cam]").forEach(b => b.onclick = () => setCam(b.dataset.cam));
+setCam("audience");
+
+const composer = new EffectComposer(renderer);
+composer.addPass(new RenderPass(scene, camera));
+const bloom = new UnrealBloomPass(new THREE.Vector2(256, 256), 0.8, 0.5, 0.42);   // only the brightest things glow
+composer.addPass(bloom);
+composer.addPass(new OutputPass());
+let useBloom = true;
+$("#bloom").onclick = () => { useBloom = !useBloom; $("#bloom").classList.toggle("on", useBloom); };
+
+function resize() {
+  const w = view.clientWidth, h = view.clientHeight;
+  renderer.setSize(w, h, false); composer.setSize(w, h);
+  camera.aspect = w / Math.max(1, h); camera.updateProjectionMatrix();
+}
+new ResizeObserver(resize).observe(view);
+
+// Room: floor, stage, back wall, truss, DJ booth with two XDJs and the mixer, and a DJ for scale.
+scene.add(new THREE.HemisphereLight(0x5a5a66, 0x151515, 1.6));
+const mat = (c, r = 0.85, m = 0) => new THREE.MeshStandardMaterial({ color: c, roughness: r, metalness: m });
+function box(w, h, d, m, x, y, z, parent = scene) {
+  const b = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), m); b.position.set(x, y, z);
+  b.castShadow = b.receiveShadow = true; parent.add(b); return b;
+}
+const floor = new THREE.Mesh(new THREE.PlaneGeometry(40, 40), mat(0x1c1c1c, 0.95));
+floor.rotation.x = -Math.PI / 2; floor.receiveShadow = true; scene.add(floor);
+box(STAGE.w, STAGE.h, STAGE.d, mat(0x1d1d1d, 0.7), 0, STAGE.h / 2, -STAGE.d / 2);
+box(STAGE.w, 0.02, 0.02, mat(0xff5a1f, 0.4), 0, STAGE.h, 0.0);                       // stage edge
+const wall = box(9, 4.4, 0.1, mat(0x2a2a2a, 0.95), 0, 2.2, STAGE.wallZ - 0.05);
+const metal = mat(0x6b6b6b, 0.35, 0.8);
+box(5.6, 0.1, 0.1, metal, 0, STAGE.trussY, STAGE.trussZ);
+box(5.6, 0.1, 0.1, metal, 0, STAGE.trussY - 0.3, STAGE.trussZ);
+for (const x of [-2.8, 2.8]) box(0.1, STAGE.trussY, 0.1, metal, x, STAGE.trussY / 2, STAGE.trussZ);
+const booth = new THREE.Group(); booth.position.set(0, STAGE.h, -1.4); scene.add(booth);
+box(1.9, 0.95, 0.7, mat(0x111111, 0.6), 0, 0.475, 0, booth);
+box(1.9, 0.9, 0.02, mat(0x202020, 0.5), 0, 0.46, 0.36, booth);
+const deckMat = mat(0x0c0c0c, 0.4, 0.2);
+const jogs = [];
+for (const x of [-0.55, 0.55]) {
+  box(0.32, 0.1, 0.42, deckMat, x, 1.0, 0, booth);
+  const jog = new THREE.Mesh(new THREE.CylinderGeometry(0.1, 0.1, 0.012, 32), new THREE.MeshStandardMaterial({ color: 0x222222, emissive: 0x000000, roughness: 0.4 }));
+  jog.position.set(x, 1.06, 0.06); booth.add(jog); jogs.push(jog);
+  const scr = new THREE.Mesh(new THREE.PlaneGeometry(0.16, 0.08), new THREE.MeshBasicMaterial({ color: 0x3a5a78 }));
+  scr.rotation.x = -Math.PI / 2 + 0.3; scr.position.set(x, 1.06, -0.13); booth.add(scr);
+}
+box(0.3, 0.1, 0.38, deckMat, 0, 1.0, 0, booth);                                        // mixer
+const dj = new THREE.Group(); dj.position.set(0, STAGE.h, -2.0); scene.add(dj);
+const djMat = mat(0x0e0e0e, 0.9);
+const body = new THREE.Mesh(new THREE.CapsuleGeometry(0.2, 0.75, 4, 12), djMat); body.position.y = 1.05; body.castShadow = true; dj.add(body);
+const head = new THREE.Mesh(new THREE.SphereGeometry(0.12, 16, 12), djMat); head.position.y = 1.68; head.castShadow = true; dj.add(head);
+
+// ------------------------------------------------------------------ live show + projection
+// State (lighting engine, via the projector's feed) and the projection layout arrive over one
+// event stream. The projection itself is drawn by the projector's own renderer (render.js) into a
+// hidden canvas, which the 3D projectors throw onto the room.
+let show = null, showAt = 0;
+const projCanvas = document.createElement("canvas"), projOverlay = document.createElement("canvas");
+projCanvas.width = projOverlay.width = 640; projCanvas.height = projOverlay.height = 360;
+const projTex = new THREE.CanvasTexture(projCanvas);
+projTex.colorSpace = THREE.SRGBColorSpace;
+projTex.wrapS = projTex.wrapT = THREE.ClampToEdgeWrapping;
+let mapRenderer = null;
+function loadRenderJs() {
+  return new Promise(res => {
+    const sc = document.createElement("script"); sc.src = `${PROJ}/render.js`;
+    sc.onload = () => { try { mapRenderer = new MapRenderer(projCanvas, projOverlay); connectVisuals(mapRenderer); } catch (e) { console.warn("projection renderer", e); } res(); };
+    sc.onerror = () => res();
+    document.head.appendChild(sc);
+  });
+}
+function connect() {
+  const es = new EventSource(`${PROJ}/api/events`);
+  es.onopen = () => { $("#conn").className = "pill ok"; $("#conn").textContent = "LIVE"; };
+  es.onerror = () => { $("#conn").className = "pill bad"; $("#conn").textContent = "RECONNECTING"; };
+  es.onmessage = e => {
+    const m = JSON.parse(e.data);
+    if (m.t === "state") { show = m.s; showAt = performance.now(); if (mapRenderer) mapRenderer.clock.update(m.s); }
+    else if (m.t === "layout") { if (mapRenderer) mapRenderer.layout = m.layout; }
+    else if (m.t === "stage" && !dragging && Date.now() - lastSaveAt > 1500 && m.stage && m.stage.fixtures) setRig(m.stage.fixtures, false);
+  };
+}
+
+// Beat clock and colour for simulated fixtures, from the show state (or a slow idle clock).
+function showFrame(now) {
+  const s = show;
+  if (!s || !s.bpm || s.scene === "IDLE") {
+    const b = now / 1000;
+    return { scene: s ? s.scene || "IDLE" : "IDLE", beat: b, frac: b % 1, bwb: 1 + Math.floor(b) % 4, hue: (now / 60000) % 1, progress: 0, since: 0,
+             strobe: !!(s && s.strobe), blinder: !!(s && s.blinder), black: !!(s && (s.black_hold || s.mode === "blackout")), intensity: s ? s.intensity ?? 0.8 : 0.8 };
+  }
+  const dt = (now - showAt) / 1000 * s.bpm / 60, beat = (s.beat || 0) + dt;
+  return { scene: s.scene, beat, frac: ((beat % 1) + 1) % 1, bwb: 1 + ((Math.floor(beat) - 1) % 4 + 4) % 4, hue: s.hue || 0,
+           progress: s.progress || 0, since: s.scene === "DROP" ? (s.since_drop || 0) + dt : 0,
+           strobe: !!s.strobe, strobeDiv: s.strobe_div ?? 2, blinder: !!s.blinder, black: !!(s.black_hold || s.mode === "blackout"),
+           intensity: s.intensity ?? 0.8 };
+}
+const hsl = (h, s = 1, l = 0.5) => new THREE.Color().setHSL(((h % 1) + 1) % 1, s, l);
+function livePixels(name) { return show && show.preview && show.preview[name] && show.preview[name].length ? show.preview[name] : null; }
+
+// ------------------------------------------------------------------ fixtures
+// Each fixture is a group (body + light + beam) rebuilt when its settings change and updated
+// every frame from the live pixels (if linked to a real fixture) or the simulation.
+let rig = [], built = new Map(), selected = null, dragging = false, lastSaveAt = 0;
+let haze = 0.55;
+$("#haze").oninput = e => { haze = +e.target.value; scene.fog.density = 0.012 + 0.04 * haze; };
+scene.fog.density = 0.012 + 0.04 * haze;
+
+// A soft additive light beam: a cone from the fixture along its +z, fading with distance.
+const beamVS = `varying float vD; varying vec3 vN; varying vec3 vV; uniform float len;
+  void main() { vD = position.z / len; vec4 mv = modelViewMatrix * vec4(position, 1.0);
+    vN = normalize(normalMatrix * normal); vV = normalize(-mv.xyz); gl_Position = projectionMatrix * mv; }`;
+const beamFS = `varying float vD; varying vec3 vN; varying vec3 vV; uniform vec3 color; uniform float amount;
+  void main() { float edge = pow(abs(dot(vN, vV)), 1.6); float a = amount * pow(max(0.0, 1.0 - vD), 1.4) * edge;
+    gl_FragColor = vec4(color * a, a); }`;
+function beamMesh(angleDeg, len) {
+  const r = Math.tan(THREE.MathUtils.degToRad(angleDeg) / 2) * len;
+  const g = new THREE.ConeGeometry(r, len, 40, 1, true); g.translate(0, -len / 2, 0); g.rotateX(-Math.PI / 2);
+  const m = new THREE.ShaderMaterial({ vertexShader: beamVS, fragmentShader: beamFS, transparent: true, depthWrite: false,
+    blending: THREE.AdditiveBlending, side: THREE.DoubleSide, uniforms: { color: { value: new THREE.Color() }, amount: { value: 0 }, len: { value: len } } });
+  const mesh = new THREE.Mesh(g, m); mesh.renderOrder = 10; return mesh;
+}
+function bodyMesh(w, h, d, colour = 0x1a1a1a) {
+  const m = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), mat(colour, 0.5, 0.4)); m.castShadow = true; return m;
+}
+
+function build(fx) {
+  const g = new THREE.Group(); g.userData.fid = fx.id;
+  const aim = new THREE.Object3D(); scene.add(aim);                                   // aim point (spotlight target)
+  const parts = { group: g, aim };
+  const T = TYPES[fx.type];
+  if (fx.type === "screen") {
+    const [w, h] = fx.size || T.size;
+    const scr = new THREE.Mesh(new THREE.PlaneGeometry(w, h), new THREE.MeshStandardMaterial({ color: 0xe6e6e6, roughness: 0.95 }));
+    scr.receiveShadow = true; g.add(scr);
+    const frame = new THREE.Mesh(new THREE.BoxGeometry(w + 0.06, h + 0.06, 0.02), mat(0x111111, 0.6)); frame.position.z = -0.012; g.add(frame);
+    parts.hit = [scr, frame];
+  } else if (fx.type === "tube" || fx.type === "ledbar") {
+    const n = Math.max(1, fx.count || T.count), len = fx.type === "tube" ? 1.03 : 1.0;
+    const shell = new THREE.Mesh(new THREE.CylinderGeometry(0.028, 0.028, len, 16, 1, true),
+      new THREE.MeshStandardMaterial({ color: 0xffffff, transparent: true, opacity: 0.12, roughness: 0.2 }));
+    const leds = new THREE.InstancedMesh(new THREE.BoxGeometry(0.035, len / n * 0.9, 0.035), new THREE.MeshBasicMaterial({ toneMapped: false }), n);
+    const o = new THREE.Object3D();
+    for (let i = 0; i < n; i++) { o.position.set(0, -len / 2 + (i + 0.5) * len / n, 0); o.updateMatrix(); leds.setMatrixAt(i, o.matrix); leds.setColorAt(i, new THREE.Color(0)); }
+    const holder = new THREE.Group(); holder.add(shell, leds);
+    holder.position.y = len / 2;                                                       // stands on its position
+    if (fx.type === "ledbar") holder.rotation.z = Math.PI / 2;
+    g.add(holder);
+    const base = bodyMesh(0.12, 0.03, 0.12); base.position.y = 0.015; g.add(base);
+    parts.leds = leds; parts.n = n; parts.len = len; parts.hit = [shell, base];
+    parts.lights = [0.25, 0.75].map(k => { const l = new THREE.PointLight(0xffffff, 0, 3.5, 2); l.position.set(0, len * k, 0.08); holder.add(l); l.position.y -= len / 2; return l; });
+  } else if (fx.type === "projector") {
+    const b = bodyMesh(0.34, 0.14, 0.3, 0x202020); g.add(b);
+    const lens = new THREE.Mesh(new THREE.CylinderGeometry(0.04, 0.04, 0.03, 20), new THREE.MeshBasicMaterial({ color: 0x9fb4ff }));
+    lens.rotation.x = Math.PI / 2; lens.position.z = 0.16; g.add(lens);
+    const stand = bodyMesh(0.04, Math.max(0.01, fx.pos[1] - STAGE.h), 0.04, 0x333333); stand.position.y = -(fx.pos[1] - STAGE.h) / 2; g.add(stand);
+    // The image is projected through the spotlight's square shadow frustum; open the round cone wide
+    // enough to contain that square, so the picture lands as a rectangle with sharp edges.
+    const spot = new THREE.SpotLight(0xffffff, 0, 14, Math.min(1.4, THREE.MathUtils.degToRad(fx.angle || T.angle) / 2 * 1.45), 0, 1.2);
+    spot.map = projTex; spot.castShadow = true; spot.shadow.mapSize.set(512, 512); spot.shadow.bias = -0.0005;
+    spot.target = aim; spot.position.set(0, 0, 0.17); g.add(spot);
+    const beam = beamMesh(fx.angle || T.angle, 5); beam.position.z = 0.17; g.add(beam);
+    parts.spot = spot; parts.beam = beam; parts.hit = [b]; parts.lens = lens;
+  } else if (fx.type === "laser") {
+    const b = bodyMesh(0.22, 0.12, 0.28, 0x151515); g.add(b);
+    const n = Math.max(1, fx.count || T.count), beams = [];
+    for (let i = 0; i < n; i++) {
+      const geo = new THREE.CylinderGeometry(0.0025, 0.0025, 1, 6, 1, true); geo.translate(0, 0.5, 0); geo.rotateX(Math.PI / 2);
+      const m = new THREE.Mesh(geo, new THREE.MeshBasicMaterial({ color: fx.colour || T.colour, transparent: true, blending: THREE.AdditiveBlending, depthWrite: false, toneMapped: false }));
+      m.position.z = 0.15; m.scale.z = 14; g.add(m); beams.push(m);
+    }
+    parts.beams = beams; parts.hit = [b];
+  } else {                                                                               // wash, strobe, moving head
+    const isStrobe = fx.type === "strobe", isMoving = fx.type === "moving";
+    const b = isStrobe ? bodyMesh(0.36, 0.14, 0.1) : bodyMesh(0.22, 0.24, 0.22, isMoving ? 0x222222 : 0x151515);
+    g.add(b);
+    const face = new THREE.Mesh(isStrobe ? new THREE.PlaneGeometry(0.32, 0.1) : new THREE.CircleGeometry(0.09, 24),
+      new THREE.MeshBasicMaterial({ color: 0x000000, toneMapped: false }));
+    face.position.z = isStrobe ? 0.051 : 0.112; g.add(face);
+    const ang = fx.angle || T.angle;
+    const spot = new THREE.SpotLight(0xffffff, 0, isStrobe ? 12 : 16, THREE.MathUtils.degToRad(ang) / 2, isStrobe ? 0.8 : 0.35, 1.3);
+    spot.target = aim; spot.position.z = 0.12; g.add(spot);
+    const beam = beamMesh(ang, isStrobe ? 4 : 7); beam.position.z = 0.12; g.add(beam);
+    parts.spot = spot; parts.beam = beam; parts.face = face; parts.hit = [b];
+  }
+  // Clamp for hanging fixtures: a little yoke up to the truss when they hang from it.
+  if (fx.type !== "tube" && fx.type !== "projector" && Math.abs(fx.pos[1] - (STAGE.trussY - 0.15)) < 0.4) {
+    const clamp = bodyMesh(0.05, STAGE.trussY - fx.pos[1], 0.05, 0x444444); clamp.position.y = (STAGE.trussY - fx.pos[1]) / 2; g.add(clamp);
+  }
+  // Aim handle, shown when selected.
+  const handle = new THREE.Mesh(new THREE.SphereGeometry(0.07, 16, 12), new THREE.MeshBasicMaterial({ color: 0xff5a1f, toneMapped: false, depthTest: false }));
+  handle.renderOrder = 20; handle.visible = false; scene.add(handle); parts.handle = handle;
+  parts.hit.forEach(h => (h.userData.fid = fx.id));
+  scene.add(g);
+  place(fx, parts);
+  return parts;
+}
+function place(fx, p) {
+  p.group.position.set(...fx.pos);
+  p.aim.position.set(...fx.aim); p.handle.position.set(...fx.aim);
+  if (fx.type === "tube" || fx.type === "ledbar") p.group.rotation.set(0, 0, 0);
+  else p.group.lookAt(p.aim.position);
+}
+function destroy(p) {
+  scene.remove(p.group, p.aim, p.handle);
+  p.group.traverse(o => { if (o.geometry) o.geometry.dispose(); if (o.material && o.material.dispose) o.material.dispose(); if (o.shadow && o.shadow.map) o.shadow.map.dispose(); });
+}
+function setRig(list, save = true) {
+  for (const p of built.values()) destroy(p);
+  built.clear();
+  rig = list.map(f => ({ ...f, pos: [...f.pos], aim: [...f.aim] }));
+  for (const fx of rig) built.set(fx.id, build(fx));
+  if (selected && !rig.find(f => f.id === selected)) selected = null;
+  renderList(); select(selected);
+  if (save) saveRig();
+}
+function rebuild(fx) {
+  const old = built.get(fx.id); if (old) destroy(old);
+  built.set(fx.id, build(fx));
+  if (selected === fx.id) select(fx.id);
+}
+
+// ------------------------------------------------------------------ per-frame update
+const cTmp = new THREE.Color();
+function update(now) {
+  const f = showFrame(now), sc = f.scene, black = f.black || sc === "PREDROP";
+  const strobeOn = f.blinder || (f.strobe && (f.strobeDiv ? ((f.frac * f.strobeDiv) % 1) < 0.5 : (now / 83) % 1 < 0.5));
+  const kick = Math.exp(-6 * f.frac);
+  const beamAmt = 0.08 + 0.55 * haze;
+  for (const fx of rig) {
+    const p = built.get(fx.id); if (!p) continue;
+    if (fx.type === "screen") continue;
+    const live = fx.source && fx.source !== "sim" ? livePixels(fx.source) : null;
+    if (p.leds) {
+      // Tube / LED bar: the fixture's own pixels (0 = bottom), or a simulated pulse + chase.
+      const n = p.n; let sumR = 0, sumG = 0, sumB = 0;
+      for (let i = 0; i < n; i++) {
+        if (live) cTmp.set(live[Math.min(live.length - 1, Math.floor(i / n * live.length))]).multiplyScalar(3);   // diffuser glow
+        else {
+          const x = i / n, head = ((f.bwb - 1 + f.frac) / 4) % 1, tail = Math.max(0, 1 - Math.abs(x - head) * 8);
+          cTmp.copy(hsl(f.hue + x * 0.05)).multiplyScalar(black ? 0 : (0.15 + 0.7 * kick) * f.intensity);
+          cTmp.lerp(new THREE.Color(1, 1, 1), black ? 0 : tail * 0.6);
+          if (strobeOn && !black) cTmp.setRGB(1, 1, 1);
+        }
+        p.leds.setColorAt(i, cTmp); sumR += cTmp.r; sumG += cTmp.g; sumB += cTmp.b;
+      }
+      p.leds.instanceColor.needsUpdate = true;
+      const avg = new THREE.Color(sumR / n, sumG / n, sumB / n), lvl = Math.max(avg.r, avg.g, avg.b);
+      for (const l of p.lights) { l.color.copy(avg).multiplyScalar(1 / Math.max(0.001, lvl)); l.intensity = 12 * Math.min(1, lvl); }
+    } else if (fx.type === "projector") {
+      const on = fx.source !== "off" && !!mapRenderer;
+      p.spot.intensity = on ? 160 : 0;
+      p.beam.material.uniforms.amount.value = on ? beamAmt * 0.18 : 0;
+      p.beam.material.uniforms.color.value.setRGB(0.8, 0.85, 1);
+      p.lens.material.color.set(on ? 0xdfe8ff : 0x222222);
+    } else if (fx.type === "laser") {
+      // Simulated: fans sweep on the beat in GROOVE, fast and wide in DROP, converge through BUILD,
+      // a slow single sheet in BREAKDOWN, off in the pre-drop blackout.
+      const n = p.beams.length, spread = THREE.MathUtils.degToRad(fx.angle || 30);
+      let on = !black && ["GROOVE", "DROP", "BUILD", "HOLD", "BREAKDOWN", "OUTRO", "INTRO"].includes(sc);
+      let sweep = Math.sin(f.beat * Math.PI / 2) * 0.6, width = 1, level = 0.9;
+      if (sc === "DROP") { sweep = Math.sin(f.beat * Math.PI) * 0.9; level = 1; on = on && (f.since > 0.25); }
+      else if (sc === "BUILD" || sc === "HOLD") { width = 1 - 0.85 * f.progress; sweep = 0; level = 0.4 + 0.6 * f.progress; on = on && ((f.beat * (f.progress > 0.5 ? 4 : 2)) % 1) < 0.5; }
+      else if (sc === "BREAKDOWN") { width = 0.15; sweep = Math.sin(f.beat * Math.PI / 8) * 0.3; level = 0.6; }
+      else if (sc === "INTRO" || sc === "OUTRO") { level = 0.4; width = 0.5; }
+      if (fx.source !== "sim" && fx.source) on = on && !!live;                          // linked but not sending: off
+      p.beams.forEach((m, i) => {
+        const k = n === 1 ? 0 : i / (n - 1) - 0.5;
+        m.rotation.set(Math.sin(f.beat * 0.7 + i) * 0.05 * width, k * spread * width + sweep * spread, 0);
+        m.visible = on; m.material.opacity = 0.35 * level * f.intensity;
+        if (live) m.material.color.set(live[0]);
+      });
+    } else {
+      // Wash / strobe / moving head.
+      let col = new THREE.Color(0), lvl = 0;
+      if (live) { col.set(live[0]); lvl = Math.max(col.r, col.g, col.b); if (lvl > 0) col.multiplyScalar(1 / lvl); }
+      else if (fx.type === "strobe") {
+        const hit = strobeOn || (sc === "DROP" && f.since < 4 && ((f.since * 2) % 1) < 0.5) || (sc === "DROP" && f.since < 0.25);
+        col.setRGB(1, 1, 1); lvl = !black && hit ? 1 : 0;
+      } else {
+        col.copy(hsl(f.hue + (fx.type === "moving" ? 0.5 : 0)));
+        lvl = black ? 0 : sc === "DROP" ? 0.4 + 0.6 * kick : sc === "BREAKDOWN" ? 0.25 : sc === "BUILD" || sc === "HOLD" ? 0.3 + 0.7 * f.progress : 0.15 + 0.6 * kick;
+        if (strobeOn && !black) { col.setRGB(1, 1, 1); lvl = 1; }
+        lvl *= f.intensity;
+      }
+      if (fx.colour && fx.source === "sim" && fx.type !== "strobe") col.set(fx.colour);
+      if (fx.type === "moving") {                                                           // sweep around its aim point
+        const a = new THREE.Vector3(...fx.aim), r = sc === "DROP" ? 1.6 : 0.8;
+        p.aim.position.set(a.x + Math.sin(f.beat * Math.PI / 4) * r, a.y, a.z + Math.cos(f.beat * Math.PI / 4) * r * 0.5);
+        p.group.lookAt(p.aim.position);
+      }
+      p.spot.color.copy(col); p.spot.intensity = lvl * (fx.type === "strobe" ? 900 : 260);
+      p.face.material.color.copy(col).multiplyScalar(lvl * 2);
+      p.beam.material.uniforms.color.value.copy(col);
+      p.beam.material.uniforms.amount.value = lvl * beamAmt * (fx.type === "strobe" ? 0.6 : 1);
+    }
+  }
+  // Deck jog rings glow with the beat of the live deck (for a bit of life on the booth).
+  jogs.forEach((j, i) => j.material.emissive.copy(hsl(f.hue)).multiplyScalar(show && show.live === i + 1 ? 0.25 + 0.5 * kick : 0.05));
+  if (mapRenderer) {
+    try { mapRenderer.draw(now); projTex.needsUpdate = true; } catch (e) { /* layout not in yet */ }
+  }
+  const s = show;
+  $("#hud").innerHTML = `<span class="scene">${s ? s.scene || "—" : "—"}</span>` +
+    (s && s.live ? `deck <b>${s.live}</b> · <b>${(s.bpm || 0).toFixed(1)}</b> BPM · bar ${s.bar || 0}` + (s.title ? ` · ${esc(s.title)}` : "") : "no deck playing") +
+    ` · ${rig.filter(fx => fx.type !== "screen" && fx.source && fx.source !== "sim" && (fx.type === "projector" ? mapRenderer : livePixels(fx.source))).length} live / ${rig.filter(fx => fx.type !== "screen").length} fixtures`;
+}
+const esc = s => String(s).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+
+// ------------------------------------------------------------------ selecting and editing
+const gizmo = new TransformControls(camera, renderer.domElement);
+gizmo.setSize(0.8); scene.add(gizmo);
+let gizmoMode = "move";
+gizmo.addEventListener("dragging-changed", e => { orbit.enabled = !e.value; dragging = e.value; if (!e.value) saveRig(); });
+gizmo.addEventListener("objectChange", () => {
+  const fx = rig.find(f => f.id === selected), p = fx && built.get(fx.id); if (!p) return;
+  if (gizmoMode === "move") { fx.pos = p.group.position.toArray().map(v => +v.toFixed(3)); p.aim.position.set(...fx.aim); }
+  else { fx.aim = p.handle.position.toArray().map(v => +v.toFixed(3)); p.aim.position.set(...fx.aim); }
+  place(fx, p); fillProps(fx);
+});
+function attachGizmo() {
+  gizmo.detach();
+  const p = selected && built.get(selected); if (!p) return;
+  p.handle.visible = true;
+  gizmo.attach(gizmoMode === "move" ? p.group : p.handle);
+}
+function select(id) {
+  for (const p of built.values()) p.handle.visible = false;
+  selected = id && built.has(id) ? id : null;
+  document.querySelectorAll("#list div").forEach(d => d.classList.toggle("sel", d.dataset.id === selected));
+  $("#props").classList.toggle("empty", !selected);
+  $("#noSel").style.display = selected ? "none" : "";
+  if (selected) fillProps(rig.find(f => f.id === selected));
+  attachGizmo();
+}
+const ray = new THREE.Raycaster(), ptr = new THREE.Vector2();
+let downAt = null;
+renderer.domElement.addEventListener("pointerdown", e => { downAt = [e.clientX, e.clientY]; });
+renderer.domElement.addEventListener("pointerup", e => {
+  if (!downAt || Math.hypot(e.clientX - downAt[0], e.clientY - downAt[1]) > 4 || dragging) return;
+  const r = renderer.domElement.getBoundingClientRect();
+  ptr.set(((e.clientX - r.left) / r.width) * 2 - 1, -((e.clientY - r.top) / r.height) * 2 + 1);
+  ray.setFromCamera(ptr, camera);
+  const hits = ray.intersectObjects([...built.values()].flatMap(p => p.hit), false);
+  select(hits.length ? hits[0].object.userData.fid : null);
+});
+
+function renderList() {
+  $("#list").innerHTML = rig.map((fx, i) => {
+    const live = fx.source && fx.source !== "sim";
+    if (fx.type === "screen") return `<div data-id="${fx.id}" class="${fx.id === selected ? "sel" : ""}"><span class="n">${String(i + 1).padStart(2, "0")}</span>${esc(fx.name)}<span class="src sim">SURFACE</span></div>`;
+    return `<div data-id="${fx.id}" class="${fx.id === selected ? "sel" : ""}"><span class="n">${String(i + 1).padStart(2, "0")}</span>${esc(fx.name)}` +
+      `<span class="src ${live ? "live" : "sim"}">${live ? "LIVE · " + esc(fx.source).toUpperCase() : "SIMULATED"}</span></div>`;
+  }).join("");
+}
+$("#list").onclick = e => { const d = e.target.closest("[data-id]"); if (d) select(d.dataset.id); };
+$("#add").innerHTML = Object.entries(TYPES).map(([k, t]) => `<button data-type="${k}">${t.label.toUpperCase()}</button>`).join("");
+$("#add").onclick = e => {
+  const b = e.target.closest("[data-type]"); if (!b) return;
+  const type = b.dataset.type, T = TYPES[type], hang = !["tube", "projector", "ledbar", "screen"].includes(type);
+  const fx = { id: type + Date.now().toString(36), type, name: `${T.label} ${rig.filter(f => f.type === type).length + 1}`,
+               source: type === "projector" ? "projector" : "sim",
+               pos: hang ? [0, 3.02, STAGE.trussZ] : type === "screen" ? [0, 2.2, STAGE.wallZ + 0.03] : type === "ledbar" ? [0, STAGE.h + 0.05, -0.2] : [0, STAGE.h, -0.6],
+               aim: hang ? (type === "laser" ? [0, 2.9, 8] : [0, 1, 1.5]) : type === "screen" ? [0, 2.2, 5] : type === "projector" ? [0, 2, STAGE.wallZ] : [0, 2, -0.6] };
+  if (T.count) fx.count = T.count; if (T.angle) fx.angle = T.angle; if (T.colour) fx.colour = T.colour; if (T.size) fx.size = [...T.size];
+  rig.push(fx); built.set(fx.id, build(fx)); renderList(); select(fx.id); saveRig();
+};
+
+function sourcesFor(fx) {
+  const names = (show && show.fixtures) || ["tube1", "tube2", "parcan"];
+  if (fx.type === "projector") return [["projector", "Live projection"], ["off", "Off"]];
+  return [["sim", "Simulated from the show"], ...names.map(n => [n, "Live: " + n])];
+}
+function fillProps(fx) {
+  if (!fx) return;
+  const T = TYPES[fx.type];
+  $("#pName").value = fx.name; $("#pType").textContent = T.label;
+  $("#pSource").innerHTML = sourcesFor(fx).map(([v, l]) => `<option value="${v}"${v === fx.source ? " selected" : ""}>${esc(l)}</option>`).join("");
+  ["px", "py", "pz"].forEach((id, i) => { if (document.activeElement !== $("#" + id)) $("#" + id).value = fx.pos[i].toFixed(2); });
+  ["ax", "ay", "az"].forEach((id, i) => { if (document.activeElement !== $("#" + id)) $("#" + id).value = fx.aim[i].toFixed(2); });
+  $("#rowAngle").style.display = T.angle ? "" : "none";
+  $("#lAngle").textContent = fx.type === "projector" ? "Throw" : fx.type === "laser" ? "Spread" : "Beam";
+  $("#pAngle").value = fx.angle || T.angle || 20;
+  $("#rowCount").style.display = T.count ? "" : "none";
+  $("#lCount").textContent = fx.type === "laser" ? "Beams" : "LEDs";
+  $("#pCount").value = fx.count || T.count || 1;
+  $("#rowSize").style.display = fx.type === "screen" ? "" : "none";
+  if (fx.type === "screen") { const [w, h] = fx.size || TYPES.screen.size; $("#sw").value = w; $("#sh").value = h; }
+  $("#pSource").closest(".row").style.display = fx.type === "screen" ? "none" : "";
+  $("#rowColour").style.display = ["laser", "wash", "moving"].includes(fx.type) && fx.source === "sim" ? "" : "none";
+  $("#pColour").value = fx.colour || "#ff5a1f";
+}
+const cur = () => rig.find(f => f.id === selected);
+function edited(fx, needsRebuild) { if (needsRebuild) rebuild(fx); else place(fx, built.get(fx.id)); renderList(); saveRig(); }
+$("#pName").oninput = e => { const fx = cur(); if (fx) { fx.name = e.target.value; renderList(); saveRig(); } };
+$("#pSource").onchange = e => { const fx = cur(); if (fx) { fx.source = e.target.value; fillProps(fx); edited(fx, false); } };
+for (const [id, key, i] of [["px", "pos", 0], ["py", "pos", 1], ["pz", "pos", 2], ["ax", "aim", 0], ["ay", "aim", 1], ["az", "aim", 2]])
+  $("#" + id).onchange = e => { const fx = cur(); if (fx && isFinite(+e.target.value)) { fx[key][i] = +e.target.value; edited(fx, fx.type === "projector" && key === "pos"); } };
+for (const [id, i] of [["sw", 0], ["sh", 1]])
+  $("#" + id).onchange = e => { const fx = cur(); if (fx && +e.target.value > 0) { fx.size = [...(fx.size || TYPES.screen.size)]; fx.size[i] = +e.target.value; edited(fx, true); } };
+$("#pAngle").onchange = e => { const fx = cur(); if (fx) { fx.angle = +e.target.value; edited(fx, true); } };
+$("#pCount").onchange = e => { const fx = cur(); if (fx) { fx.count = Math.max(1, Math.min(240, Math.round(+e.target.value))); edited(fx, true); } };
+$("#pColour").oninput = e => { const fx = cur(); if (fx) { fx.colour = e.target.value; edited(fx, fx.type === "laser"); } };
+$("#gMove").onclick = () => { gizmoMode = "move"; $("#gMove").classList.add("on"); $("#gAim").classList.remove("on"); attachGizmo(); };
+$("#gAim").onclick = () => { gizmoMode = "aim"; $("#gAim").classList.add("on"); $("#gMove").classList.remove("on"); attachGizmo(); };
+$("#bDup").onclick = () => {
+  const fx = cur(); if (!fx) return;
+  const c = { ...fx, id: fx.type + Date.now().toString(36), name: fx.name + " copy", pos: [fx.pos[0] + 0.4, fx.pos[1], fx.pos[2]], aim: [fx.aim[0] + 0.4, fx.aim[1], fx.aim[2]] };
+  rig.push(c); built.set(c.id, build(c)); renderList(); select(c.id); saveRig();
+};
+$("#bDel").onclick = () => {
+  const fx = cur(); if (!fx || !confirm(`Delete ${fx.name}?`)) return;
+  destroy(built.get(fx.id)); built.delete(fx.id); rig = rig.filter(f => f !== fx); selected = null; renderList(); select(null); saveRig();
+};
+addEventListener("keydown", e => {
+  if (e.target.tagName === "INPUT" || e.target.tagName === "SELECT") return;
+  if (e.key === "Escape") select(null);
+  else if ((e.key === "Delete" || e.key === "Backspace") && selected) $("#bDel").click();
+  else if (e.key.toLowerCase() === "m") $("#gMove").click();
+  else if (e.key.toLowerCase() === "a") $("#gAim").click();
+});
+
+// ------------------------------------------------------------------ saving (on the brain, shared)
+let saveTimer = null, serverOk = true;
+function saveRig() {
+  clearTimeout(saveTimer);
+  saveTimer = setTimeout(async () => {
+    const body = JSON.stringify({ version: 1, fixtures: rig });
+    try { localStorage.setItem("stageRig", body); } catch (e) {}
+    try {
+      const r = await fetch(`${PROJ}/api/stage`, { method: "POST", body });
+      serverOk = r.ok; lastSaveAt = Date.now();
+      $("#saved").textContent = r.ok ? `Saved on the brain · ${new Date().toLocaleTimeString()}` : "Saved in this browser only (the brain's projector service needs updating)";
+    } catch (e) { serverOk = false; $("#saved").textContent = "Saved in this browser only (brain not reachable)"; }
+  }, 400);
+}
+async function loadRig() {
+  try {
+    const r = await fetch(`${PROJ}/api/stage`);
+    if (r.ok) { const d = await r.json(); if (d.fixtures && d.fixtures.length) return d.fixtures; }
+  } catch (e) {}
+  try { const d = JSON.parse(localStorage.getItem("stageRig") || "null"); if (d && d.fixtures) return d.fixtures; } catch (e) {}
+  return DEFAULT_RIG();
+}
+$("#bReset").onclick = () => { if (confirm("Replace this layout with your current rig (tubes, projectors, lasers, strobe, wash)?")) setRig(DEFAULT_RIG()); };
+$("#bExport").onclick = () => {
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(new Blob([JSON.stringify({ version: 1, fixtures: rig }, null, 1)], { type: "application/json" }));
+  a.download = "rave-cave-stage.json"; a.click(); URL.revokeObjectURL(a.href);
+};
+$("#bImport").onclick = () => $("#file").click();
+$("#file").onchange = async e => {
+  const f = e.target.files[0]; if (!f) return;
+  try { const d = JSON.parse(await f.text()); if (!Array.isArray(d.fixtures)) throw new Error("no fixtures"); setRig(d.fixtures); }
+  catch (err) { alert("That file isn't a stage layout: " + err.message); }
+  e.target.value = "";
+};
+$("#design").onclick = () => { $("#main").classList.toggle("full"); $("#design").classList.toggle("on", !$("#main").classList.contains("full")); if (!$("#design").classList.contains("on")) select(null); setTimeout(resize, 0); };
+
+// ------------------------------------------------------------------ go
+function frame(now) {
+  update(now);
+  orbit.update();
+  if (useBloom) composer.render(); else renderer.render(scene, camera);
+  requestAnimationFrame(frame);
+}
+resize();
+setRig(await loadRig(), false);
+await loadRenderJs();
+connect();
+requestAnimationFrame(frame);
+window.stage = { scene, camera, rig: () => rig, built, show: () => show, map: () => mapRenderer, projCanvas };   // for poking at from the console
+</script>
+</body>
+</html>
