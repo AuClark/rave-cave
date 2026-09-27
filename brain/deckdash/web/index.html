@@ -259,6 +259,12 @@
   .onDeck { border-radius: 0; }
   .droptarget { outline-color: var(--accent); }
   .toast { border-radius: 0; background: #2f2f2f; border-color: var(--line2); border-left: 3px solid var(--accent); font-weight: 500; }
+  /* Page links in the top bar (Decks / Lighting / Projection / Visuals): the current one underlined. */
+  nav.pages { display: flex; gap: 2px; align-self: stretch; }
+  nav.pages a { display: flex; align-items: center; padding: 0 12px; color: var(--dim); text-decoration: none; font-size: 14px; font-weight: 500;
+                border-bottom: 3px solid transparent; border-top: 3px solid transparent; }
+  nav.pages a:hover { color: var(--text); }
+  nav.pages a.here { color: var(--text); border-bottom-color: var(--accent); }
   /* Bottom tiles: the other control pages, big arrows (the current one lit). */
   nav.apps { display: grid; grid-template-columns: repeat(4, 1fr); border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); max-width: 1680px; margin: 0 auto; }
   nav.apps a { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 30px 32px; color: var(--dim);
@@ -277,13 +283,14 @@
 </head>
 <body>
 <header>
-  <div class="logo">RAVE <b>CAVE</b> · DECK LINK</div>
+  <div class="logo">RAVE <b>CAVE</b></div>
+  <nav class="pages" id="pages">
+    <a class="here" data-port="8080" data-path="/">Decks</a><a data-port="8090" data-path="/">Lighting</a><a data-port="8100" data-path="/edit">Projection</a><a data-port="8110" data-path="/">Visuals</a>
+  </nav>
   <span id="conn" class="pill">CONNECTING</span>
   <span id="self" class="pill">—</span>
   <div class="viewctl">
-    <button id="vSide" title="Deck cards side by side">CARDS ⇆</button><button id="vStack" title="Deck cards in one column">CARDS ⇅</button>
-    <span class="sep"></span>
-    <button id="vLib" title="Track library (search, crates, load to deck)">LIBRARY</button><button id="vWave">WAVEFORMS</button><button id="vLanes" title="One lane per deck, deck 1 on top (XDJ / rekordbox style)">STACKED</button><button id="vOverlay" title="All decks in one lane, for beat matching">OVERLAY</button>
+    <button id="vWave">WAVEFORMS</button><button id="vLib" title="Track library (search, crates, load to deck)">LIBRARY</button>
     <span class="sep"></span>
     <button id="zOut" title="Zoom out (scroll or pinch on the waveform)">−</button><span id="zLbl" class="zlbl">8 s</span><button id="zIn" title="Zoom in">+</button>
   </div>
@@ -326,7 +333,6 @@
       </div>
     </div>
   </section>
-  <div id="players" class="players"><div class="empty">Waiting for players…</div></div>
   <div class="row3">
     <section class="panel">
       <h2>Mixer <span id="mixModel" class="pmeta"></span></h2>
@@ -356,16 +362,10 @@
   </div>
   <section class="panel"><details><summary>Raw data (everything the Pi receives, live)</summary><pre id="raw"></pre></details></section>
 </main>
-<nav class="apps" id="apps">
-  <a class="here" data-port="8080" data-path="/"><span><small>01</small>Deck link<br>and library</span><span class="arr">→</span></a>
-  <a data-port="8090" data-path="/"><span><small>02</small>Commander<br>lights</span><span class="arr">→</span></a>
-  <a data-port="8100" data-path="/edit"><span><small>03</small>Projection<br>mapping</span><span class="arr">→</span></a>
-  <a data-port="8110" data-path="/"><span><small>04</small>Generative<br>visuals</span><span class="arr">→</span></a>
-</nav>
 <div id="toast" class="toast"></div>
 <script>
-// Bottom tiles link to the other control pages on this same host.
-document.querySelectorAll("#apps a").forEach(a => a.href = `${location.protocol}//${location.hostname}:${a.dataset.port}${a.dataset.path}`);
+// Page links (top bar) go to the other control pages on this same host.
+document.querySelectorAll("#pages a").forEach(a => a.href = `${location.protocol}//${location.hostname}:${a.dataset.port}${a.dataset.path}`);
 const $ = (s, r = document) => r.querySelector(s);
 const cards = {}, waves = {}, artRefs = {}, timelines = {};
 const details = {}, posModel = {};
@@ -375,19 +375,14 @@ let savedView = {};
 try { savedView = JSON.parse(localStorage.getItem("deckdashView") || "{}"); } catch (e) {}
 // v2 made stacked lanes the default; drop the overlay choice saved by older versions.
 if (savedView.v !== 2) { delete savedView.waveMode; savedView.v = 2; }
-const view = Object.assign({ layout: "side", waves: true, lib: true, waveMode: "lanes", windowSec: ZOOM_DEFAULT }, savedView);
+const view = Object.assign({ waves: true, lib: true, windowSec: ZOOM_DEFAULT }, savedView);
 function saveView() {
   try { localStorage.setItem("deckdashView", JSON.stringify(view)); } catch (e) {}
   $("#zLbl").textContent = view.windowSec < 10 ? view.windowSec.toFixed(1) + " s" : Math.round(view.windowSec) + " s";
 }
 function applyView() {
   saveView();
-  $("#players").classList.toggle("stacked", view.layout === "stack");
-  $("#vSide").classList.toggle("on", view.layout === "side");
-  $("#vStack").classList.toggle("on", view.layout === "stack");
   $("#vWave").classList.toggle("on", view.waves);
-  $("#vOverlay").classList.toggle("on", view.waveMode === "overlay");
-  $("#vLanes").classList.toggle("on", view.waveMode === "lanes");
   $("#stack").classList.toggle("hidden", !view.waves);
   $("#vLib").classList.toggle("on", view.lib);
   $("#lib").classList.toggle("hidden", !view.lib);
@@ -581,30 +576,81 @@ function liveBeatInBar(p, now) {
   return p.status.beatWithinBar;
 }
 
-// The four beat squares on each deck card, every frame.
-function updateCardBeats(now) {
-  for (const p of lastState.players) {
-    const el = cards[p.number]; if (!el) continue;
-    const bwb = liveBeatInBar(p, now), live = p.status.playing || p.status.beatWithinBar > 0;
-    el.querySelectorAll(".beats div").forEach((b, i) => b.classList.toggle("on", live && bwb === i + 1));
+const CANVAS_FONT = "Montserrat, system-ui, sans-serif";
+const artImgs = {};
+function artFor(p) {
+  const t = p.track, ref = t && p.hasArt ? t.ref : null;
+  if (!ref) return null;
+  let a = artImgs[p.number];
+  if (!a || a.ref !== ref) { const img = new Image(); img.src = `/api/art/${p.number}?r=${encodeURIComponent(ref)}`; a = artImgs[p.number] = { ref, img }; }
+  return a.img.complete && a.img.naturalWidth ? a.img : null;
+}
+const cueColour = c => c.color || (c.hotCue ? "#7ccf8a" : "#ef5b5b");
+const cueLabel = c => c.hotCue ? String.fromCharCode(64 + c.hotCue) : "M";
+// Hot cues (A-H) and memory cues on the scrolling waveform, in their rekordbox colours.
+function drawCues(g, cues, t0, winMs, msPerPx, y, h, dpr) {
+  for (const c of cues || []) {
+    const x = (c.ms - t0) / msPerPx;
+    if (c.loop && c.loopMs && c.loopMs > t0 && c.ms < t0 + winMs) {
+      g.fillStyle = "rgba(242,184,75,.14)"; g.fillRect(x, y, (c.loopMs - c.ms) / msPerPx, h);
+    }
+    if (x < -20 * dpr || x > winMs / msPerPx) continue;
+    g.fillStyle = cueColour(c); g.fillRect(x - dpr, y, 2 * dpr, h);
+    g.fillRect(x - dpr, y, 14 * dpr, 13 * dpr);
+    g.fillStyle = "#111"; g.font = `700 ${10 * dpr}px ${CANVAS_FONT}`; g.fillText(cueLabel(c), x + 2 * dpr, y + 10 * dpr);
   }
+}
+// The whole track in one strip: colour waveform (played part dimmed), sections, drops, cues,
+// playhead, and elapsed · bar · remaining.
+function drawOverview(g, p, x0, y, w, h, dpr, pos, tl) {
+  g.fillStyle = "#1f1f1f"; g.fillRect(x0, y, w, h);
+  const wf = waves[p.number] && waves[p.number].data, t = p.track, dur = t ? t.durationSec * 1000 : 0;
+  if (!dur) return;
+  const frac = Math.max(0, Math.min(1, pos / dur)), X = ms => x0 + (ms / dur) * w;
+  if (wf && wf.segments) {
+    wf.peak = wf.peak || Math.max(1, ...wf.heights);
+    const bw = w / wf.segments, mid = y + h / 2 - 2 * dpr;
+    for (let i = 0; i < wf.segments; i++) {
+      const hh = (wf.heights[i] / wf.peak) * (h - 8 * dpr);
+      g.fillStyle = wf.color ? wf.colors[i] : "#bdbdbd"; g.globalAlpha = i / wf.segments < frac ? 0.3 : 0.9;
+      g.fillRect(x0 + i * bw, mid - hh / 2, Math.max(1, bw), hh);
+    }
+    g.globalAlpha = 1;
+  }
+  if (tl) {
+    const msOf = b => tl.beatMs[Math.max(0, Math.min(tl.beatMs.length - 1, b - 1))];
+    for (const sec of tl.sections) {
+      g.fillStyle = SECTION_COLOURS[sec.type] || "#555";
+      g.fillRect(X(msOf(sec.startBeat)), y + h - 3 * dpr, Math.max(1, X(msOf(Math.min(tl.beats, sec.endBeat + 1))) - X(msOf(sec.startBeat)) - dpr), 3 * dpr);
+    }
+    g.fillStyle = "#ff5a1f";
+    for (const dr of tl.drops) g.fillRect(X(msOf(dr.beat)) - dpr, y, 2 * dpr, h);
+  }
+  for (const c of (t.cues || [])) { g.fillStyle = cueColour(c); g.fillRect(X(c.ms) - dpr, y, 2 * dpr, 6 * dpr); }
+  g.fillStyle = "#fff"; g.fillRect(X(pos) - dpr, y, 2 * dpr, h);
+  // Labels on dark tabs so they read over the waveform.
+  const label = (txt, x, align, col) => {
+    g.font = `600 ${11 * dpr}px ${CANVAS_FONT}`;
+    const tw = g.measureText(txt).width, lx = align === "left" ? x : align === "right" ? x - tw : x - tw / 2;
+    g.fillStyle = "rgba(28,28,28,.85)"; g.fillRect(lx - 5 * dpr, y + 3 * dpr, tw + 10 * dpr, 16 * dpr);
+    g.fillStyle = col; g.fillText(txt, lx, y + 15 * dpr);
+  };
+  label(fmt(pos), x0 + 10 * dpr, "left", "#f2f2f2");
+  if (p.grid && p.grid.bars) label(`Bar ${p.grid.bar} / ${p.grid.bars}`, x0 + w / 2, "center", "#bdbdbd");
+  label("-" + fmt(Math.max(0, dur - pos)), x0 + w - 10 * dpr, "right", "#ff5a1f");
 }
 
 function drawStack() {
   requestAnimationFrame(drawStack);
-  if (lastState) updateCardBeats(performance.now());
   if (!view.waves || !lastState) return;
   const cv = $("#stackcv"), dpr = window.devicePixelRatio || 1, now = performance.now();
   const players = lastState.players.slice().sort((a, b) => a.number - b.number);
-  const overlay = view.waveMode === "overlay";
-  // Master first so it owns the top edge of the overlay.
-  const decks = overlay ? players.filter(p => p.status.trackLoaded)
-      .sort((a, b) => (b.status.tempoMaster - a.status.tempoMaster) || (a.number - b.number)) : players;
-  // STACKED: one lane per deck (deck 1 on top, like the XDJ / rekordbox), with a phase meter
-  // strip after the first lane. OVERLAY: every deck in one lane.
+  // One lane per deck (deck 1 on top, like the XDJ / rekordbox), with a phase meter strip after
+  // the first lane. Each lane: header (art, track, tags, tempo), scrolling waveform, overview.
   const loaded = players.filter(p => p.status.trackLoaded);
-  const laneCss = overlay ? 220 : 128, meterCss = overlay ? 0 : Math.max(34, 16 * loaded.length + 6);
-  const Wc = cv.clientWidth, Hc = overlay ? laneCss : Math.max(1, players.length) * laneCss + meterCss;
+  const HEADc = 52, WAVEc = 104, OVc = 30, laneCss = HEADc + WAVEc + OVc + 6;
+  const meterCss = Math.max(34, 16 * loaded.length + 6);
+  const Wc = cv.clientWidth, Hc = Math.max(1, players.length) * laneCss + meterCss;
   if (cv.width !== Math.round(Wc * dpr) || cv.height !== Math.round(Hc * dpr)) {
     cv.width = Math.round(Wc * dpr); cv.height = Math.round(Hc * dpr); cv.style.height = Hc + "px";
   }
@@ -618,120 +664,120 @@ function drawStack() {
     t0q[p.number] = Math.round((pos[p.number] - winMs / 2) / msPerPx) * msPerPx;
   }
 
-  if (overlay) {
-    const mid = LH / 2, half = LH / 2 - 26 * dpr;
-    if (!decks.length) {
-      g.fillStyle = "#6b6b6b"; g.font = `${14 * dpr}px system-ui`; g.fillText("No tracks loaded", 12 * dpr, mid);
-    }
-    g.globalCompositeOperation = "lighter";   // overlapping peaks add up to white
-    for (const p of decks) {
-      const d = details[p.number] && details[p.number].data;
-      if (d) drawDetail(g, d, pos[p.number], t0q[p.number], msPerPx, W, mid, half, deckRgb(p.number));
-    }
-    g.globalCompositeOperation = "source-over";
-    decks.forEach((p, i) => {
-      const tl = timelines[p.number] && timelines[p.number].data;
-      const edge = decks.length === 1 ? "both" : i === 0 ? "top" : "bottom";
-      if (tl) drawGrid(g, tl, t0q[p.number], winMs, msPerPx, 0, LH, dpr, deckRgb(p.number), edge, true);
-    });
-    g.fillStyle = "#fff"; g.fillRect(W / 2 - dpr, 0, 2 * dpr, LH);
-    // Legend below the top ticks, phase against the master on the right.
-    let lx = 10 * dpr;
-    g.font = `800 ${12 * dpr}px system-ui`;
-    for (const p of decks) {
-      const s = p.status, label = `${p.number}  ${s.effectiveBpm ? s.effectiveBpm.toFixed(2) : "—"}${s.tempoMaster ? "  MASTER" : ""}`;
-      g.fillStyle = rgba(deckRgb(p.number), 1); g.fillText(label, lx, 46 * dpr);
-      lx += g.measureText(label).width + 18 * dpr;
-    }
-    phaseReadout(decks, pos).forEach((r, i) => {
-      g.font = `800 ${13 * dpr}px system-ui`;
-      const w = g.measureText(r.txt).width + 16 * dpr, y = 46 * dpr + i * 22 * dpr;
-      g.fillStyle = "rgba(28,28,28,.8)"; g.fillRect(W - w - 8 * dpr, y - 15 * dpr, w, 20 * dpr);
-      g.fillStyle = r.ok ? "#7ccf8a" : rgba(r.rgb, 1); g.fillText(r.txt, W - w, y);
-    });
-    // One lane holds every deck: split it into a drop band per deck (top = first deck).
-    const bands = players.length ? players : [];
-    laneHits = bands.map((p, i) => ({ n: p.number, y0: i * laneCss / bands.length, y1: (i + 1) * laneCss / bands.length }));
-    drawDropHint(g, dpr, W);
-    return;
-  }
-
   if (!players.length) {
-    g.fillStyle = "#6b6b6b"; g.font = `${14 * dpr}px system-ui`; g.fillText("Waiting for decks…", 12 * dpr, LH / 2);
+    g.fillStyle = "#6b6b6b"; g.font = `${14 * dpr}px ${CANVAS_FONT}`; g.fillText("Waiting for decks…", 12 * dpr, 40 * dpr);
     return;
   }
-  const MH = meterCss * dpr, HEAD = 22 * dpr;
+  const MH = meterCss * dpr, HEAD = HEADc * dpr, WAVE = WAVEc * dpr, OV = OVc * dpr;
   const laneY = i => i * LH + (i >= 1 ? MH : 0);
   laneHits = players.map((p, li) => ({ n: p.number, y0: laneY(li) / dpr, y1: (laneY(li) + LH) / dpr }));
   players.forEach((p, li) => {
-    const y0 = laneY(li), s = p.status, t0 = t0q[p.number], rgb = deckRgb(p.number);
-    const wy = y0 + HEAD, wh = LH - HEAD - 4 * dpr, mid = wy + wh / 2;
-    g.fillStyle = "#262626"; g.fillRect(0, y0, W, HEAD);
-    g.fillStyle = rgba(rgb, 1); g.fillRect(0, y0, 4 * dpr, LH);
+    const y0 = laneY(li), s = p.status, t = p.track, t0 = t0q[p.number], rgb = deckRgb(p.number);
+    const tl = timelines[p.number] && timelines[p.number].data;
+    const wy = y0 + HEAD, wh = WAVE, mid = wy + wh / 2;
+    g.fillStyle = "#2b2b2b"; g.fillRect(0, y0, W, HEAD);
+    g.fillStyle = rgba(rgb, 1); g.fillRect(0, y0, 4 * dpr, LH - 6 * dpr);
+
+    // --- scrolling waveform, grid, cues, playhead
+    g.fillStyle = "#1f1f1f"; g.fillRect(0, wy, W, wh);
     g.fillStyle = "#2e2e2e"; g.fillRect(0, mid, W, dpr);
     const d = details[p.number] && details[p.number].data;
     if (d) drawDetail(g, d, pos[p.number], t0, msPerPx, W, mid, wh / 2 - 2 * dpr, null);
     else {
-      g.fillStyle = "#6b6b6b"; g.font = `${14 * dpr}px system-ui`;
+      g.fillStyle = "#6b6b6b"; g.font = `${14 * dpr}px ${CANVAS_FONT}`;
       g.fillText(s.trackLoaded ? "loading waveform…" : "no track", 14 * dpr, mid + 5 * dpr);
     }
-    const tl = timelines[p.number] && timelines[p.number].data;
     if (tl) drawGrid(g, tl, t0, winMs, msPerPx, wy, wh, dpr, [255, 255, 255], "both", false);
+    if (t) drawCues(g, t.cues, t0, winMs, msPerPx, wy, wh, dpr);
     g.fillStyle = "#fff"; g.fillRect(W / 2 - dpr, wy, 2 * dpr, wh);
     g.beginPath(); g.moveTo(W / 2 - 6 * dpr, wy); g.lineTo(W / 2 + 6 * dpr, wy); g.lineTo(W / 2, wy + 7 * dpr); g.fill();
 
-    // Header: deck, title, then tempo / key / remaining / countdown on the right.
-    const t = p.track, yT = y0 + 16 * dpr;
-    g.font = `900 ${15 * dpr}px system-ui`; g.fillStyle = rgba(rgb, 1); g.fillText(p.number, 12 * dpr, yT);
-    g.font = `700 ${12 * dpr}px system-ui`; g.fillStyle = "#f2f2f2";
-    const title = t ? `${t.title || "Untitled"}${t.artist ? "  —  " + t.artist : ""}` : (s.trackLoaded ? `Track #${s.rekordboxId}` : "empty");
-    const right = [];
-    if (s.looping) right.push(["LOOP", "#e6e6e6"]);
-    if (s.tempoMaster) right.push(["MASTER", "#ff5a1f"]);
-    if (!s.playing && s.trackLoaded) right.push([s.cued ? "CUE" : "PAUSED", "#f2b84b"]);
+    // --- overview: whole track, sections, drops, cues, playhead; elapsed · bar · remaining
+    drawOverview(g, p, 0, wy + wh + 2 * dpr, W, OV, dpr, pos[p.number], tl);
+
+    // --- header
+    const art = artFor(p), ax = 34 * dpr, as = 44 * dpr, ay = y0 + 4 * dpr;
+    g.font = `300 ${28 * dpr}px ${CANVAS_FONT}`; g.fillStyle = rgba(rgb, 1); g.fillText(p.number, 11 * dpr, y0 + 36 * dpr);
+    if (art) g.drawImage(art, ax, ay, as, as);
+    else { g.fillStyle = "#1f1f1f"; g.fillRect(ax, ay, as, as); g.fillStyle = "#555"; g.font = `${18 * dpr}px ${CANVAS_FONT}`; g.fillText("♪", ax + 15 * dpr, ay + 29 * dpr); }
+    // Right: big BPM, then tags (line 1) and key / drop / track tempo (line 2).
+    const pc = s.pitchPct || 0;
+    let rx = W - 12 * dpr;
+    g.font = `300 ${30 * dpr}px ${CANVAS_FONT}`; g.fillStyle = "#f2f2f2";
+    const bpmTxt = s.effectiveBpm ? s.effectiveBpm.toFixed(2) : "—", bw = g.measureText(bpmTxt).width;
+    g.fillText(bpmTxt, rx - bw, y0 + 38 * dpr); rx -= bw + 18 * dpr;
+    const tags = [];
+    if (s.playing) tags.push(["PLAYING", "#7ccf8a", false]);
+    else if (s.cued) tags.push(["CUED", "#f2b84b", false]);
+    else if (s.trackLoaded) tags.push(["PAUSED", "#f2b84b", false]);
+    if (s.looping) tags.push([s.loopBeats > 0 ? `LOOP ${s.loopBeats}` : "LOOP", "#f2f2f2", false]);
+    if (s.synced) tags.push(["SYNC", "#ff5a1f", true]);
+    if (s.tempoMaster) tags.push(["MASTER", "#ff5a1f", true]);
+    if (s.onAir) tags.push(["ON AIR", "#ff5a1f", false]);
+    if (s.reverse) tags.push(["REVERSE", "#f2f2f2", false]);
+    if (s.atEnd) tags.push(["END", "#f2f2f2", true]);
+    g.font = `600 ${10 * dpr}px ${CANVAS_FONT}`;
+    let tx = rx;
+    for (const [txt, col, fill] of tags.slice().reverse()) {
+      const w = g.measureText(txt).width + 12 * dpr; tx -= w;
+      if (fill) { g.fillStyle = col; g.fillRect(tx, y0 + 8 * dpr, w, 16 * dpr); g.fillStyle = col === "#f2f2f2" ? "#222" : "#fff"; }
+      else { g.strokeStyle = col; g.lineWidth = dpr; g.strokeRect(tx + dpr / 2, y0 + 8.5 * dpr, w - dpr, 15 * dpr); g.fillStyle = col; }
+      g.fillText(txt, tx + 6 * dpr, y0 + 19.5 * dpr); tx -= 5 * dpr;
+    }
+    const line2 = [];
+    if (t && t.key) line2.push([t.key, "#bdbdbd"]);
     if (tl && s.playing) {
       const ph = beatPhase(tl, pos[p.number]), nxt = ph && tl.drops.find(dr => dr.beat > ph.beat);
-      if (nxt) right.push([`DROP ${Math.ceil(nxt.beat - ph.beat - ph.frac)}`, "#ff5a1f"]);
+      if (nxt) line2.push([`DROP in ${Math.ceil(nxt.beat - ph.beat - ph.frac)}`, "#ff5a1f"]);
     }
-    if (t && t.key) right.push([t.key, "#bdbdbd"]);
-    const pc = s.pitchPct || 0;
-    right.push([`${s.effectiveBpm ? s.effectiveBpm.toFixed(2) : "—"} BPM  ${pc > 0 ? "+" : ""}${pc.toFixed(2)}%`, "#f2f2f2"]);
-    if (t) right.push(["-" + fmt(t.durationSec * 1000 - pos[p.number]), "#ff5a1f"]);
-    let rx = W - 10 * dpr;
-    g.font = `800 ${12 * dpr}px system-ui`;
-    for (const [txt, col] of right.reverse()) {
-      const w = g.measureText(txt).width;
-      rx -= w; g.fillStyle = col; g.fillText(txt, rx, yT); rx -= 14 * dpr;
+    line2.push([`track ${s.trackBpm ? s.trackBpm.toFixed(2) : "—"} · ${pc > 0 ? "+" : ""}${pc.toFixed(2)}%`, pc ? "#f2b84b" : "#9a9a9a"]);
+    g.font = `500 ${11 * dpr}px ${CANVAS_FONT}`;
+    let lx2 = rx;
+    for (const [txt, col] of line2.slice().reverse()) {
+      const w = g.measureText(txt).width; lx2 -= w; g.fillStyle = col; g.fillText(txt, lx2, y0 + 42 * dpr); lx2 -= 14 * dpr;
     }
-    g.font = `700 ${12 * dpr}px system-ui`; g.fillStyle = "#f2f2f2";
-    let tt = title; const maxW = rx - 34 * dpr;
-    while (tt.length > 3 && g.measureText(tt).width > maxW) tt = tt.slice(0, -2);
-    g.fillText(tt === title ? tt : tt + "…", 32 * dpr, yT);
+    // Left: title — artist, then album · year · genre · label · rating · bitrate.
+    const textX = ax + as + 12 * dpr, maxW = Math.min(tx, lx2) - textX - 16 * dpr;
+    const fit = (txt, w) => { let x = txt; while (x.length > 3 && g.measureText(x).width > w) x = x.slice(0, -2); return x === txt ? x : x + "…"; };
+    g.font = `600 ${13 * dpr}px ${CANVAS_FONT}`; g.fillStyle = "#f2f2f2";
+    const title = t ? `${t.title || "Untitled"}${t.artist ? "  —  " + t.artist : ""}` : (s.trackLoaded ? `Track #${s.rekordboxId}` : "empty");
+    g.fillText(fit(title, maxW), textX, y0 + 22 * dpr);
+    if (t) {
+      g.font = `400 ${11 * dpr}px ${CANVAS_FONT}`; g.fillStyle = "#9a9a9a";
+      const info = [t.album, t.year || null, t.genre, t.label, t.rating ? "★".repeat(t.rating) : null, t.bitRate ? t.bitRate + " kbps" : null].filter(Boolean).join("  ·  ");
+      g.fillText(fit(info, maxW), textX, y0 + 41 * dpr);
+    }
   });
 
-  // Phase meter (rekordbox style): each deck's beat in the bar, and its phase against the master.
+  // Phase meter (rekordbox style): each deck's beat in the bar, and a marker sweeping left to right
+  // through each beat on every deck that's playing. When two decks play, their markers move together
+  // if they're in phase; the text gives the offset against the master.
   const my = LH, rows = loaded, rh = rows.length ? (MH - 6 * dpr) / rows.length : 0;
   g.fillStyle = "#262626"; g.fillRect(0, my, W, MH);
-  const phases = Object.fromEntries(phaseReadout(rows, pos).map(r => [r.num, r]));
+  const playingRows = rows.filter(p => p.status.playing);
+  const phases = playingRows.length > 1 ? Object.fromEntries(phaseReadout(playingRows, pos).map(r => [r.num, r])) : {};
   const gx = 34 * dpr, cw = 26 * dpr, gap = 4 * dpr, gaugeX = gx + 4 * (cw + gap) + 20 * dpr, gaugeW = Math.min(360 * dpr, W * 0.3);
   rows.forEach((p, i) => {
     const y = my + 3 * dpr + i * rh, rgb = deckRgb(p.number), bwb = liveBeatInBar(p, performance.now()), h = rh - 4 * dpr;
-    g.font = `900 ${11 * dpr}px system-ui`; g.fillStyle = rgba(rgb, 1); g.fillText(p.number, 14 * dpr, y + h - 1 * dpr);
+    g.font = `600 ${11 * dpr}px ${CANVAS_FONT}`; g.fillStyle = rgba(rgb, 1); g.fillText(p.number, 14 * dpr, y + h - 1 * dpr);
     for (let k = 0; k < 4; k++) {
       g.fillStyle = bwb === k + 1 ? (k === 0 ? "#fff" : rgba(rgb, 1)) : "#3a3a3a";
       g.fillRect(gx + k * (cw + gap), y, cw, h);
     }
-    // Gauge: centre = in phase with the master; left = behind, right = ahead (±half a beat).
+    // Track for the sweep: the beat starts at the left edge.
     g.fillStyle = "#3a3a3a"; g.fillRect(gaugeX, y + h / 2 - dpr, gaugeW, 2 * dpr);
-    g.fillStyle = "#6b6b6b"; g.fillRect(gaugeX + gaugeW / 2 - dpr, y, 2 * dpr, h);
-    const r = phases[p.number];
-    if (r && r.phase != null) {
-      g.fillStyle = r.ok ? "#7ccf8a" : rgba(rgb, 1);
-      g.fillRect(gaugeX + gaugeW / 2 + r.phase * gaugeW - 3 * dpr, y, 6 * dpr, h);
+    g.fillStyle = "#6b6b6b"; g.fillRect(gaugeX, y, 2 * dpr, h); g.fillRect(gaugeX + gaugeW - 2 * dpr, y, 2 * dpr, h);
+    const tl = timelines[p.number] && timelines[p.number].data, ph = tl && beatPhase(tl, pos[p.number]);
+    if (p.status.playing && ph) {
+      g.fillStyle = rgba(rgb, 1);
+      g.fillRect(gaugeX + ph.frac * (gaugeW - 6 * dpr), y, 6 * dpr, h);
     }
-    g.font = `800 ${11 * dpr}px system-ui`;
+    const r = phases[p.number];
+    g.font = `600 ${11 * dpr}px ${CANVAS_FONT}`;
     g.fillStyle = r ? (r.ok ? "#7ccf8a" : rgba(rgb, 1)) : "#9a9a9a";
-    g.fillText(r ? r.txt : (p.status.tempoMaster ? "MASTER" : ""), gaugeX + gaugeW + 16 * dpr, y + h - 1 * dpr);
+    const txt = !p.status.playing ? (p.status.cued ? "CUED" : "PAUSED")
+      : r ? r.txt : (p.status.tempoMaster ? "MASTER" : playingRows.length > 1 ? "" : "PLAYING");
+    g.fillText(txt, gaugeX + gaugeW + 16 * dpr, y + h - 1 * dpr);
   });
   drawDropHint(g, dpr, W);
 }
@@ -765,30 +811,6 @@ const fmt = ms => {
 const esc = s => s == null ? "" : String(s).replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
 const bytes = b => b > 1e9 ? (b / 1e9).toFixed(1) + " GB" : (b / 1e6).toFixed(0) + " MB";
 
-function cardFor(n) {
-  if (cards[n]) return cards[n];
-  const el = document.createElement("div");
-  el.className = "card";
-  el.dataset.deck = n;
-  el.innerHTML = `
-    <div class="flash"></div>
-    <div class="phead"><div class="pnum">${n}</div><div><div class="pmodel"></div><div class="pmeta"></div></div></div>
-    <div class="badges"></div>
-    <div class="top">
-      <div class="art">♪</div>
-      <div><div class="title">No track loaded</div><div class="artist"></div><div class="album"></div></div>
-      <div class="tempo"><div class="bpm">—</div><div class="sub"></div></div>
-    </div>
-    <div class="beats"><div></div><div></div><div></div><div></div></div>
-    <canvas class="wave" width="1200" height="140"></canvas>
-    <div class="times"><span>Elapsed <b class="el">--:--</b></span><span class="barinfo"></span><span class="rem">-00:00</span></div>
-    <div class="cues"></div>
-    <div class="grid2"></div>`;
-  $("#players").appendChild(el);
-  cards[n] = el;
-  return el;
-}
-
 async function loadWave(n, key) {
   if (!key) { waves[n] = null; return; }
   if (waves[n] && waves[n].key === key) return;
@@ -810,57 +832,6 @@ async function loadTimeline(n, key) {
 }
 const SECTION_COLOURS = { intro: "#555555", groove: "#bdbdbd", breakdown: "#7a7a7a", build: "#f2b84b", drop: "#ff5a1f", outro: "#555555" };
 
-function drawWave(n, p) {
-  const cv = $("canvas.wave", cards[n]); const g = cv.getContext("2d");
-  const W = cv.width, H = cv.height; g.clearRect(0, 0, W, H);
-  const wf = waves[n] && waves[n].data;
-  const dur = p.track ? p.track.durationSec * 1000 : 0;
-  const pos = p.position ? p.position.ms : 0;
-  const frac = dur > 0 ? Math.min(1, pos / dur) : 0;
-  if (wf && wf.segments) {
-    const bw = W / wf.segments;
-    wf.peak = wf.peak || Math.max(1, ...wf.heights);
-    for (let i = 0; i < wf.segments; i++) {
-      const h = (wf.heights[i] / wf.peak) * (H - 8);
-      const played = i / wf.segments < frac;
-      g.fillStyle = wf.color ? wf.colors[i] : "#e6e6e6";
-      g.globalAlpha = played ? 0.35 : 1;
-      g.fillRect(i * bw, (H - h) / 2, Math.max(1, bw), h);
-    }
-    g.globalAlpha = 1;
-  } else {
-    g.fillStyle = "#6b6b6b"; g.font = "22px system-ui"; g.fillText(p.status.trackLoaded ? "Waveform loading…" : "No track", 16, H / 2 + 8);
-  }
-  if (p.track && dur > 0) {
-    for (const c of p.track.cues || []) {
-      const x = (c.ms / dur) * W;
-      g.fillStyle = c.color || (c.hotCue ? "#7ccf8a" : "#ef5b5b");
-      g.fillRect(x - 1, 0, 3, 16);
-      if (c.loop && c.loopMs) { g.globalAlpha = .18; g.fillRect(x, 0, ((c.loopMs - c.ms) / dur) * W, H); g.globalAlpha = 1; }
-      if (c.hotCue) { g.font = "bold 14px system-ui"; g.fillText(String.fromCharCode(64 + c.hotCue), x + 4, 14); }
-    }
-    const tl = timelines[n] && timelines[n].data;
-    if (tl) {
-      const msOf = b => tl.beatMs[Math.max(0, Math.min(tl.beatMs.length - 1, b - 1))];
-      for (const sec of tl.sections) {
-        const x0 = msOf(sec.startBeat) / dur * W, x1 = msOf(Math.min(tl.beats, sec.endBeat + 1)) / dur * W;
-        g.fillStyle = SECTION_COLOURS[sec.type] || "#555"; g.globalAlpha = 0.9;
-        g.fillRect(x0, H - 10, Math.max(1, x1 - x0 - 1), 10);
-      }
-      g.globalAlpha = 1;
-      for (const d of tl.drops) {
-        const x = msOf(d.beat) / dur * W;
-        g.fillStyle = "#ff5a1f"; g.fillRect(x - 2, 0, 4, H);
-        g.font = "bold 20px system-ui"; g.fillText("DROP", x + 6, 38);
-      }
-      const beat = p.status.beatNumber;
-      const nxt = tl.drops.find(d => d.beat > beat);
-      p._countdown = nxt && p.status.playing ? nxt.beat - beat : null;
-    }
-    g.fillStyle = "#fff"; g.fillRect(frac * W - 1.5, 0, 3, H);
-  }
-}
-
 function render(st) {
   lastState = st;
   const rxNow = performance.now();
@@ -875,65 +846,7 @@ function render(st) {
   $("#masterBpm").textContent = st.master.bpm ? st.master.bpm.toFixed(2) : "—";
   $("#masterName").textContent = st.master.player ? `Player ${st.master.player}` : "no master";
 
-  const seen = new Set();
-  if (st.players.length) $("#players .empty")?.remove();
-  for (const p of st.players) {
-    const n = p.number; seen.add(n);
-    const el = cardFor(n), s = p.status, t = p.track;
-    el.classList.toggle("playing", s.playing);
-    el.classList.toggle("master", s.tempoMaster);
-    $(".pmodel", el).textContent = p.name;
-    $(".pmeta", el).textContent = `${p.address} · fw ${p.firmware || "?"} · source P${s.trackSourcePlayer} ${s.trackSourceSlot}`;
-    const badge = (on, cls, txt) => `<span class="badge ${on ? "on " + cls : ""}">${txt}</span>`;
-    $(".badges", el).innerHTML = [
-      badge(s.playing, "play", "PLAYING"), badge(s.paused && !s.cued, "pause", "PAUSED"), badge(s.cued, "cue", "CUED"),
-      badge(s.looping, "loop", s.loopBeats > 0 ? `LOOP ${s.loopBeats}` : "LOOP"), badge(s.tempoMaster, "master", "MASTER"),
-      badge(s.synced, "sync", "SYNC"), badge(s.onAir, "air", "ON AIR"), badge(s.searching, "search", "SEARCH"),
-      badge(s.atEnd, "end", "END"), badge(s.reverse, "loop", "REVERSE")].join("");
-
-    $(".title", el).textContent = t ? (t.title || "Untitled") : (s.trackLoaded ? `Track #${s.rekordboxId}` : "No track loaded");
-    $(".artist", el).textContent = t ? (t.artist || "") : "";
-    $(".album", el).textContent = t ? [t.album, t.year || null].filter(Boolean).join(" · ") : "";
-    const art = $(".art", el);
-    const ref = t && p.hasArt ? t.ref : null;
-    if (artRefs[n] !== ref) {
-      artRefs[n] = ref;
-      if (ref) { art.style.backgroundImage = `url(/api/art/${n}?r=${encodeURIComponent(ref)})`; art.textContent = ""; }
-      else { art.style.backgroundImage = ""; art.textContent = "♪"; }
-    }
-
-    $(".bpm", el).textContent = s.effectiveBpm ? s.effectiveBpm.toFixed(2) : "—";
-    const pc = s.pitchPct;
-    $(".sub", el).innerHTML = `track ${s.trackBpm ? s.trackBpm.toFixed(2) : "—"} BPM · <span class="pitch ${pc > 0 ? "pos" : pc < 0 ? "neg" : ""}">${pc > 0 ? "+" : ""}${pc.toFixed(2)}%</span>`;
-
-    const bars = el.querySelectorAll(".beats div");
-    bars.forEach((b, i) => b.classList.toggle("one", i === 0));   // lit each frame by updateCardBeats
-    const flash = $(".flash", el);
-    if (p.beat.msSinceLast >= 0 && p.beat.msSinceLast < 120) { flash.classList.add("on"); setTimeout(() => flash.classList.remove("on"), 60); }
-
-    loadWave(n, p.waveformKey);
-    loadTimeline(n, p.timelineKey);
-    drawWave(n, p);
-    const dur = t ? t.durationSec * 1000 : 0, pos = p.position ? p.position.ms : 0;
-    $(".el", el).textContent = fmt(pos);
-    $(".rem", el).textContent = dur ? "-" + fmt(dur - pos) : "-00:00";
-    $(".barinfo", el).innerHTML = (p.grid ? `Bar <b>${p.grid.bar}</b> / ${p.grid.bars}` : (s.beatNumber > 0 ? `beat ${s.beatNumber}` : ""))
-      + (p._countdown != null ? ` · <b style="color:var(--accent)">DROP in ${p._countdown} beats</b>` : "");
-
-    $(".cues", el).innerHTML = t && t.cues ? t.cues.filter(c => c.hotCue || c.comment).map(c =>
-      `<span class="cue" style="border-left-color:${c.color || "#9a9a9a"}">${c.hotCue ? String.fromCharCode(64 + c.hotCue) : "MEM"} ${fmt(c.ms)}${c.loop ? " ⟳" : ""}${c.comment ? " · " + esc(c.comment) : ""}</span>`).join("") : "";
-
-    const kv = (k, v) => v == null || v === "" || v === 0 ? "" : `<div class="kv"><span>${k}</span><b title="${esc(v)}">${esc(v)}</b></div>`;
-    $(".grid2", el).innerHTML = [
-      kv("Key", t && t.key), kv("Genre", t && t.genre), kv("Label", t && t.label), kv("Remixer", t && t.remixer),
-      kv("Rating", t && t.rating ? "★".repeat(t.rating) : ""), kv("Bitrate", t && t.bitRate ? t.bitRate + " kbps" : ""),
-      kv("Length", t ? fmt(t.durationSec * 1000) : ""), kv("Colour", t && t.color),
-      kv("Added", t && t.dateAdded), kv("Comment", t && t.comment),
-      kv("Rekordbox ID", s.rekordboxId), kv("Track type", s.trackType),
-      kv("Play state", s.playState1), kv("Cue countdown", s.cueCountdown),
-      kv("Beats heard", p.beat.count), kv("Status packets", s.packetNumber)].join("");
-  }
-  for (const n of Object.keys(cards)) if (!seen.has(+n)) { cards[n].remove(); delete cards[n]; }
+  for (const p of st.players) loadWave(p.number, p.waveformKey);
 
   $("#devices").innerHTML = "<tr><th>#</th><th>Device</th><th>Address</th><th>MAC</th><th>Last seen</th></tr>" +
     st.devices.map(d => `<tr><td>${d.number}</td><td>${esc(d.name)}${d.number === st.self.deviceNumber ? " (this Pi)" : ""}</td><td>${d.address}</td><td>${d.mac}</td><td>${(d.seenMsAgo / 1000).toFixed(1)} s</td></tr>`).join("");
@@ -1547,8 +1460,8 @@ addEventListener("dragend", endDrag);
   cv.addEventListener("dragleave", () => { dropTarget = null; });
   cv.addEventListener("drop", e => dropOnDeck(e, lane(e)));
 })();
-// Deck cards and the deck chips above the library.
-for (const root of [$("#players"), $("#libdecks")]) {
+// The deck chips above the library (the waveform lanes are handled above).
+for (const root of [$("#libdecks")]) {
   root.addEventListener("dragover", e => { const el = e.target.closest("[data-deck]"); overDeck(e, el && +el.dataset.deck, el); });
   root.addEventListener("dragleave", e => { const el = e.target.closest("[data-deck]"); if (el && !el.contains(e.relatedTarget)) el.classList.remove("droptarget", "warn"); });
   root.addEventListener("drop", e => { const el = e.target.closest("[data-deck]"); dropOnDeck(e, el && +el.dataset.deck); });
@@ -1699,11 +1612,7 @@ setInterval(() => {
     if (now - lastRetry > 15000) connect();     // try the stream again now and then
   }
 }, 150);
-$("#vSide").onclick = () => { view.layout = "side"; applyView(); };
-$("#vStack").onclick = () => { view.layout = "stack"; applyView(); };
 $("#vWave").onclick = () => { view.waves = !view.waves; applyView(); };
-$("#vOverlay").onclick = () => { view.waveMode = "overlay"; applyView(); };
-$("#vLanes").onclick = () => { view.waveMode = "lanes"; applyView(); };
 $("#zIn").onclick = () => zoomBy(1 / 1.5);
 $("#zOut").onclick = () => zoomBy(1.5);
 applyView();

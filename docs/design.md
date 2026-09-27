@@ -24,7 +24,7 @@ Each page defines these as CSS variables in its "design system" block.
 
 ## Components
 
-- **Top bar:** a nav row with a hairline under it. The active view is underlined in orange.
+- **Top bar:** the page links, then the page's own view controls, on a row with a hairline under it. Whatever's active is underlined in orange.
 - **Panels:** square, flat, divided by hairlines rather than floating with gaps. Section headings are numbered `01 — Name`, with the number in orange.
 - **Buttons:** outlined rectangles. The edge goes orange on hover, and the button fills orange when on. Status tags are outlined in their status colour.
-- **Bottom tiles:** every control page ends with the same four tiles (Deck link, Commander, Projection, Visuals), each with an arrow. The current page's tile is light, with an orange arrow block.
+- **Page links:** the top bar of every control page has the same links (Decks, Lighting, Projection, Visuals), with the current page underlined in orange, so you never scroll to switch pages.

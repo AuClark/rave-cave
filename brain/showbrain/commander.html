@@ -84,7 +84,8 @@
   @media (max-width: 900px) { nav.apps { grid-template-columns: 1fr 1fr; } nav.apps a:nth-child(3) { border-left: 0; } }
 
   body { padding: 0; font-size: 15px; }
-  h1 { font-weight: 600; font-size: 14px; letter-spacing: .22em; margin: 0; padding: 22px 24px; border-bottom: 1px solid var(--line); }
+  h1 { font-weight: 600; font-size: 14px; letter-spacing: .22em; margin: 0; padding: 0 24px; min-height: 64px; align-items: stretch; gap: 20px; border-bottom: 1px solid var(--line); }
+  h1 > b, h1 .keys { align-self: center; }
   h1 b { color: var(--accent); font-weight: 600; }
   .wrap { gap: 0; padding: 0; counter-reset: sec; }
   .wrap > .card { border: 0; border-right: 1px solid var(--line); border-bottom: 1px solid var(--line); padding: 22px 24px; }
@@ -108,12 +109,18 @@
   .swatches button { border-radius: 0 !important; border-width: 2px; }
   .swatches button.on { border-color: var(--text); box-shadow: none; }
   .tapbpm { font-weight: 300; font-size: 44px; }
+  /* Page links in the top bar (Decks / Lighting / Projection / Visuals): the current one underlined. */
+  nav.pages { display: flex; gap: 2px; align-self: stretch; }
+  nav.pages a { display: flex; align-items: center; padding: 0 12px; color: var(--dim); text-decoration: none; font-size: 14px; font-weight: 500;
+                letter-spacing: .01em; text-transform: none; border-bottom: 3px solid transparent; border-top: 3px solid transparent; }
+  nav.pages a:hover { color: var(--text); }
+  nav.pages a.here { color: var(--text); border-bottom-color: var(--accent); }
 </style>
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;500;600&display=swap" rel="stylesheet">
 </head>
 <body>
-<h1>RAVE <b>CAVE</b> · COMMANDER <span class="keys">keys: space flash · S strobe · W blinder · B blackout · T tap · 0–4 looks · D drop</span></h1>
+<h1><span style="align-self:center">RAVE <b>CAVE</b></span> <nav class="pages" id="pages"><a data-port="8080" data-path="/">Decks</a><a class="here" data-port="8090" data-path="/">Lighting</a><a data-port="8100" data-path="/edit">Projection</a><a data-port="8110" data-path="/">Visuals</a></nav><span class="keys">keys: space flash · S strobe · W blinder · B blackout · T tap · 0–4 looks · D drop</span></h1>
 <div class="wrap">
 
 <div class="card span">
@@ -322,12 +329,6 @@ async function poll() {
 }
 poll();
 </script>
-<nav class="apps" id="apps">
-  <a data-port="8080" data-path="/"><span><small>01</small>Deck link<br>and library</span><span class="arr">→</span></a>
-  <a class="here" data-port="8090" data-path="/"><span><small>02</small>Commander<br>lights</span><span class="arr">→</span></a>
-  <a data-port="8100" data-path="/edit"><span><small>03</small>Projection<br>mapping</span><span class="arr">→</span></a>
-  <a data-port="8110" data-path="/"><span><small>04</small>Generative<br>visuals</span><span class="arr">→</span></a>
-</nav>
-<script>document.querySelectorAll("#apps a").forEach(a => a.href = `${location.protocol}//${location.hostname}:${a.dataset.port}${a.dataset.path}`);</script>
+<script>document.querySelectorAll("#pages a").forEach(a => a.href = `${location.protocol}//${location.hostname}:${a.dataset.port}${a.dataset.path}`);</script>
 </body>
 </html>
