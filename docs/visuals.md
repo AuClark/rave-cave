@@ -19,8 +19,11 @@ Everything is beat-locked: speeds are in cycles per beat, and **Beat punch** set
 | `rings` | Structure: ring count, spacing, inner radius, zoom. Shape: sides (3–12) and roundness (polygon to circle). Wave: frequency, amplitude, phase per ring, speed. Motion: twist per ring, spin, beat punch. Line: width, glow. Colour: hue, hue spread across the rings, saturation, follow the show's colour. |
 
 | `field` | Elements: density (dots across the surface height, up to 60), size, size variation, round to square, filled to outline. Movement: wander, wander speed, drift speed and direction (the whole field travels across the surface). Wave: a travelling wave that swells the dots (amount, frequency, speed, direction). Links: lines to neighbouring dots (a moving net), link width, glow. Colour: hue, spread, colour by random or by the wave, saturation, follow the show's colour. |
+| `emergence` | A Turing-pattern labyrinth after Maxime Causeret's video for Max Cooper's *Order From Chaos*. Pattern: complexity, stripe density, spots to worms to fill, solid blobs. Motion: slither (cycles per beat), rewire, spin, beat punch (fattens the worms). Organism: size, hole, ragged edge, grow through the song section. Colour: zone mixing, hue shift, saturation, follow the show's colour. |
 
-Low sides with no roundness, zero wave frequency and some twist gives the stacked, rotating-polygon spirograph look. High frequency with small amplitude gives rippling contour lines. In `field`, turning up Links with some Wander gives a drifting net; Wave with no Wander gives a clean grid of dots swelling in bands.
+Low sides with no roundness, zero wave frequency and some twist gives the stacked, rotating-polygon spirograph look. High frequency with small amplitude gives rippling contour lines. In `field`, turning up Links with some Wander gives a drifting net; Wave with no Wander gives a clean grid of dots swelling in bands. In `emergence`, a large Size with no Hole fills the surface with maze (good for walls), and low Spots → worms gives cells instead of worms.
+
+`emergence` is not a real reaction-diffusion simulation (that needs a feedback buffer the renderer doesn't have yet). It adds up plane waves of one wavelength in scattered directions and colours where the sum is above a level, which gives the same labyrinth with no memory between frames, so every surface stays in sync.
 
 ## Writing a sketch
 
