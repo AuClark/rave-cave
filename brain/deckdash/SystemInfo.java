@@ -52,7 +52,7 @@ public class SystemInfo {
 
     // ---------------------------------------------------------------- sampling
 
-    static String sample() {
+    static synchronized String sample() {   // also called by Sim after a switch, so pages reload onto fresh state
         long now = System.currentTimeMillis();
         DeckDash.Json j = new DeckDash.Json().obj();
         j.bool("ready", true).num("ts", now).str("host", hostname());

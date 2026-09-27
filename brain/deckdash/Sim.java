@@ -91,6 +91,7 @@ public class Sim {
         }
         startedAt = System.currentTimeMillis();
         DeckDash.log("simulation on (" + bpm + " BPM)");
+        refresh();
         return null;
     }
 
@@ -106,7 +107,16 @@ public class Sim {
             DeckDash.log("simulation off");
         }
         SystemInfo.exec(10, "sudo", "-n", "systemctl", "start", "mixer");
+        refresh();
         return null;
+    }
+
+    /** Pages reload right after a switch: make /api/system show it straight away. */
+    static void refresh() {
+        try {
+            SystemInfo.snapshot = SystemInfo.sample();
+        } catch (Throwable ignored) {
+        }
     }
 
     // ---------------------------------------------------------------- pass-through
