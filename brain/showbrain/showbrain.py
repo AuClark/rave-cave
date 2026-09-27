@@ -903,7 +903,8 @@ def main():
                 f.render(ctx, fx, engine.fixture_ctl[f.name], True)
             else:
                 f.preview = []
-        engine.frames.append((round(t0, 3), {f.name: f.preview for f in fixtures}))
+        # Compact: each fixture's LEDs as one hex string, 6 characters per LED.
+        engine.frames.append((round(t0, 3), {f.name: "".join(h[1:] for h in f.preview) for f in fixtures}))
         time.sleep(max(0.0, 1 / fps - (time.time() - t0)))
 
 
