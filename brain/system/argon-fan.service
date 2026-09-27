@@ -1,0 +1,14 @@
+[Unit]
+Description=Sektor5 Argon ONE case fan (speed from CPU temperature, over I2C)
+ConditionPathExists=/dev/i2c-1
+
+[Service]
+User=pi
+Group=i2c
+RuntimeDirectory=argon-fan
+ExecStart=/usr/bin/python3 -u /usr/local/lib/sektor5/argon_fan.py
+Restart=on-failure
+RestartSec=10
+
+[Install]
+WantedBy=multi-user.target

@@ -26,7 +26,7 @@ step() { echo "== $*"; }
 step "packages"
 sudo DEBIAN_FRONTEND=noninteractive apt-get update -qq
 sudo DEBIAN_FRONTEND=noninteractive apt-get -y -qq install \
-  openjdk-21-jdk-headless python3-numpy python3-usb tcpdump alsa-utils flac avahi-utils rsync curl >/dev/null
+  openjdk-21-jdk-headless python3-numpy python3-usb python3-smbus i2c-tools ir-keytable tcpdump alsa-utils flac avahi-utils rsync curl >/dev/null
 
 step "accounts: group rave, service user ravesvc (runs projector + visuals, no login)"
 getent group rave >/dev/null || sudo groupadd rave
@@ -52,6 +52,13 @@ sudo systemctl daemon-reload
 sudo systemctl enable -q deckdash showbrain mixer projector visuals
 sudo udevadm control --reload
 sudo systemctl restart systemd-journald
+
+step "I2C and the IR receiver (used by an Argon ONE case: fan + power button chip at 0x1a, IR on GPIO 23); apply at the next boot"
+sudo raspi-config nonint do_i2c 0
+grep -q "^dtoverlay=gpio-ir," /boot/firmware/config.txt || echo "dtoverlay=gpio-ir,gpio_pin=23   # Argon ONE IR receiver" | sudo tee -a /boot/firmware/config.txt >/dev/null
+sudo install -d /usr/local/lib/sektor5 && sudo install -m 755 $S/argon_fan.py /usr/local/lib/sektor5/
+sudo install -m 644 $S/argon-fan.service /etc/systemd/system/
+sudo systemctl daemon-reload && sudo systemctl enable -q argon-fan && sudo systemctl restart argon-fan   # exits quietly without an Argon case
 
 step "eth0: link-local only for the deck switch (never a default route); applies at the next boot"
 # Later netplan files override cloud-init's 50-cloud-init.yaml (which has eth0 on DHCP).
