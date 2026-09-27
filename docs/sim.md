@@ -52,3 +52,7 @@ The brain can run the same synthetic rig, so a Pi on the bench (or at home, with
 - API: `GET /api/sim`, `POST /api/sim {"on": true|false, "bpm": 126}` (admin). Also in `/api/system` as `sim`.
 
 How it works: deckdash ([`Sim.java`](../brain/deckdash/Sim.java)) runs `fakerig.py` (copied to `~/sim/` by `brain/deploy.sh deckdash`) on port 8079, passes the deck data API through to it (`/api/state`, `/api/events`, timelines, waveforms, library, `/api/deck`, `/api/tempo`), and stops sending its own deck feed to showbrain while fakerig sends the synthetic one. The mixer service is paused meanwhile, because with no DJM it would keep telling showbrain the mixer is unplugged. Its log is `/tmp/fakerig.log`.
+
+### Sound
+
+**Play sound** on the SIMULATION strip plays music in that browser, in time with the show. The synthetic tracks have structure but no audio, so [`s5audio.js`](../brain/common/web/s5audio.js) synthesises house music that follows showbrain's beat clock (`/api/state`): kick, open hats, clap and an offbeat bassline in grooves and drops; no kick, a pad and a dark filter in breakdowns; a filter sweep, a snare roll that speeds up and a riser through builds; a beat of silence before the drop. It's all generated in the browser, so there's nothing to license. Browsers only start sound after a click, which is why it's a button. Each browser plays its own copy: turn it on in one.

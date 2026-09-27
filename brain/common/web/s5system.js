@@ -223,6 +223,7 @@
     if (sim.on) {
       simEl.className = "show on";
       simEl.innerHTML = `<b>Simulation</b><span>synthetic set at ${Math.round(sim.bpm)} BPM · the lights follow it</span>` +
+        `<button data-sim="sound" class="${window.S5AUDIO && S5AUDIO.playing ? "go" : ""}">${window.S5AUDIO && S5AUDIO.playing ? "Sound on" : "Play sound"}</button>` +
         `<button data-sim="off">Back to real decks</button>`;
     } else if (sim.available && !sim.djlink && sim.uptime_s > 20 && !dismissed) {
       simEl.className = "show";
@@ -232,10 +233,24 @@
       simEl.className = "";
     }
   }
+  // Simulation audio (s5audio.js, from the dashboard): a synth that follows the show, in this browser.
+  function loadAudio() {
+    if (window.S5AUDIO) return Promise.resolve();
+    return new Promise((ok, fail) => { const sc = document.createElement("script"); sc.src = API + "/s5audio.js"; sc.onload = ok; sc.onerror = fail; document.head.appendChild(sc); });
+  }
+  async function toggleSound(b) {
+    try {
+      await loadAudio();
+      if (S5AUDIO.playing) S5AUDIO.stop(); else await S5AUDIO.start();   // the click is the gesture browsers need for sound
+    } catch (e) { alert("Couldn't start the sound."); }
+    b.classList.toggle("go", S5AUDIO && S5AUDIO.playing);
+    b.textContent = S5AUDIO && S5AUDIO.playing ? "Sound on" : "Play sound";
+  }
   simEl.addEventListener("click", async e => {
     const b = e.target.closest("button[data-sim]");
     if (!b) return;
     if (b.dataset.sim === "x") { sessionStorage.setItem("s5simDismissed", "1"); simEl.className = ""; return; }
+    if (b.dataset.sim === "sound") { toggleSound(b); return; }
     b.disabled = true; b.textContent = b.dataset.sim === "on" ? "Starting…" : "Stopping…";
     try {
       const r = await fetch(API + "/api/sim", { method: "POST", credentials: "include", headers: { "Content-Type": "text/plain" },
