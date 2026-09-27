@@ -7,6 +7,7 @@ Wants=network-online.target
 User=pi
 WorkingDirectory=/home/pi/deckdash
 ExecStart=/usr/bin/java -Djava.awt.headless=true -Xmx384m \
+  -Dweb=/srv/rave/deckdash-web -Dpreview=/srv/rave/deckdash-preview \
   -Dorg.slf4j.simpleLogger.defaultLogLevel=warn \
   -Dorg.slf4j.simpleLogger.log.org.deepsymmetry.beatlink.data.MetadataFinder=off \
   -cp lib/*:classes DeckDash

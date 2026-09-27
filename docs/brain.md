@@ -75,6 +75,33 @@ brain/deploy.sh          # copies deckdash + showbrain, compiles, restarts both
 - **showbrain** ([`brain/showbrain/`](../brain/showbrain/)) runs the scenes. See [show-engine.md](show-engine.md). Fixtures are listed in `config.json`, where hosts can use `${VAR:-default}` from `.env`.
 - **tools/prodj_listen.py** is a receive-only Pro DJ Link decoder, useful for checking a new deck setup without joining the network.
 
+## Access for collaborators
+
+Each collaborator gets their own account on the brain, never the `pi` user (which has passwordless root and runs the show).
+
+| Account | Can | Can't |
+|---|---|---|
+| `pi` | Everything (owner) | |
+| `richard` | Edit the dashboard page in `/srv/rave/deckdash-web` (live) and `/srv/rave/deckdash-preview`; `sudo systemctl restart deckdash` / `status deckdash`; read logs (`systemd-journal` group) | Touch `showbrain`, the fixtures, system config, or anything else as root |
+
+Shared folders are owned by `pi:rave`, group-writable and setgid, so files stay editable by the group. The narrow sudo rule lives in `/etc/sudoers.d/<user>`.
+
+**Adding someone:**
+```bash
+sudo adduser --disabled-password --gecos "Name" name
+sudo usermod -aG rave,systemd-journal name
+sudo install -d -m 700 -o name -g name /home/name/.ssh
+echo "<their ssh-ed25519 public key>" | sudo tee /home/name/.ssh/authorized_keys
+sudo chown name:name /home/name/.ssh/authorized_keys && sudo chmod 600 /home/name/.ssh/authorized_keys
+```
+Removing them: `sudo deluser --remove-home name` (and delete any `/etc/sudoers.d/name`).
+
+**Working on the dashboard page:**
+- `http://ravecave.local:8080/` serves `/srv/rave/deckdash-web/index.html`, re-read on every request (no restart).
+- `http://ravecave.local:8080/preview/` serves `/srv/rave/deckdash-preview/`, a work-in-progress copy with the same live data. Break it freely.
+- The API allows cross-origin requests, so the page can also be developed on a laptop against `http://ravecave.local:8080/api/...`.
+- From the repo: `brain/deploy.sh preview` (test) and `brain/deploy.sh web` (live). Live changes go through a PR to `main` first.
+
 ## Operations
 
 - Logs: `journalctl -u deckdash -f`, `journalctl -u showbrain -f`.
