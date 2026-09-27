@@ -465,6 +465,7 @@ function connectEvents(renderer, { onLayout, onScreen, onStatus, onSketch, onPar
 // The visuals service (:8110, same host) feeds content "gen": its sketch and live params.
 // The beat clock comes from the projector's own stream, so this one's state is ignored.
 function connectVisuals(renderer, opts = {}) {
-  // Over Tailscale HTTPS the visuals service is on port + 10000 (18110).
-  return connectEvents(renderer, { state: false, reload: false, ...opts, url: `${location.protocol}//${location.hostname}:${location.protocol === "https:" ? 18110 : 8110}/api/events` });
+  // The visuals page's address comes from /s5auth.js (a port on the rig's network, /visuals over HTTPS).
+  const url = window.S5AUTH && S5AUTH.url ? S5AUTH.url(8110, "/api/events") : `${location.protocol}//${location.hostname}:8110/api/events`;
+  return connectEvents(renderer, { state: false, reload: false, ...opts, url });
 }
