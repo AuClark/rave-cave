@@ -297,6 +297,7 @@
       <select id="amMode" title="How the next track is chosen"><option value="queue">Next in this list</option><option value="harmonic">Best match (BPM + key)</option></select>
       <select id="amStyle" title="Where the mix lands"><option value="drop">Drop on outro end</option><option value="overlap">Fixed overlap</option></select>
       <select id="amOverlap" title="Fixed overlap: how long both tracks play together"><option value="16">16 beats</option><option value="32">32 beats</option><option value="64">64 beats</option></select>
+      <button class="lbtn on" id="amKick" title="Line the kicks up, not the rekordbox grids: start the new track shifted by the difference in the two tracks' grid errors (read from their waveforms), with SYNC off so the deck doesn't pull it back">KICK ALIGN</button>
       <button class="lbtn" id="amTempo" title="The Pi takes tempo master and glides to each new track's original BPM during the mix (needs deckdash -Dtempo=on)">TEMPO RAMP</button>
       <span class="amstatus" id="amStatus">Automix is off.</span>
       <button class="lbtn" id="amSkip" title="Choose a different next track">SKIP</button>
@@ -1142,7 +1143,7 @@ async function playWhenLoaded(deck, t) {
 const AM_LEAD_MS = 25;                                  // network + deck start latency to send early
 const AM_MAX_LEAD = 128;                                // drop-aligned: longest lead-in before we fall back to an overlap
 const am = { on: false, mode: view.amMode || "queue", overlap: +(view.amOverlap || 32), phase: "off",
-             style: view.amStyle || "drop", tempo: false, takeSent: 0,
+             style: view.amStyle || "drop", tempo: false, takeSent: 0, kick: view.amKick !== false, kickPlan: null,
              next: null, skipped: new Set(), loadSent: 0, syncSent: 0, masterSent: 0, startTimer: null,
              stopTimer: null, forceStart: null, said: "" };
 
@@ -1183,6 +1184,57 @@ function timeOfBeat(p, tl, beat) {
 }
 const deckKey = s => `${s.trackSourcePlayer}:${s.trackSourceSlot}/${s.rekordboxId}`;
 
+// ---- kick alignment
+// SYNC lines up the rekordbox beat grids. When a grid sits a few ms off its kicks (common), two synced
+// decks flam. Each track's grid error is read from its detailed waveform: in groove and drop sections,
+// the bass onset nearest each grid line (bass = height weighted by the red, low-frequency colour).
+// Only trusted when the middle half of beats agree within 15 ms.
+const gridErrCache = {};
+function gridError(n) {
+  const p = lastState && lastState.players.find(x => x.number === n), key = p && p.timelineKey;
+  if (!key) return null;
+  if (key in gridErrCache) return gridErrCache[key];
+  const dd = details[n], tt = timelines[n];
+  if (!dd || dd.key !== key || !dd.data || !tt || tt.key !== key || !tt.data) return null;   // not loaded yet
+  const d = dd.data, tl = tt.data, frames = d.length / 4, offs = [];
+  const E = f => d[f * 4] * d[f * 4 + 1] / 64;
+  for (const sec of tl.sections) {
+    if (sec.type !== "groove" && sec.type !== "drop") continue;
+    for (let b = Math.max(2, sec.startBeat); b <= Math.min(tl.beatMs.length - 2, sec.endBeat); b++) {
+      const g = tl.beatMs[b - 1] * 0.15; let best = null, br = 0;
+      for (let f = Math.round(g - 12); f <= Math.round(g + 12); f++) {        // +/- 80 ms
+        if (f < 2 || f >= frames) continue;
+        const r = E(f) - E(f - 2); if (r > br) { br = r; best = f; }
+      }
+      if (best != null && br >= 6) offs.push((best - g) / 0.15);
+    }
+  }
+  offs.sort((a, b) => a - b);
+  const q = x => offs[Math.floor(offs.length * x)];
+  const res = offs.length < 64 ? { ms: null, n: offs.length }
+    : { ms: q(0.25) != null && q(0.75) - q(0.25) <= 15 ? +q(0.5).toFixed(1) : null, spread: +(q(0.75) - q(0.25)).toFixed(1), n: offs.length };
+  return (gridErrCache[key] = res);
+}
+// Time (browser clock) of this deck's latest beat, from its beat packets: much tighter than the
+// interpolated position, which is what a start without SYNC needs.
+function beatClock(p) {
+  if (!lastState || !lastState.now || clockOff == null || !p.beat || p.beat.msSinceLast < 0 || !p.status.effectiveBpm) return null;
+  return { t: lastState.now + clockOff - p.beat.msSinceLast, period: 60000 / p.status.effectiveBpm };
+}
+function snapToBeat(p, t) {
+  const c = beatClock(p);
+  return c ? c.t + Math.round((t - c.t) / c.period) * c.period : t;
+}
+// Where B's grid sits against A's right now (ms, + = B's beats come later), from both decks' beat packets.
+function gridOffset(A, B) {
+  const a = beatClock(A), b = beatClock(B);
+  if (!a || !b) return null;
+  const x = ((b.t - a.t) % a.period + a.period * 1.5) % a.period - a.period / 2;
+  return x;
+}
+let amLatency = 25;                                     // learned: how late a deck starts after "play" (ms)
+try { const v = +localStorage.getItem("automixStartLatency"); if (v > 0 && v < 200) amLatency = v; } catch (e) {}
+
 function amPickNext(currentId) {
   const onDeck = new Set(lastState.players.map(p => p.status.rekordboxId));
   const ok = t => !onDeck.has(t.id) && !played.has(lib.src + "/" + t.id) && !am.skipped.has(t.id) && t.id !== currentId;
@@ -1197,9 +1249,18 @@ function amPickNext(currentId) {
   return (i >= 0 ? v.slice(i + 1).concat(v.slice(0, i)) : v).find(ok) || null;
 }
 
+// A kick-aligned mix took SYNC off the incoming deck when it was scheduled. If that mix is abandoned,
+// put SYNC back so the deck isn't left unsynced for later mixes.
+function amKickCancel() {
+  const k = am.kickPlan;
+  am.kickPlan = null;
+  if (k && k.deck) deckCmd(k.deck, "sync_on");
+}
+
 function amStop(reason) {
   clearTimeout(am.startTimer); clearTimeout(am.stopTimer);
   am.startTimer = am.stopTimer = null; am.forceStart = null; am.plan = null;
+  amKickCancel();
   am.phase = am.on ? "prep" : "off";
   if (reason) amSay(reason);
 }
@@ -1233,7 +1294,7 @@ function amTick() {
   if (!bs.trackLoaded || bs.busy) return amSay(`Loading ${nextTitle} on deck ${B.number}…`);
   // Retry a few times (a deck can miss a command), then leave it: the mix still starts on the bar.
   const tries = am.next.tries || (am.next.tries = { sync: 0, master: 0 });
-  if (!bs.synced && tries.sync < 3 && now - am.syncSent > 3000) { am.syncSent = now; tries.sync++; deckCmd(B.number, "sync_on"); }
+  if (!bs.synced && !am.kickPlan && tries.sync < 3 && now - am.syncSent > 3000) { am.syncSent = now; tries.sync++; deckCmd(B.number, "sync_on"); }
   const ts = tempoState(), piMaster = !!(ts && ts.master);
   if (am.tempo && ts && ts.enabled) {
     // Tempo ramps: the Pi holds master and both decks follow it with SYNC on.
@@ -1268,42 +1329,105 @@ function amTick() {
     how = `${stop - start}-beat overlap${note}`;
   }
   const beatsLeft = start - cur;
-  if (!am.startTimer && beatsLeft <= 16) { am.plan = { start, stop, how }; amSchedule(A, B, tl, start, stop); }
+  if (am.kick && !(am.tempo && tempoState() && tempoState().master)) {
+    const ea = gridError(A.number), eb = gridError(B.number);
+    const fmt1 = e => !e ? "reading…" : e.ms == null ? "unclear" : `${e.ms > 0 ? "+" : ""}${e.ms} ms`;
+    how += ` · kick align: grids vs kicks ${fmt1(ea)} / ${fmt1(eb)}` +
+      (ea && eb && ea.ms != null && eb.ms != null ? (Math.abs(ea.ms - eb.ms) >= 3 ? ` → start ${Math.abs(ea.ms - eb.ms).toFixed(1)} ms ${ea.ms - eb.ms > 0 ? "later" : "earlier"}, SYNC off` : " → already in line") : " → grid sync");
+  }
+  // Kick align needs both tracks' waveforms read: hold the schedule for them until the last 4 beats.
+  const rampOn = am.tempo && tempoState() && tempoState().master;
+  const kickReady = !am.kick || rampOn || (gridError(A.number) !== null && gridError(B.number) !== null);
+  if (!am.startTimer && beatsLeft <= 16 && (kickReady || beatsLeft <= 4)) { am.plan = { start, stop, how }; amSchedule(A, B, tl, start, stop); }
   amSay(`Next: ${nextTitle} on deck ${B.number} · starts at bar ${barNumber(tl, start)} of deck ${A.number} ` +
         `(<b>${Math.ceil(beatsLeft)}</b> beats) · ${how}`);
 }
 
 function amSchedule(A, B, tl, start, stopBeat) {
   const a = A.number, b = B.number, next = am.next;
-  am.startTimer = setTimeout(async () => {
-    am.startTimer = null; am.plan = null;
+  // Kick align: shift the start by the difference in grid errors and take SYNC off B first, so it
+  // doesn't pull B back onto its grid. Not with tempo ramps (those need SYNC).
+  const ts0 = tempoState(), ramping = am.tempo && ts0 && ts0.master;
+  const ea = am.kick && !ramping ? gridError(a) : null, eb = am.kick && !ramping ? gridError(b) : null;
+  let kick = null;
+  if (ea && eb && ea.ms != null && eb.ms != null && Math.abs(ea.ms - eb.ms) >= 3) {
+    kick = { shift: ea.ms - eb.ms, errA: ea.ms, errB: eb.ms, deck: b };
+    deckCmd(b, "sync_off");                            // B keeps the tempo it synced to (checked before the start)
+  }
+  am.kickPlan = kick;
+  const when = () => {                                  // browser time to send "play"
+    const pa = lastState.players.find(p => p.number === a);
+    const onBeat = snapToBeat(pa, timeOfBeat(pa, tl, start));
+    return onBeat + (kick ? kick.shift : 0) - (kick ? amLatency : AM_LEAD_MS);
+  };
+  // Two stages: wake 400 ms early, then aim with the freshest beat packets.
+  am.startTimer = setTimeout(() => {
+    am.startTimer = setTimeout(async () => {
+      am.startTimer = null; am.plan = null;
+      const pa = lastState.players.find(p => p.number === a), pb = lastState.players.find(p => p.number === b);
+      // Only if nothing changed in the meantime.
+      if (!am.on || !pa || !pb || !pa.status.playing || pb.status.playing || pb.status.rekordboxId !== next.id) return amKickCancel();
+      if (kick && (pb.status.synced || Math.abs(pb.status.effectiveBpm - pa.status.effectiveBpm) > 0.02)) {
+        // B didn't hold A's tempo without SYNC (or SYNC stayed on): align grids instead.
+        if (!pb.status.synced) deckCmd(b, "sync_on");
+        toast(`Kick align skipped: deck ${b} ${pb.status.synced ? "kept SYNC on" : "doesn't hold " + pa.status.effectiveBpm.toFixed(2) + " BPM without SYNC"}`, true);
+        kick = null; am.kickPlan = null;
+      }
+      if (!(await deckCmd(b, "play"))) return amKickCancel();
+      am.phase = "mixing"; am.forceStart = null;
+      played.add(deckKey(pb.status));
+      toast(`Automix: "${next.title}" in on deck ${b}`);
+      amSay(`Mixing: deck ${a} → deck ${b} (<b>${esc(next.title)}</b>) over ${stopBeat - start} beats` +
+            (kick ? ` · kick align: grids ${kick.shift > 0 ? "+" : ""}${kick.shift.toFixed(1)} ms apart` : ""));
+      if (kick) setTimeout(() => amCheckKicks(a, b, kick), 2500);
+      // Tempo ramp: glide to the new track's own BPM, arriving as the old one stops.
+      const ts = tempoState(), native = pb.status.trackBpm;
+      if (am.tempo && ts && ts.master && native && Math.abs(native - ts.bpm) > 0.2)
+        tempoCmd({ action: "ramp", to: native, beats: stopBeat - start });
+      am.stopTimer = setTimeout(async () => {
+        am.stopTimer = null;
+        const nb = lastState.players.find(p => p.number === b);
+        am.phase = am.on ? "prep" : "off"; am.next = null; am.kickPlan = null;
+        if (!am.on || !nb || !nb.status.playing) return;  // you took over: leave deck A alone
+        const t = tempoState();
+        if (!(t && t.master)) await deckCmd(b, "master"); // the Pi keeps master while it's ramping
+        await deckCmd(a, "stop");
+        toast(`Automix: deck ${b} leads, picking the next track for deck ${a}`);
+      }, timeOfBeat(pa, tl, stopBeat) - performance.now() - AM_LEAD_MS);
+    }, Math.max(0, when() - performance.now()));
+  }, Math.max(0, when() - performance.now() - 400));
+}
+
+// A couple of seconds in: where did B's grid land against A's (beat packets, ~1 ms)? Learn the deck's
+// start delay for next time, and if the kicks are far apart, put SYNC back on.
+async function amCheckKicks(a, b, kick) {
+  const reads = [];
+  for (let i = 0; i < 12; i++) {
     const pa = lastState.players.find(p => p.number === a), pb = lastState.players.find(p => p.number === b);
-    // Only if nothing changed in the meantime.
-    if (!am.on || !pa || !pb || !pa.status.playing || pb.status.playing || pb.status.rekordboxId !== next.id) return;
-    if (!(await deckCmd(b, "play"))) return;
-    am.phase = "mixing"; am.forceStart = null;
-    played.add(deckKey(pb.status));
-    toast(`Automix: "${next.title}" in on deck ${b}`);
-    amSay(`Mixing: deck ${a} → deck ${b} (<b>${esc(next.title)}</b>) over ${stopBeat - start} beats`);
-    // Tempo ramp: glide to the new track's own BPM, arriving as the old one stops.
-    const ts = tempoState(), native = pb.status.trackBpm;
-    if (am.tempo && ts && ts.master && native && Math.abs(native - ts.bpm) > 0.2)
-      tempoCmd({ action: "ramp", to: native, beats: stopBeat - start });
-    am.stopTimer = setTimeout(async () => {
-      am.stopTimer = null;
-      const nb = lastState.players.find(p => p.number === b);
-      am.phase = am.on ? "prep" : "off"; am.next = null;
-      if (!am.on || !nb || !nb.status.playing) return;  // you took over: leave deck A alone
-      const t = tempoState();
-      if (!(t && t.master)) await deckCmd(b, "master"); // the Pi keeps master while it's ramping
-      await deckCmd(a, "stop");
-      toast(`Automix: deck ${b} leads, picking the next track for deck ${a}`);
-    }, timeOfBeat(pa, tl, stopBeat) - performance.now() - AM_LEAD_MS);
-  }, timeOfBeat(A, tl, start) - performance.now() - AM_LEAD_MS);
+    const x = pa && pb && pa.status.playing && pb.status.playing ? gridOffset(pa, pb) : null;
+    if (x != null) reads.push(x);
+    await new Promise(r => setTimeout(r, 250));
+  }
+  if (reads.length < 4) return;
+  reads.sort((x, y) => x - y);
+  const got = reads[reads.length >> 1], late = got - kick.shift, kicksApart = late;
+  amLatency = Math.max(0, Math.min(150, amLatency + 0.6 * late));
+  try { localStorage.setItem("automixStartLatency", amLatency.toFixed(1)); } catch (e) {}
+  if (Math.abs(kicksApart) > 25) {
+    deckCmd(b, "sync_on");
+    toast(`Kick align: kicks were ${kicksApart.toFixed(0)} ms apart, so SYNC is back on (learning the deck's start delay: ${amLatency.toFixed(0)} ms)`, true);
+  } else {
+    toast(`Kick align: kicks within ${Math.abs(kicksApart).toFixed(0)} ms (grids ${got.toFixed(1)} ms apart, aiming for ${kick.shift.toFixed(1)})`);
+  }
 }
 
 $("#amMode").value = am.mode; $("#amOverlap").value = String(am.overlap); $("#amStyle").value = am.style;
 $("#amStyle").onchange = e => { am.style = view.amStyle = e.target.value; saveView(); if (am.phase !== "mixing") amStop(); };
+$("#amKick").classList.toggle("on", am.kick);
+$("#amKick").onclick = () => {
+  am.kick = view.amKick = !am.kick; saveView(); $("#amKick").classList.toggle("on", am.kick);
+  toast(am.kick ? "Kick align on: lines up the kicks, not the grids" : "Kick align off: SYNC lines up the grids");
+};
 $("#amTempo").onclick = () => {
   const ts = tempoState();
   if (!(ts && ts.enabled)) return toast("Tempo ramps need deckdash started with -Dtempo=on (the repo owner's call)", true);
