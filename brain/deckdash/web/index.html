@@ -766,10 +766,14 @@ async function libSources() {
       lib.src = ready.length ? ready[0].src : null; lib.playlist = 0;
       if (lib.src) { sel.value = lib.src; await libLoadSource(); } else { lib.tracks = []; lib.tree = []; libRenderTree(); libRender(); }
     }
-    lib.missing = false;
+    if (lib.missing) { lib.missing = false; lib.sig = ""; }
   } catch (e) {
     // Older deckdash builds have no /api/library (the page comes back instead of JSON).
-    if (!lib.missing) { lib.missing = true; libRender(); }
+    if (!lib.missing) {
+      lib.missing = true;
+      $("#libsrc").innerHTML = "<option>Library not available yet</option>"; $("#libsrc").dataset.opts = "";
+      lib.sig = ""; libRender(); if (lastState) libRenderDecks();
+    }
   }
 }
 
@@ -849,7 +853,7 @@ function libRender() {
       <td class="num">${fmt(t.dur * 1000)}</td><td>${esc(t.genre)}</td><td title="${esc(t.album)}">${esc(t.album)}</td>
       <td class="num">${t.rating ? "★".repeat(t.rating) : ""}</td><td>${esc(t.added)}</td>
       <td class="ld">${decks.map(n => `<button class="lbtn" data-load="${n}" title="${playing.has(n) ? "Deck " + n + " is playing" : "Load to deck " + n}"${playing.has(n) ? " style='opacity:.5'" : ""}>${n}</button>`).join(" ")}</td></tr>`;
-  }).join("") || `<tr><td colspan="13" class="pmeta" style="padding:24px">${lib.missing ? "The library needs the updated deckdash (Library.java) on the brain. It isn't deployed yet." : lib.src ? (lib.tracks.length ? "No tracks match." : "Empty playlist.") : "Insert a rekordbox USB into a player to browse its library."}</td></tr>`;
+  }).join("") || `<tr><td colspan="13" class="pmeta" style="padding:24px">${lib.missing ? "Browsing and loading tracks, and PLAY / SYNC / MASTER, need the deckdash update (Library.java) on the brain. The repo owner deploys that; until then this panel can't reach the decks." : lib.src ? (lib.tracks.length ? "No tracks match." : "Empty playlist.") : "Insert a rekordbox USB into a player to browse its library."}</td></tr>`;
   $("#libcount").textContent = lib.tracks.length ? `${lib.view.length} of ${lib.tracks.length}${lib.view.length > LIMIT ? ` (showing ${LIMIT})` : ""}` : "";
   $("#fBpm").classList.toggle("on", lib.fBpm); $("#fKey").classList.toggle("on", lib.fKey);
 }
@@ -884,11 +888,13 @@ function libRenderDecks() {
   const st = lastState; if (!st) return;
   $("#libdecks").innerHTML = st.players.slice().sort((a, b) => a.number - b.number).map(p => {
     const s = p.status, t = p.track, c = rgba(deckRgb(p.number), 1);
+    // Deck commands go through /api/deck, which only exists once Library.java is deployed.
+    const off = lib.missing ? ` disabled title="Needs the deckdash update (Library.java) on the brain"` : "";
     return `<div class="ldeck" style="border-left:3px solid ${c}"><span class="n" style="color:${c}">${p.number}</span>
       <span class="tt">${t ? `<b>${esc(t.title)}</b> · ${esc(t.artist || "")}` : s.trackLoaded ? "loading…" : "empty"}</span>
-      <button class="lbtn play${s.playing ? " on" : ""}" data-dk="${p.number}" data-a="${s.playing ? "stop" : "play"}" title="Fader start / stop over DJ Link">${s.playing ? "■ STOP" : "▶ PLAY"}</button>
-      <button class="lbtn${s.synced ? " on" : ""}" data-dk="${p.number}" data-a="${s.synced ? "sync_off" : "sync_on"}">SYNC</button>
-      <button class="lbtn${s.tempoMaster ? " on" : ""}" data-dk="${p.number}" data-a="master">MASTER</button></div>`;
+      <button class="lbtn play${s.playing ? " on" : ""}" data-dk="${p.number}" data-a="${s.playing ? "stop" : "play"}" title="Fader start / stop over DJ Link"${off}>${s.playing ? "■ STOP" : "▶ PLAY"}</button>
+      <button class="lbtn${s.synced ? " on" : ""}" data-dk="${p.number}" data-a="${s.synced ? "sync_off" : "sync_on"}"${off}>SYNC</button>
+      <button class="lbtn${s.tempoMaster ? " on" : ""}" data-dk="${p.number}" data-a="master"${off}>MASTER</button></div>`;
   }).join("") || `<span class="pmeta">Waiting for decks…</span>`;
 }
 
