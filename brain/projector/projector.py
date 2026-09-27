@@ -10,6 +10,9 @@
   /api/layouts      GET preset names
   /api/layouts/NAME GET a preset; POST saves the current layout as NAME;
                     POST .../NAME/load makes it current
+  /api/stage        GET / POST the 3D stage design (stage.html): fixtures, positions, links to
+                    real fixtures. Saved as layouts/stage.json; broadcast as {"t":"stage"}
+  /stage.html       3D stage visualiser and designer (three.js in web/vendor)
   /api/screen       POST from the output page: {"w","h"} (its real resolution) plus stats
                     {"fps","scale","gpu"} every few seconds, shown in the editor
 
@@ -209,8 +212,13 @@ class H(SimpleHTTPRequestHandler):
             if SAFE_NAME.match(name) and f.is_file():
                 return self._json(200, json.loads(f.read_text()))
             return self._json(404, {"error": "no such preset"})
+        if path == "/api/stage":
+            f = LAYOUTS / "stage.json"
+            return self._json(200, json.loads(f.read_text()) if f.is_file() else {"fixtures": None})
         if path == "/edit":
             self.path = "/edit.html"
+        if path == "/stage":
+            self.path = "/stage.html"
         return super().do_GET()
 
     def do_POST(self):
@@ -223,6 +231,18 @@ class H(SimpleHTTPRequestHandler):
                     save_layout()
                     snap = dict(layout)
                 broadcast({"t": "layout", "layout": snap})
+                return self._json(200, {"ok": True})
+            if path == "/api/stage":
+                d = self._body()
+                if not isinstance(d.get("fixtures"), list) or len(d["fixtures"]) > 200:
+                    return self._json(400, {"error": "fixtures must be a list (max 200)"})
+                body = json.dumps(d)
+                if len(body) > 500_000:
+                    return self._json(400, {"error": "stage design too large"})
+                LAYOUTS.mkdir(exist_ok=True)
+                with lock:
+                    (LAYOUTS / "stage.json").write_text(body)
+                broadcast({"t": "stage", "stage": d})
                 return self._json(200, {"ok": True})
             if path == "/api/screen":
                 d = self._body()
