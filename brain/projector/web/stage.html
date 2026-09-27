@@ -45,6 +45,7 @@
   #view > #conn { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); z-index: 2; padding: 10px 16px;
     background: rgba(20,20,20,.75); pointer-events: none; }
   #view > #conn.ok { display: none; }
+  @media (max-width: 1300px) { #hint { display: none; } }   /* it collides with the track info on narrower screens */
   #hint { position: absolute; right: 16px; bottom: 14px; font-size: 11px; color: #777; pointer-events: none; text-align: right; }
   aside { border-left: 1px solid var(--line); overflow: auto; background: var(--panel); counter-reset: sec; }
   aside section { padding: 18px 20px; border-bottom: 1px solid var(--line); }
