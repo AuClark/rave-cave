@@ -34,7 +34,7 @@ From a blank card to a working brain in about 30 minutes, mostly waiting. Everyt
    ssh pi@sektor5-2.local 'sudo reboot'
    ```
 6. **Set the admin PIN** (typed hidden): `ssh -t pi@sektor5-2.local 'python3 ~/tools/set_pin.py'`
-7. **Check it.** Open `http://sektor5-2.local:8080/` and click the logo: the System view should show every service running and no under-voltage. With no decks connected, the strip at the bottom offers **Start simulation**, which runs the whole rig on a synthetic DJ set ([sim.md](sim.md#on-the-brain)).
+7. **Check it.** Open `http://sektor5-2.local:8080/` and click the logo: the System view should show every service running and no under-voltage. With no decks connected, the **NO DECKS** pill at the top right offers **Start simulation**, which runs the whole rig on a synthetic DJ set ([sim.md](sim.md#on-the-brain)).
 8. **Optional:** [Tailscale](#remote-access-tailscale) for remote access and a public link (set the PIN first), and [accounts for collaborators](#access-for-collaborators).
 
 To work on it from the Mac, put `S5_BRAIN_HOST=sektor5-2.local` in front of `brain/deploy.sh …`, or in `.env`.
@@ -173,8 +173,8 @@ Removing them: `sudo deluser --remove-home name` (and delete any `/etc/sudoers.d
 
 Anyone can open the pages and watch. **Changing anything needs admin**: loading or playing tracks, tempo, the Commander, projection layouts, visuals. Each service enforces this itself: a change without the admin cookie gets `401`. So hiding a button isn't what protects the rig.
 
-- **Unlocking:** enter the PIN once (any page: the VIEW ONLY badge bottom-right, or the prompt that appears when you try to change something). The browser gets a signed `s5_admin` cookie for 5 years. Cookies are per host, not per port, so one unlock covers every page on that address (`sektor5.local`, the Tailscale name and the public link each need one unlock).
-- **Locking a browser:** click the ADMIN badge.
+- **Unlocking:** enter the PIN once (any page: the orange lock at the right end of the top bar, or the prompt that appears when you try to change something). The browser gets a signed `s5_admin` cookie for 5 years. Cookies are per host, not per port, so one unlock covers every page on that address (`sektor5.local`, the Tailscale name and the public link each need one unlock).
+- **Locking a browser:** click the green (open) lock.
 - **Set or change the PIN** (hidden input, stored only as a salted PBKDF2 hash in `/srv/rave/auth.json`, group `rave`, mode 640):
   ```bash
   brain/deploy.sh tools                                # once, copies set_pin.py to the brain

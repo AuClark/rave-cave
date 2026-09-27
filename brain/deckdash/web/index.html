@@ -197,6 +197,15 @@
   .viewctl .sep { background: var(--line); height: 28px; margin: 0 8px; }
   .masterbox .big { font-weight: 300; font-size: 40px; letter-spacing: -.01em; }
   .masterbox .lbl { letter-spacing: .18em; }
+  /* Phones: one column that never gets wider than the screen (the library table scrolls sideways
+     inside its panel), and no zoom buttons in the bar (pinch the waveforms instead). */
+  @media (max-width: 760px) {
+    .libbody, .row2, .row3, .players { grid-template-columns: minmax(0, 1fr) !important; }
+    main, section.panel, .tracks { min-width: 0; }
+    .tracks, section.panel { overflow-x: auto; }
+    .viewctl .sep, #zOut, #zIn, #zLbl { display: none; }
+    .masterrow { padding: 10px 12px 6px; }
+  }
   /* Master BPM sits just under the top bar (the bar itself is the same on every page). */
   .masterrow { display: flex; justify-content: flex-end; max-width: 1680px; margin: 0 auto; padding: 14px 24px 10px; }
   main { padding: 0; gap: 0; border-left: 1px solid var(--line); border-right: 1px solid var(--line); max-width: 1680px; margin: 0 auto; }
@@ -724,9 +733,12 @@ function drawStack() {
     if (s.onAir) tags.push(["ON AIR", "#ff5a1f", false]);
     if (s.reverse) tags.push(["REVERSE", "#f2f2f2", false]);
     if (s.atEnd) tags.push(["END", "#f2f2f2", true]);
+    // Phones: only the essentials on the right, so the title keeps some room.
+    const narrow = W / dpr < 560;
+    const shown = narrow ? tags.filter(([txt]) => /^(PLAYING|CUED|PAUSED|LOOP|MASTER)/.test(txt)) : tags;
     g.font = `600 ${10 * dpr}px ${CANVAS_FONT}`;
     let tx = rx;
-    for (const [txt, col, fill] of tags.slice().reverse()) {
+    for (const [txt, col, fill] of shown.slice().reverse()) {
       const w = g.measureText(txt).width + 12 * dpr; tx -= w;
       if (fill) { g.fillStyle = col; g.fillRect(tx, y0 + 8 * dpr, w, 16 * dpr); g.fillStyle = col === "#f2f2f2" ? "#222" : "#fff"; }
       else { g.strokeStyle = col; g.lineWidth = dpr; g.strokeRect(tx + dpr / 2, y0 + 8.5 * dpr, w - dpr, 15 * dpr); g.fillStyle = col; }
@@ -738,7 +750,8 @@ function drawStack() {
       const ph = beatPhase(tl, pos[p.number]), nxt = ph && tl.drops.find(dr => dr.beat > ph.beat);
       if (nxt) line2.push([`DROP in ${Math.ceil(nxt.beat - ph.beat - ph.frac)}`, "#ff5a1f"]);
     }
-    line2.push([`track ${s.trackBpm ? s.trackBpm.toFixed(2) : "—"} · ${pc > 0 ? "+" : ""}${pc.toFixed(2)}%`, pc ? "#f2b84b" : "#9a9a9a"]);
+    if (!narrow) line2.push([`track ${s.trackBpm ? s.trackBpm.toFixed(2) : "—"} · ${pc > 0 ? "+" : ""}${pc.toFixed(2)}%`, pc ? "#f2b84b" : "#9a9a9a"]);
+    if (narrow && line2.length > 1) line2.shift();   // keep the drop countdown, drop the key
     g.font = `500 ${11 * dpr}px ${CANVAS_FONT}`;
     let lx2 = rx;
     for (const [txt, col] of line2.slice().reverse()) {

@@ -38,8 +38,29 @@
   .s5bar > nav.pages a:hover { color: #f2f2f2; }
   .s5bar > nav.pages a.here { color: #f2f2f2; border-bottom-color: #ff5a1f; }
   html.s5-fontwait .s5bar > nav.pages { visibility: hidden; }
-  .s5bar > :not(.s5home):not(nav.pages) { animation: s5in .45s ease; }
-  .s5bar ~ * { animation: s5in .35s ease; }   /* no fill: nothing lingers (stacking) once faded */
+  .s5bar > :not(.s5home):not(nav.pages):not(.s5who) { animation: s5in .45s ease; }
+  .s5bar ~ :not(.s5tabs) { animation: s5in .35s ease; }   /* no fill: nothing lingers (stacking) once faded */
+  /* Viewer / admin: a lock at the right end of the bar (stays in view if the bar scrolls sideways). */
+  .s5bar > .s5who { margin-left: auto; position: sticky; right: 0; flex: none; width: 38px; height: 38px; padding: 0; display: none;
+    align-items: center; justify-content: center; cursor: pointer; background: #242424; color: #9a9a9a; border: 1px solid #555; }
+  html.s5-viewer .s5bar > .s5who, html.s5-admin .s5bar > .s5who { display: flex; }
+  html.s5-viewer .s5bar > .s5who { color: #ff5a1f; border-color: rgba(255,90,31,.55); }
+  html.s5-admin .s5bar > .s5who { color: #7ccf8a; border-color: rgba(124,207,138,.55); }
+  .s5who svg { width: 18px; height: 18px; }
+  /* Phones: the page links move to a tab bar at the bottom (Decks in the middle). */
+  .s5tabs { display: none; }
+  @media (max-width: 760px) {
+    .s5bar { padding: 0 12px; gap: 10px; }
+    .s5bar > nav.pages, .s5bar #self, .s5bar .keys { display: none; }
+    .s5tabs { display: grid; grid-template-columns: repeat(5, 1fr); position: fixed; left: 0; right: 0; bottom: 0; z-index: 45;
+      height: calc(60px + env(safe-area-inset-bottom)); padding: 0 0 env(safe-area-inset-bottom); background: #242424; border-top: 1px solid #3e3e3e; }
+    .s5tabs a { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 5px; color: #9a9a9a;
+      text-decoration: none; font: 500 10px/1 ${FONT}; letter-spacing: .04em; -webkit-tap-highlight-color: transparent; }
+    .s5tabs a svg { width: 22px; height: 22px; fill: none; stroke: currentColor; stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; }
+    .s5tabs a.mid svg { width: 26px; height: 26px; }
+    .s5tabs a.here { color: #f2f2f2; } .s5tabs a.here svg { stroke: #ff5a1f; }
+    body { padding-bottom: calc(64px + env(safe-area-inset-bottom)) !important; }
+  }
   @keyframes s5in { from { opacity: 0; } to { opacity: 1; } }`;
   S5.barCss = barCss;   // the System view (s5system.js) reuses it inside its shadow root
   const barStyle = document.createElement("style");
@@ -57,11 +78,9 @@
   let quietUntil = 0, pending = null;
 
   const css = `
-  .s5a-badge { position: fixed; right: 14px; bottom: 14px; z-index: 9998; font: 600 11px/1 var(--font, system-ui, sans-serif);
-    letter-spacing: .14em; text-transform: uppercase; padding: 8px 12px; cursor: pointer; background: rgba(30,30,30,.92);
-    color: var(--dim, #9a9a9a); border: 1px solid var(--line2, #555); user-select: none; }
-  .s5a-badge.admin { color: var(--good, #7ccf8a); border-color: var(--good, #7ccf8a); }
-  .s5a-badge.viewer { color: var(--accent, #ff5a1f); border-color: var(--accent, #ff5a1f); }
+  .s5who.s5a-float { position: fixed; top: 12px; right: 12px; z-index: 9998; width: 38px; height: 38px; padding: 0; display: flex;
+    align-items: center; justify-content: center; cursor: pointer; background: rgba(30,30,30,.92); border: 1px solid #555; }
+  .s5who.s5a-float svg { width: 18px; height: 18px; }
   .s5a-back { position: fixed; inset: 0; z-index: 9999; background: rgba(0,0,0,.6); display: flex; align-items: center; justify-content: center; }
   .s5a-box { width: min(92vw, 340px); background: var(--panel, #2b2b2b); border: 1px solid var(--line, #3e3e3e); padding: 26px;
     font: 400 14px/1.45 var(--font, system-ui, sans-serif); color: var(--text, #f2f2f2); }
@@ -97,13 +116,35 @@
     return (reach[port] ||= rawFetch(S5.url(port, "/s5auth.js"), { mode: "no-cors", cache: "no-store", signal: AbortSignal.timeout(5000) })
       .then(() => true, () => false));
   }
+  const ICON = {
+    lock: '<rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/>',
+    unlock: '<rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8a4 4 0 0 1 7.7-1.5"/>',
+    Decks: '<circle cx="7.5" cy="12" r="4.5"/><circle cx="16.5" cy="12" r="4.5"/><circle cx="7.5" cy="12" r=".8"/><circle cx="16.5" cy="12" r=".8"/>',
+    Lighting: '<path d="M9 18h6M10 21h4M12 3a6 6 0 0 0-4 10.5c.8.8 1 1.7 1 2.5h6c0-.8.2-1.7 1-2.5A6 6 0 0 0 12 3z"/>',
+    Projection: '<rect x="2" y="8" width="20" height="10" rx="2"/><circle cx="8" cy="13" r="3"/><path d="M14 11h5M14 14h3M6 18v2M18 18v2"/>',
+    Visuals: '<path d="M2 12c2.5-6 4.5-6 6.5 0s4.5 6 7 0 4-6 6.5 0"/><path d="M2 17c2.5-3 4.5-3 6.5 0s4.5 3 7 0 4-3 6.5 0" opacity=".5"/>',
+    Stage: '<path d="M3 4h18M7 4v3M17 4v3"/><path d="M7 7 4 20M7 7l4 13M17 7l-4 13M17 7l3 13" opacity=".6"/><path d="M3 20h18"/>',
+  };
+  const svg = (name, extra = "") => `<svg viewBox="0 0 24 24" aria-hidden="true" ${extra}>${ICON[name]}</svg>`;
+  S5.icon = svg;
+  // Phones: a tab bar with the same links as the top bar: Lighting · Projection · Decks · Visuals · Stage.
+  function tabs() {
+    const top = document.querySelector(".s5bar nav.pages");
+    if (!top || document.querySelector(".s5tabs")) return;
+    const here = (top.querySelector("a.here") || {}).textContent;
+    const nav = el("nav", { class: "s5tabs", "aria-label": "Pages" });
+    nav.innerHTML = [["Lighting", 8090, "/"], ["Projection", 8100, "/edit"], ["Decks", 8080, "/"], ["Visuals", 8110, "/"], ["Stage", 8100, "/stage.html"]]
+      .map(([n, port, path]) => `<a data-port="${port}" data-path="${path}" class="${n === "Decks" ? "mid" : ""}${n === here ? " here" : ""}">${svg(n)}<span>${n}</span></a>`).join("");
+    document.body.appendChild(nav);
+  }
   function links() {
+    tabs();
     document.querySelectorAll("a[data-port]").forEach(a => {
       a.href = S5.url(a.dataset.port, a.dataset.path || "/");
       if (a.classList.contains("here")) return;
       const off = why => { a.classList.toggle("s5-off", !!why); a.toggleAttribute("aria-disabled", !!why); a.title = why || a.dataset.title || ""; };
       if (a.dataset.title === undefined) a.dataset.title = a.title || "";
-      if (S5.enabled && !S5.admin) return off("Admin only. Unlock with the PIN (bottom right) to open this page.");
+      if (S5.enabled && !S5.admin) return off("Admin only. Unlock with the PIN (the lock, top right) to open this page.");
       off("");
       reachable(a.dataset.port).then(ok => { if (ok || !S5.admin) return; off("Not reachable from here. Use the rig's Wi-Fi or Tailscale."); });
     });
@@ -118,10 +159,11 @@
     document.documentElement.classList.toggle("s5-viewer", S5.enabled && !S5.admin);
     document.documentElement.classList.toggle("s5-admin", S5.enabled && S5.admin);
     if (!badge) return links();
+    badge.innerHTML = svg(S5.admin ? "unlock" : "lock", 'fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"');
+    badge.title = S5.admin ? "Admin: unlocked on this browser. Click to lock it again." : "View only. Click to unlock with the admin PIN.";
+    badge.setAttribute("aria-label", badge.title);
     badge.style.display = S5.enabled ? "" : "none";
-    badge.className = "s5a-badge " + (S5.admin ? "admin" : "viewer");
-    badge.textContent = S5.admin ? "Admin" : "View only · unlock";
-    badge.title = S5.admin ? "Unlocked on this browser. Click to lock it again." : "Enter the admin PIN to control the rig";
+    if (badge.classList.contains("s5a-float")) badge.style.color = S5.admin ? "#7ccf8a" : "#ff5a1f";
     links();
   }
 
@@ -191,7 +233,9 @@
 
   function mount() {
     const style = el("style"); style.textContent = css; document.head.appendChild(style);
-    badge = el("div", { class: "s5a-badge", role: "button", tabindex: "0" });
+    // The lock sits at the right end of the top bar; pages without one get it floating top right.
+    const bar = document.querySelector(".s5bar");
+    badge = el("button", { class: bar ? "s5who" : "s5who s5a-float", type: "button" });
     badge.style.display = "none";
     badge.onclick = async () => {
       if (!S5.admin) return prompt();
@@ -199,7 +243,7 @@
       await rawFetch("/api/auth/logout", { method: "POST", credentials: "same-origin" }).catch(() => {});
       status();
     };
-    document.body.appendChild(badge);
+    (bar || document.body).appendChild(badge);
     render();
     status();
     setInterval(status, 60000);
