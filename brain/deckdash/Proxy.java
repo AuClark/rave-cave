@@ -60,9 +60,9 @@ public class Proxy {
             int code = c.getResponseCode();
             InputStream in = code >= 400 ? c.getErrorStream() : c.getInputStream();
             DeckDash.cors(ex);
-            for (String h : RESPONSE_HEADERS) {
-                List<String> vs = c.getHeaderFields().get(h);
-                if (vs != null) for (String v : vs) ex.getResponseHeaders().add(h, v);
+            for (Map.Entry<String, List<String>> e : c.getHeaderFields().entrySet()) {   // header names aren't case-sensitive
+                String k = e.getKey();
+                if (k != null && RESPONSE_HEADERS.stream().anyMatch(k::equalsIgnoreCase)) for (String v : e.getValue()) ex.getResponseHeaders().add(k, v);
             }
             String loc = c.getHeaderField("Location");
             if (loc != null) ex.getResponseHeaders().add("Location", loc.startsWith("/") && prefix != null ? prefix + loc : loc);
