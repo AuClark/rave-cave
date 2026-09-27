@@ -16,7 +16,8 @@ The stage in 3D: a 4.8 × 3 m platform, a back wall, a lighting truss, and the D
 | Strobe | Top middle | **Simulated:** Commander strobe, blinder, and the drop hits |
 | Wash | Top middle | **Live:** the par can's DMX colour (`parcan`) |
 
-- **Live fixtures** use what the show engine actually sends each light: `preview` in its state (every LED of a strip, with the fixture's brightness applied; the par can's emitters mixed into one colour), 25 times a second via the projector's `/api/events` feed.
+- **Live fixtures** use what the show engine actually sends each light: `preview` in its state (every LED of a strip, with the fixture's brightness applied; the par can's emitters mixed into one colour), via the projector's `/api/events` feed. Showbrain includes its last four output frames (50 fps, time-stamped) with every update, so the page gets every frame even though updates arrive 25 times a second; it plays them back at their real spacing about 90 ms behind, so rain, sparkles and fills move as smoothly as on the real tubes.
+  - Tubes and LED bars are drawn as one continuous strip blended between LEDs, like the real diffuser, inside a frosted shell with a faint halo.
   - Drive levels are linear light, so they're read as linear RGB and scaled as a whole (never clipped per channel), which keeps hues exact.
   - Strobe, blinder and the drop's white hit are drawn by the page on the same beat clock, frame-exact, so they can't fall between updates.
   - **Match real lights** (saved with the layout): an LED display gain, a wash gain, and gamma (1.0 = as sent, WLED's realtime default; 2.8 if the fixture applies its own gamma). Set these by eye against the real rig.

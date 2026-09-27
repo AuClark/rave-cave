@@ -13,6 +13,7 @@ Scene flow (see docs/show-engine.md):
     python3 brain/showbrain/showbrain.py [config.json]
 """
 import bisect
+import collections
 import colorsys
 import json
 import math
@@ -159,6 +160,9 @@ class Engine:
         self.filters = {}               # mixer channel -> filter offset -1..1 (needs mixer.midi.chN_filter)
         self.midi_t = 0.0               # newest MIDI message already handled
         self.mix = {}                   # what the mixer is doing now, for the Commander
+        # The last few output frames (time, {fixture: preview}), so a viewer polling at 25 Hz still
+        # gets every 50 fps frame and can play them back at their real timing (the Stage view).
+        self.frames = collections.deque(maxlen=4)
         self.fixture_ctl = {}           # fixture name -> {"on": bool, "level": 0..1}
         # Tap clock: drives the lights when no deck is playing (looks or forced events only).
         self.tap_bpm = 128.0
@@ -878,6 +882,7 @@ def main():
             "fixture_info": {f.name: {"kind": f.kind, "leds": f.cfg.get("leds"), "reverse": bool(f.cfg.get("reverse"))} for f in fixtures},
             "fixture_ctl": engine.fixture_ctl,
             "preview": {f.name: f.preview for f in fixtures},
+            "frames": list(engine.frames),
             "fps": round(fps_meas, 1),
             "live_reason": engine.live_reason,
             "mix": engine.mix,
@@ -893,12 +898,12 @@ def main():
         else:
             idle_since = None
         streaming = idle_since is None or t0 - idle_since < 0.5
-        preview = n % 2 == 0                 # 25 Hz: the Stage view follows the lights closely
-        for f in fixtures:
+        for f in fixtures:                   # every frame's preview: the Stage view plays them all back
             if streaming or f.always:
-                f.render(ctx, fx, engine.fixture_ctl[f.name], preview)
-            elif preview:
+                f.render(ctx, fx, engine.fixture_ctl[f.name], True)
+            else:
                 f.preview = []
+        engine.frames.append((round(t0, 3), {f.name: f.preview for f in fixtures}))
         time.sleep(max(0.0, 1 / fps - (time.time() - t0)))
 
 
