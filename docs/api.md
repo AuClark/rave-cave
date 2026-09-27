@@ -14,6 +14,7 @@ Ownership: the **front end** (the page) is Richard's. The **data behind it** (th
 | `GET /api/wavedetail/N` | Detailed colour waveform for player N as binary: 150 frames/s, 4 bytes per frame (height 0-31, r, g, b). Header `X-Wave-Key` identifies the track. |
 | `GET /api/waveform/N` | Waveform preview (1200 segments) as JSON: `heights`, `colors`, `maxHeight` |
 | `GET /api/art/N` | Album art for player N (JPEG), `404` if none |
+| `GET /api/system` | Brain health, sampled every 2 s (see below). Shown in the dashboard's System panel (click the logo). |
 | `GET /` | The live page (`/srv/rave/deckdash-web/index.html`) |
 | `GET /preview/…` | The preview page and any files beside it (`/srv/rave/deckdash-preview/`) |
 
@@ -105,3 +106,24 @@ es.onmessage = e => {
   console.log(st.show?.scene, live?.track?.title, st.mixer?.share);
 };
 ```
+
+## `/api/system`
+
+Sampled every 2 s by `brain/deckdash/SystemInfo.java`. `ready: false` until the first sample.
+
+| Field | Meaning |
+|---|---|
+| `host`, `ts`, `uptime_s` | Hostname, sample time (ms epoch), uptime |
+| `cpu.temp_c`, `cpu.mhz`, `cpu.usage[]`, `cpu.load`, `cpu.cores` | Temperature, current clock, CPU % (`[total, core0, core1, …]`), `/proc/loadavg` |
+| `throttle.*` | From `vcgencmd get_throttled` (every 10 s): `under_voltage_now`, `throttled_now`, `freq_capped_now`, `soft_temp_limit_now`, each also as `…_since_boot`; `raw` bits |
+| `memory.total_mb`, `used_mb`, `available_mb`, `swap_total_mb`, `swap_used_mb` | RAM and swap |
+| `disk.total_gb`, `free_gb`, `recordings_gb`, `recordings_files` | Root filesystem, and `/srv/rave/recordings` |
+| `network.interfaces[]` | `wlan0` / `eth0`: `addresses`, `up`, `rx_kbps`, `tx_kbps` |
+| `network.wifi.signal_dbm`, `quality_pct` | Wi-Fi signal |
+| `services[]` | `deckdash`, `showbrain`, `mixer`, `projector`, `visuals`: `state`, `sub`, `pid`, `cpu_pct`, `mem_mb` (main process RSS), `restarts`, `since` |
+| `clients.ports[]` | Per page (`:8080` dashboard, `:8090` commander, `:8100` projector, `:8110` visuals): `connections`, `devices`, `addresses` (other hosts only) |
+| `clients.devices`, `clients.dashboard_streams` | Distinct devices across all pages; open `/api/events` streams |
+| `usb[]` | `{id, name}` of attached USB devices (e.g. `2b73:0013` DJM-450, `16c0:05dc` uDMX) |
+| `djlink_devices`, `deckdash_jvm.heap_used_mb`, `heap_max_mb` | DJ Link devices seen; deckdash memory |
+
+The panel flags **red** for 80 °C or more, under-voltage or throttling now, less than 1 GB free, or a service not running. It flags **amber** for 70 °C or more, throttling since boot, less than 3 GB free, more than 85% RAM, Wi-Fi weaker than -75 dBm, or any service restarts. The dot next to the logo shows the worst of these and refreshes every 10 s while the panel is closed.

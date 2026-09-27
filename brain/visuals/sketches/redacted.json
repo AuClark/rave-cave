@@ -1,0 +1,30 @@
+{
+  "title": "Redacted",
+  "about": "A classified document: black bars slide off on the beat to show glowing hidden words (MAJESTIC 12, MK ULTRA, AREA 51 ...). All revealed on the drop, blacked out in the outro. A stamp thumps down each bar.",
+  "groups": [
+    {"name": "Document", "params": [
+      {"id": "lines",  "label": "Lines on the page",     "min": 4,     "max": 40,   "step": 1,     "default": 14},
+      {"id": "margin", "label": "Margin",                "min": 0,     "max": 0.3,  "step": 0.005, "default": 0.08},
+      {"id": "scroll", "label": "Scroll (pages per 16 beats)", "min": 0, "max": 2, "step": 0.01,  "default": 0.1},
+      {"id": "dark",   "label": "Dark paper",            "min": 0,     "max": 1,    "step": 1,     "default": 0}
+    ]},
+    {"name": "Redaction", "params": [
+      {"id": "redact", "label": "Redacted words",        "min": 0,     "max": 1,    "step": 0.01,  "default": 0.3},
+      {"id": "reveal", "label": "Revealed each time",    "min": 0,     "max": 1,    "step": 0.01,  "default": 0.25},
+      {"id": "every",  "label": "Change every (beats)",  "min": 0.5,   "max": 16,   "step": 0.5,   "default": 2},
+      {"id": "drop",   "label": "Reveal all on drop",    "min": 0,     "max": 1,    "step": 0.01,  "default": 1},
+      {"id": "outro",  "label": "Black out in outro",    "min": 0,     "max": 1,    "step": 0.01,  "default": 1},
+      {"id": "glow",   "label": "Glow",                  "min": 0,     "max": 1,    "step": 0.01,  "default": 0.4}
+    ]},
+    {"name": "Stamp", "params": [
+      {"id": "stamp",  "label": "Stamp (-1 none, 0 top secret, 1 classified, 2 eyes only ...)", "min": -1, "max": 15, "step": 1, "default": 0},
+      {"id": "stampw", "label": "Stamp size",            "min": 0.1,   "max": 0.8,  "step": 0.01,  "default": 0.4},
+      {"id": "beat",   "label": "Beat punch",            "min": 0,     "max": 1,    "step": 0.01,  "default": 0.5}
+    ]},
+    {"name": "Colour", "params": [
+      {"id": "hue",    "label": "Reveal hue",            "min": 0,     "max": 1,    "step": 0.005, "default": 0.11},
+      {"id": "sat",    "label": "Saturation",            "min": 0,     "max": 1,    "step": 0.01,  "default": 0.85},
+      {"id": "follow", "label": "Follow show hue",       "min": 0,     "max": 1,    "step": 1,     "default": 0}
+    ]}
+  ]
+}

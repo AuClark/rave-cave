@@ -93,6 +93,7 @@ public class DeckDash {
         http.createContext("/preview/", DeckDash::preview);
         http.createContext("/api/state", ex -> send(ex, 200, "application/json", state().getBytes(StandardCharsets.UTF_8)));
         http.createContext("/api/events", DeckDash::events);
+        http.createContext("/api/system", ex -> send(ex, 200, "application/json", SystemInfo.json().getBytes(StandardCharsets.UTF_8)));
         http.createContext("/api/art/", DeckDash::art);
         http.createContext("/api/waveform/", DeckDash::waveform);
         http.createContext("/api/wavedetail/", DeckDash::waveDetail);
@@ -105,6 +106,7 @@ public class DeckDash {
         TempoMaster.start(http);
         http.start();
         log("dashboard on http://0.0.0.0:" + PORT + "/");
+        SystemInfo.start();
 
         ScheduledExecutorService tick = Executors.newScheduledThreadPool(2);
         // A scheduled task that throws is cancelled for good, silently, so neither may let anything escape:
