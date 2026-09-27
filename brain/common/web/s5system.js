@@ -17,7 +17,7 @@
   #sys *, #sys *::before { box-sizing: border-box; }
   .s5logo { display: flex; align-items: center; line-height: 1; } .s5logo .s5word { color: #f2f2f2; display: block; flex: none; }
   .s5logo .s5five { fill: #ff5a1f; }
-  #simpop { position: fixed; top: 72px; right: 12px; z-index: 9992; width: min(340px, calc(100vw - 24px)); display: none; padding: 20px;
+  #simpop { position: fixed; top: calc(var(--s5bar, 48px) + 8px); right: 12px; z-index: 9992; width: min(340px, calc(100vw - 24px)); display: none; padding: 20px;
     background: #2b2b2b; border: 1px solid #555; color: #f2f2f2; font: 400 13px/1.45 "Montserrat", ui-sans-serif, system-ui, sans-serif;
     box-shadow: 0 12px 40px rgba(0,0,0,.5); animation: s5in .2s ease; }
   #simpop.open { display: block; }
@@ -71,7 +71,7 @@
   #sys .acts button:disabled { opacity: .4; cursor: wait; }
   #sys a { color: var(--accent2); }`;
   const dotCss = `
-  .s5bar > .s5sim { flex: none; display: none; align-items: center; gap: 7px; height: 30px; padding: 0 11px; margin-left: auto; cursor: pointer;
+  .s5bar > .s5sim { flex: none; display: none; align-items: center; gap: 7px; height: 28px; padding: 0 10px; margin-left: auto; cursor: pointer;
     position: sticky; right: 48px; background: #242424; color: #9a9a9a; border: 1px solid #555;
     font: 600 11px/1 "Montserrat", ui-sans-serif, system-ui, sans-serif; letter-spacing: .14em; text-transform: uppercase; }
   .s5bar > .s5sim.on, .s5bar > .s5sim.offer { display: flex; }

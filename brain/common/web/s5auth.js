@@ -22,8 +22,9 @@
   const FONT = `"Montserrat", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif`;
   const barCss = `
   html { scrollbar-gutter: stable; }
+  :root { --s5bar: 48px; }   /* top bar height: things pinned under it use this */
   .s5bar { box-sizing: border-box; position: sticky; top: 0; z-index: 40; display: flex; flex-wrap: nowrap; align-items: center; gap: 20px;
-    height: 64px; min-height: 64px; max-height: 64px; margin: 0; padding: 0 24px; background: #242424; border: 0; border-bottom: 1px solid #3e3e3e;
+    height: var(--s5bar); min-height: var(--s5bar); max-height: var(--s5bar); margin: 0; padding: 0 24px; background: #242424; border: 0; border-bottom: 1px solid #3e3e3e;
     font: 500 14px/1 ${FONT}; letter-spacing: .01em; text-transform: none; backdrop-filter: none;
     overflow-x: auto; overflow-y: hidden; scrollbar-width: none; }
   .s5bar::-webkit-scrollbar { display: none; }
@@ -41,12 +42,12 @@
   .s5bar > :not(.s5home):not(nav.pages):not(.s5who) { animation: s5in .45s ease; }
   .s5bar ~ :not(.s5tabs) { animation: s5in .35s ease; }   /* no fill: nothing lingers (stacking) once faded */
   /* Viewer / admin: a lock at the right end of the bar (stays in view if the bar scrolls sideways). */
-  .s5bar > .s5who { margin-left: auto; position: sticky; right: 0; flex: none; width: 30px; height: 30px; padding: 0; display: none;
+  .s5bar > .s5who { margin-left: auto; position: sticky; right: 0; flex: none; width: 28px; height: 28px; padding: 0; display: none;
     align-items: center; justify-content: center; cursor: pointer; background: #242424; color: #9a9a9a; border: 1px solid #555; }
   html.s5-viewer .s5bar > .s5who, html.s5-admin .s5bar > .s5who { display: flex; }
   html.s5-viewer .s5bar > .s5who { color: #ff5a1f; border-color: rgba(255,90,31,.55); }
   html.s5-admin .s5bar > .s5who { color: #7ccf8a; border-color: rgba(124,207,138,.55); }
-  .s5who svg { width: 15px; height: 15px; }
+  .s5who svg { width: 14px; height: 14px; }
   /* Section tabs under a page's display (S5AUTH.sectionTabs): only the chosen section shows. */
   .s5sect { display: flex; overflow-x: auto; scrollbar-width: none; background: #1c1c1c; border-top: 1px solid #3e3e3e; }
   .s5sect::-webkit-scrollbar { display: none; }

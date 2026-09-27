@@ -103,7 +103,7 @@
   #stage { width: min(100%, calc(50vh * var(--ar, 1.7778))); margin: 0 auto; border: 0; }
   @media (max-width: 760px) { #stage { width: 100%; } }
   /* The display stays in view (just under the top bar) while the controls scroll underneath. */
-  .hero { position: sticky; top: 64px; z-index: 30; }
+  .hero { position: sticky; top: var(--s5bar, 48px); z-index: 30; }
   @media (max-width: 760px) {   /* phones: the display edge to edge, full width; a compact strip under it */
     .hero { padding: 0; }
     .herobar { padding: 6px 12px; min-height: 0; gap: 8px; }
