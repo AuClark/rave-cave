@@ -31,5 +31,6 @@ Each page defines these as CSS variables in its "design system" block.
 
 ## Top bar and phones
 
-- **One top bar on every page** (`.s5bar`, styled by `brain/common/web/s5auth.js`): 64 px, never wraps. Logo (opens System) and page links on the left, in the same place on every page; page-specific bits fade in; the **SIM / NO DECKS** pill and the **lock** (orange view only, green admin) sit at the right end.
+- **One top bar on every page** (`.s5bar`, styled by `brain/common/web/s5auth.js`): 48 px (`--s5bar`, which everything pinned under it uses), never wraps. Logo (opens System) and page links on the left, in the same place on every page; page-specific bits fade in; the **SIM / NO DECKS** pill and the **lock** (orange view only, green admin) sit at the right end.
 - **Phones (≤ 760 px):** the page links move to a bottom tab bar with icons: Lighting · Projection · **Decks** (middle) · Visuals · Stage. Pages must never be wider than the screen: tables and wide rows scroll sideways inside their panel.
+- **Display first, controls in tabs:** on Lighting, Projection, Visuals and Stage the live view (Lighting's status and fixture strips, the projection preview, the visuals preview, the 3D stage) is pinned under the top bar, with **section tabs** under it (`S5AUTH.sectionTabs`); only the chosen section of controls shows, and the page remembers it. Projection and Visuals previews fill the width on phones and keep the projector's aspect ratio.
