@@ -6,6 +6,8 @@ Ownership: the **front end** (the page) is Richard's. The **data behind it** (th
 
 ## Endpoints
 
+**Changes need admin.** Every `POST` (e.g. `/api/deck`, `/api/tempo`) returns `401 {"error":"admin PIN required"}` without the `s5_admin` cookie once a PIN is set. `GETs` stay open. Pages that include `/s5auth.js` get the PIN prompt and retry automatically. See [brain.md](brain.md#admin-pin-viewers-and-admins).
+
 | Endpoint | Returns |
 |---|---|
 | `GET /api/state` | Full snapshot (JSON), described below |
@@ -14,6 +16,7 @@ Ownership: the **front end** (the page) is Richard's. The **data behind it** (th
 | `GET /api/wavedetail/N` | Detailed colour waveform for player N as binary: 150 frames/s, 4 bytes per frame (height 0-31, r, g, b). Header `X-Wave-Key` identifies the track. |
 | `GET /api/waveform/N` | Waveform preview (1200 segments) as JSON: `heights`, `colors`, `maxHeight` |
 | `GET /api/art/N` | Album art for player N (JPEG), `404` if none |
+| `GET /api/auth` | `{"enabled", "admin"}` for this browser. `POST /api/auth {"pin"}` sets the admin cookie; `POST /api/auth/logout` clears it. Same on every service's port. |
 | `GET /api/system` | Brain health, sampled every 2 s (see below). Shown in the dashboard's System panel (click the logo). |
 | `GET /` | The live page (`/srv/rave/deckdash-web/index.html`) |
 | `GET /preview/…` | The preview page and any files beside it (`/srv/rave/deckdash-preview/`) |

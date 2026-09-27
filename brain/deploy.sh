@@ -9,6 +9,7 @@
 #   brain/deploy.sh mixer      # DJM-450 USB bridge
 #   brain/deploy.sh projector  # projection-mapping page on :8100
 #   brain/deploy.sh visuals    # generative visuals control on :8110 (needs projector deployed too)
+#   brain/deploy.sh tools      # brain/tools to ~/tools (set_pin.py: the admin PIN)
 #   brain/deploy.sh pyramid    # pyramid receiver on rave-box (restart needs sudo there)
 #   brain/deploy.sh panel      # HUB75 panel receiver on rave-box
 #
@@ -93,22 +94,23 @@ if [[ -z ${DEPLOY_LABEL:-} ]]; then
 fi
 
 if [[ $what == all || $what == deckdash ]]; then
-  rsync -a brain/deckdash/DeckDash.java brain/deckdash/Timeline.java brain/deckdash/Library.java brain/deckdash/TempoMaster.java brain/deckdash/SystemInfo.java "$BRAIN":deckdash/
-  rsync -rlt --omit-dir-times brain/deckdash/web/ "$BRAIN":/srv/rave/deckdash-web/
+  rsync -a brain/deckdash/DeckDash.java brain/deckdash/Timeline.java brain/deckdash/Library.java brain/deckdash/TempoMaster.java brain/deckdash/SystemInfo.java brain/deckdash/Auth.java "$BRAIN":deckdash/
+  rsync -rlt --omit-dir-times brain/deckdash/web/ brain/common/web/s5auth.js "$BRAIN":/srv/rave/deckdash-web/
   # Compile to classes.new and swap only on success, so a failed build leaves the running one alone.
-  ssh "$BRAIN" 'cd ~/deckdash && rm -rf classes.new && javac -cp "lib/*" -d classes.new DeckDash.java Timeline.java Library.java TempoMaster.java SystemInfo.java && rm -rf classes && mv classes.new classes && sudo systemctl restart deckdash && echo "deckdash restarted"'
+  ssh "$BRAIN" 'cd ~/deckdash && rm -rf classes.new && javac -cp "lib/*" -d classes.new DeckDash.java Timeline.java Library.java TempoMaster.java SystemInfo.java Auth.java && rm -rf classes && mv classes.new classes && sudo systemctl restart deckdash && echo "deckdash restarted"'
 fi
 
 if [[ $what == web ]]; then       # page only: no compile, no restart (the page is re-read on every request)
-  rsync -rlt --omit-dir-times brain/deckdash/web/ "$BRAIN":/srv/rave/deckdash-web/ && echo "dashboard page updated"
+  rsync -rlt --omit-dir-times brain/deckdash/web/ brain/common/web/s5auth.js "$BRAIN":/srv/rave/deckdash-web/ && echo "dashboard page updated"
 fi
 
 if [[ $what == preview ]]; then   # work-in-progress page at http://ravecave.local:8080/preview/
-  rsync -rlt --omit-dir-times brain/deckdash/web/ "$BRAIN":/srv/rave/deckdash-preview/ && echo "preview updated: http://${S5_BRAIN_HOST:-ravecave.local}:8080/preview/"
+  rsync -rlt --omit-dir-times brain/deckdash/web/ brain/common/web/s5auth.js "$BRAIN":/srv/rave/deckdash-preview/ && echo "preview updated: http://${S5_BRAIN_HOST:-ravecave.local}:8080/preview/"
 fi
 
 if [[ $what == all || $what == showbrain ]]; then
   rsync -a --exclude overrides.json --exclude __pycache__ --exclude .env brain/showbrain/ "$BRAIN":showbrain/
+  rsync -a brain/common/s5auth.py brain/common/web/s5auth.js "$BRAIN":showbrain/     # admin PIN (shared)
   [[ -f .env ]] && rsync -a .env "$BRAIN":showbrain/.env     # site config, never committed
   ssh "$BRAIN" 'sudo systemctl restart showbrain && echo "showbrain restarted"'
 fi
@@ -120,14 +122,21 @@ fi
 
 if [[ $what == all || $what == projector ]]; then
   rsync -rlt --omit-dir-times --exclude __pycache__ --exclude layouts brain/projector/ "$BRAIN":/srv/rave/projector/
+  rsync -rlt --omit-dir-times brain/common/s5auth.py "$BRAIN":/srv/rave/projector/ && rsync -rlt --omit-dir-times brain/common/web/s5auth.js "$BRAIN":/srv/rave/projector/web/
   rsync -a brain/system/projector.service "$BRAIN":/tmp/projector.service
   ssh "$BRAIN" 'sudo install -m 644 /tmp/projector.service /etc/systemd/system/ && sudo systemctl daemon-reload && sudo systemctl enable -q projector && sudo systemctl restart projector && echo "projector restarted"'
 fi
 
 if [[ $what == all || $what == visuals ]]; then
   rsync -rlt --omit-dir-times --exclude __pycache__ --exclude state brain/visuals/ "$BRAIN":/srv/rave/visuals/
+  rsync -rlt --omit-dir-times brain/common/s5auth.py "$BRAIN":/srv/rave/visuals/ && rsync -rlt --omit-dir-times brain/common/web/s5auth.js "$BRAIN":/srv/rave/visuals/web/
   rsync -a brain/system/visuals.service "$BRAIN":/tmp/visuals.service
   ssh "$BRAIN" 'sudo install -m 644 /tmp/visuals.service /etc/systemd/system/ && sudo systemctl daemon-reload && sudo systemctl enable -q visuals && sudo systemctl restart visuals && echo "visuals restarted"'
+fi
+
+if [[ $what == all || $what == tools ]]; then     # brain/tools/ (set_pin.py etc.) to ~/tools on the brain
+  ssh "$BRAIN" 'mkdir -p ~/tools'
+  rsync -a brain/tools/ brain/common/s5auth.py "$BRAIN":tools/ && echo "tools updated (set the PIN: ssh -t $BRAIN python3 ~/tools/set_pin.py)"
 fi
 
 if [[ $what == pyramid ]]; then

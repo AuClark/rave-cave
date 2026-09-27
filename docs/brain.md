@@ -111,6 +111,22 @@ Removing them: `sudo deluser --remove-home name` (and delete any `/etc/sudoers.d
 - API reference: [api.md](api.md). The API allows cross-origin requests, so the page can also be developed on a laptop against `http://ravecave.local:8080/api/...`.
 - From the repo: `brain/deploy.sh preview` (test) and `brain/deploy.sh web` (live). Live changes go through a PR to `main` first.
 
+## Admin PIN (viewers and admins)
+
+Anyone can open the pages and watch. **Changing anything needs admin**: loading or playing tracks, tempo, the Commander, projection layouts, visuals. Each service enforces this itself: a change without the admin cookie gets `401`. So hiding a button isn't what protects the rig.
+
+- **Unlocking:** enter the PIN once (any page: the VIEW ONLY badge bottom-right, or the prompt that appears when you try to change something). The browser gets a signed `s5_admin` cookie for 5 years. Cookies are per host, not per port, so one unlock covers every page on that address (`ravecave.local`, the Tailscale name and the public link each need one unlock).
+- **Locking a browser:** click the ADMIN badge.
+- **Set or change the PIN** (hidden input, stored only as a salted PBKDF2 hash in `/srv/rave/auth.json`, group `rave`, mode 640):
+  ```bash
+  brain/deploy.sh tools                                # once, copies set_pin.py to the brain
+  ssh -t pi@ravecave.local python3 ~/tools/set_pin.py
+  ```
+  Changing the PIN signs every browser out. `--sign-out` keeps the PIN and signs everyone out (lost phone); `--off` removes it. Services pick changes up immediately.
+- **Brute force:** each check takes about 0.5 s, and 8 wrong PINs in 10 minutes lock PIN entry for 10 minutes (per service). Use 6+ digits if the rig is on a public link.
+- **Until a PIN is set, auth is off** and everyone is admin, as before.
+- Code: `brain/common/s5auth.py` (Python services) and `brain/deckdash/Auth.java` (same token format, so the cookie works on every port). `brain/common/web/s5auth.js` is the shared page script. `deploy.sh` copies these into each service.
+
 ## Operations
 
 - Logs: `journalctl -u deckdash -f`, `journalctl -u showbrain -f`.

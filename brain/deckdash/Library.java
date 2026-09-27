@@ -153,6 +153,7 @@ public class Library {
 
     static void deck(HttpExchange ex) throws IOException {
         if (!"POST".equals(ex.getRequestMethod())) { DeckDash.send(ex, 405, "text/plain", "POST only".getBytes()); return; }
+        if (!Auth.require(ex)) return;
         Map<String, String> b = flatJson(new String(ex.getRequestBody().readAllBytes(), StandardCharsets.UTF_8));
         try {
             int deck = Integer.parseInt(b.getOrDefault("deck", "0"));
