@@ -27,6 +27,8 @@ The computer that reads the decks and runs the show. Code: [`brain/`](../brain/)
    ```
 5. Remove the boot jumper and power-cycle. First boot takes 2–3 minutes. Then `ssh pi@sektor5.local`.
 
+**On a Raspberry Pi 4 (microSD instead of eMMC):** skip the jumper and `rpiboot`. Put the card in a reader, write the cloud-init files with a different name so it doesn't clash with the running brain (`S5_HOSTNAME=sektor5-2 python3 brain/provision/make_cloudinit.py`), and flash the card the same way (`diskutil list external` shows its `/dev/diskN`; check the size before writing). Imager ejects the card when it's done. Boot the Pi from it and `ssh pi@sektor5-2.local`, then carry on from step 2; deploy to it with `S5_BRAIN_HOST=sektor5-2.local brain/deploy.sh …`. A card that only holds `recovery.bin` / `pieeprom.bin` is the bootloader recovery image, not an OS.
+
 ### 2. Network: Ethernet to the decks
 
 The deck switch has no router or DHCP. The decks give themselves 169.254.x.x addresses, so the brain does the same on `eth0` and never routes through it:
