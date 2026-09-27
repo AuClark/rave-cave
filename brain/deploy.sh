@@ -12,13 +12,82 @@
 #   brain/deploy.sh pyramid    # pyramid receiver on rave-box (restart needs sudo there)
 #   brain/deploy.sh panel      # HUB75 panel receiver on rave-box
 #
+# Where the code comes from (put these before the target):
+#   brain/deploy.sh ...            this checkout; must be a clean main that matches origin/main
+#   brain/deploy.sh --pr 6 ...     a clean checkout of PR #6's latest commit (workshop testing only)
+#   brain/deploy.sh live ...       a clean checkout of origin/main (back to reviewed code)
+#   brain/deploy.sh --force ...    this checkout as-is, skipping the checks (emergencies)
+#
+# Each deploy records what's running in ~/.deployed/<target> on the host:
+#   ssh pi@ravecave.local 'grep . ~/.deployed/*'
+#
 # Hosts default to their .local names; override in the repo-root .env (see .env.example).
 set -euo pipefail
 cd "$(dirname "$0")/.."
 [[ -f .env ]] && set -a && . ./.env && set +a
 BRAIN=${PI:-pi@${RAVE_BRAIN_HOST:-ravecave.local}}
 BOX=${BOX:-raver@${RAVE_BOX_HOST:-rave-box.local}}
+
+force=0 src=here
+while [[ $# -gt 0 ]]; do
+  case $1 in
+    --force) force=1; shift ;;
+    --pr) src=pr; pr=${2:?--pr needs a PR number}; shift 2 ;;
+    live) src=live; shift ;;
+    *) break ;;
+  esac
+done
 what=${1:-all}
+
+die() { echo "deploy: $*" >&2; exit 1; }
+
+# Record what's now running: one line per target in ~/.deployed/ on the host that runs it.
+mark() {
+  local host=$BRAIN targets=$what
+  [[ $what == pyramid || $what == panel ]] && host=$BOX
+  [[ $what == all ]] && targets="deckdash showbrain mixer projector"
+  local line="$1 @ $2, $(date '+%F %T') by $(git config user.name || whoami)"
+  ssh "$host" "mkdir -p ~/.deployed && for t in $targets; do echo '$line' > ~/.deployed/\$t; done"
+}
+
+# Top-level call (not the re-run inside a clean checkout below).
+if [[ -z ${DEPLOY_LABEL:-} ]]; then
+  git fetch -q origin main 2>/dev/null || echo "deploy: can't reach GitHub; checking against the last fetched origin/main" >&2
+
+  if [[ $src != here ]]; then
+    if [[ $src == pr ]]; then
+      git fetch -q origin "pull/$pr/head" || die "couldn't fetch PR #$pr"
+      ref=$(git rev-parse FETCH_HEAD) label="PR #$pr"
+    else
+      ref=$(git rev-parse origin/main) label=main
+    fi
+    sha=$(git rev-parse --short "$ref")
+    tmp=$(mktemp -d)
+    trap 'git worktree remove --force "$tmp" >/dev/null 2>&1 || true' EXIT
+    git worktree add -q --detach "$tmp" "$ref"
+    [[ -f .env ]] && cp .env "$tmp/.env"
+    echo "deploying $what from $label @ $sha"
+    # Run that commit's own deploy script; older ones don't know about markers, so mark from here.
+    DEPLOY_LABEL=$label "$tmp/brain/deploy.sh" "$what"
+    mark "$label" "$sha"
+    exit
+  fi
+
+  branch=$(git branch --show-current) sha=$(git rev-parse --short HEAD)
+  dirty=$(git status --porcelain -- brain fixtures)
+  if [[ $what == preview ]]; then     # scratch copy of the page: any branch, no checks
+    label="preview from $branch${dirty:+ +uncommitted}"
+  elif [[ $force == 0 ]]; then
+    [[ $branch == main ]] || die "on '$branch', not main. Test a PR with 'brain/deploy.sh --pr N $what', or use --force."
+    [[ -z $dirty ]] || die "uncommitted changes under brain/ or fixtures/. Commit them via a PR, or use --force."
+    [[ $(git rev-parse HEAD) == $(git rev-parse origin/main) ]] ||
+      die "local main isn't origin/main (git pull --ff-only first), or deploy it with 'brain/deploy.sh live $what'."
+    label=main
+  else
+    label="local $branch${dirty:+ +uncommitted} (forced)"
+  fi
+  trap '[[ $? == 0 ]] && mark "$label" "$sha"' EXIT
+fi
 
 if [[ $what == all || $what == deckdash ]]; then
   rsync -a brain/deckdash/DeckDash.java brain/deckdash/Timeline.java brain/deckdash/Library.java brain/deckdash/TempoMaster.java "$BRAIN":deckdash/
