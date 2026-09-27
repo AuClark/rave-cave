@@ -161,6 +161,7 @@ public class SystemInfo {
                 ? org.deepsymmetry.beatlink.DeviceFinder.getInstance().getCurrentDevices().size() : 0);
 
         j.raw("tailscale", Tailscale.json());
+        j.raw("sim", Sim.json());
 
         Runtime rt = Runtime.getRuntime();
         j.key("deckdash_jvm").obj().num("heap_used_mb", (rt.totalMemory() - rt.freeMemory()) / (1024 * 1024))

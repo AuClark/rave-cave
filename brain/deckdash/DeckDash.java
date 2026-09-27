@@ -63,21 +63,22 @@ public class DeckDash {
         http.setExecutor(Executors.newCachedThreadPool());
         http.createContext("/", DeckDash::index);
         http.createContext("/preview/", DeckDash::preview);
-        http.createContext("/api/state", ex -> send(ex, 200, "application/json", state().getBytes(StandardCharsets.UTF_8)));
-        http.createContext("/api/events", DeckDash::events);
+        Sim.proxied(http.createContext("/api/state", ex -> send(ex, 200, "application/json", state().getBytes(StandardCharsets.UTF_8))));
+        Sim.proxied(http.createContext("/api/events", DeckDash::events));
         http.createContext("/api/auth", Auth::handle);
         http.createContext("/s5auth.js", ex -> send(ex, 200, "text/javascript", Files.readAllBytes(WEB.resolve("s5auth.js"))));
         http.createContext("/s5system.js", ex -> send(ex, 200, "text/javascript", Files.readAllBytes(WEB.resolve("s5system.js"))));
         http.createContext("/api/system", ex -> send(ex, 200, "application/json", SystemInfo.json().getBytes(StandardCharsets.UTF_8)));
         http.createContext("/api/system/tailscale", Tailscale::handle);
-        http.createContext("/api/art/", DeckDash::art);
-        http.createContext("/api/waveform/", DeckDash::waveform);
-        http.createContext("/api/wavedetail/", DeckDash::waveDetail);
-        http.createContext("/api/timeline/", ex -> {
+        http.createContext("/api/sim", Sim::handle);
+        Sim.proxied(http.createContext("/api/art/", DeckDash::art));
+        Sim.proxied(http.createContext("/api/waveform/", DeckDash::waveform));
+        Sim.proxied(http.createContext("/api/wavedetail/", DeckDash::waveDetail));
+        Sim.proxied(http.createContext("/api/timeline/", ex -> {
             String t = Timeline.forPlayer(playerFrom(ex));
             if (t == null) send(ex, 404, "application/json", "{}".getBytes());
             else send(ex, 200, "application/json", t.getBytes(StandardCharsets.UTF_8));
-        });
+        }));
         Library.register(http);
         TempoMaster.start(http);
         http.start();
@@ -266,8 +267,18 @@ public class DeckDash {
     }
 
     static void send(HttpExchange ex, int code, String type, byte[] body) throws IOException {
-        // Any origin can read; the rig's own pages on other ports (same host) can also send the admin
-        // cookie, e.g. the System view's Tailscale buttons on the Lighting page.
+        cors(ex);
+        ex.getResponseHeaders().add("Content-Type", type);
+        ex.getResponseHeaders().add("Cache-Control", "no-cache");
+        ex.sendResponseHeaders(code, body.length);
+        try (OutputStream out = ex.getResponseBody()) {
+            out.write(body);
+        }
+    }
+
+    /** Any origin can read; the rig's own pages on other ports (same host) can also send the admin
+     *  cookie, e.g. the System view's Tailscale buttons on the Lighting page. */
+    static void cors(HttpExchange ex) {
         String origin = ex.getRequestHeaders().getFirst("Origin"), host = ex.getRequestHeaders().getFirst("Host");
         if (origin != null && host != null && sameHost(origin, host)) {
             ex.getResponseHeaders().add("Access-Control-Allow-Origin", origin);
@@ -275,12 +286,6 @@ public class DeckDash {
             ex.getResponseHeaders().add("Vary", "Origin");
         } else {
             ex.getResponseHeaders().add("Access-Control-Allow-Origin", "*");
-        }
-        ex.getResponseHeaders().add("Content-Type", type);
-        ex.getResponseHeaders().add("Cache-Control", "no-cache");
-        ex.sendResponseHeaders(code, body.length);
-        try (OutputStream out = ex.getResponseBody()) {
-            out.write(body);
         }
     }
 
@@ -472,6 +477,7 @@ public class DeckDash {
     static final InetSocketAddress BRAIN = new InetSocketAddress("127.0.0.1", Integer.getInteger("brainPort", 9100));
 
     static void toBrain(String json) {
+        if (Sim.on()) return;                   // fakerig sends showbrain the synthetic feed
         try {
             byte[] b = json.getBytes(StandardCharsets.UTF_8);
             brainSock.send(new DatagramPacket(b, b.length, BRAIN));

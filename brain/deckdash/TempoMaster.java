@@ -39,7 +39,7 @@ public class TempoMaster {
     }
 
     static void start(HttpServer http) {
-        http.createContext("/api/tempo", TempoMaster::handle);
+        Sim.proxied(http.createContext("/api/tempo", TempoMaster::handle));
         if (!ENABLED) return;
         VirtualCdj v = VirtualCdj.getInstance();
         try {

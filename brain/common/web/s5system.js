@@ -17,6 +17,19 @@
   #sys *, #sys *::before { box-sizing: border-box; }
   .s5logo { display: flex; align-items: center; line-height: 1; } .s5logo .s5word { color: #f2f2f2; display: block; flex: none; }
   .s5logo .s5five { fill: #ff5a1f; }
+  #simbar { position: fixed; left: 50%; bottom: 14px; transform: translateX(-50%); z-index: 9991; display: none; align-items: center; gap: 14px;
+    padding: 8px 8px 8px 16px; background: rgba(30,30,30,.96); border: 1px solid #555; color: #f2f2f2;
+    font: 500 12px/1 "Montserrat", ui-sans-serif, system-ui, sans-serif; letter-spacing: .04em; animation: s5in .35s ease; }
+  #simbar.show { display: flex; }
+  #simbar.on { border-color: #f2b84b; }
+  #simbar b { font-weight: 600; letter-spacing: .14em; text-transform: uppercase; font-size: 11px; }
+  #simbar.on b { color: #f2b84b; }
+  #simbar span { color: #9a9a9a; }
+  #simbar button { font: 600 11px/1 "Montserrat", ui-sans-serif, system-ui, sans-serif; letter-spacing: .12em; text-transform: uppercase;
+    padding: 9px 12px; cursor: pointer; background: transparent; color: #f2f2f2; border: 1px solid #555; }
+  #simbar button:hover { border-color: #ff5a1f; }
+  #simbar button.go { background: #ff5a1f; border-color: #ff5a1f; color: #111; }
+  #simbar button:disabled { opacity: .5; cursor: wait; }
   #sys.open { animation: s5in .25s ease; }
   #sys.open { display: block; }
     #sys .sys-title { animation: s5in .3s ease; font-weight: 500; font-size: 13px; letter-spacing: .16em; text-transform: uppercase; color: var(--text);
@@ -68,7 +81,7 @@
   root.innerHTML = `<style>:host { all: initial; } ${(window.S5AUTH && S5AUTH.barCss) || ""} ${css}</style>` +
     `<div id="sys" aria-hidden="true"><div class="s5bar sys-top"><div class="s5home" id="sysLogo" title="Back to the app"></div>` +
     `<span class="sys-title">System</span><span class="muted" id="sysHost"></span><span class="sp"></span><span class="muted" id="sysAge"></span></div>` +
-    `<div class="sys-grid" id="sysGrid"></div></div>`;
+    `<div class="sys-grid" id="sysGrid"></div></div><div id="simbar"></div>`;
   document.body.appendChild(hostEl);
   const sysEl = root.getElementById("sys");
   // The health dot sits beside the page's own logo (outside the shadow root).
@@ -188,6 +201,7 @@
       const d = await (await fetch(API + "/api/system", { cache: "no-store" })).json();
       if (!d.ready) return;
       sysLast = d;
+      simRender(d.sim);
       const h = sysHealth(d);
       if (dot) dot.className = "hdot " + h;
       if (dot) dot.title = h === "ok" ? "System healthy" : h === "warn" ? "System: needs a look" : "System: problem";
@@ -200,6 +214,39 @@
     sysTimer = setInterval(sysPoll, on ? 2000 : 10000);
     if (on) { if (sysLast) sysRender(sysLast); sysPoll(); }
   }
+  // Simulation mode (deckdash Sim.java): with no decks found, offer the synthetic rig; while it runs,
+  // say so on every page and offer the way back. Fixed at the bottom, so nothing on the page moves.
+  const simEl = root.getElementById("simbar");
+  function simRender(sim) {
+    if (!sim) return;
+    const dismissed = sessionStorage.getItem("s5simDismissed") === "1";
+    if (sim.on) {
+      simEl.className = "show on";
+      simEl.innerHTML = `<b>Simulation</b><span>synthetic set at ${Math.round(sim.bpm)} BPM · the lights follow it</span>` +
+        `<button data-sim="off">Back to real decks</button>`;
+    } else if (sim.available && !sim.djlink && sim.uptime_s > 20 && !dismissed) {
+      simEl.className = "show";
+      simEl.innerHTML = `<b>No decks found</b><span>run a synthetic DJ set to try the rig</span>` +
+        `<button class="go" data-sim="on">Start simulation</button><button data-sim="x" title="Hide for now">×</button>`;
+    } else {
+      simEl.className = "";
+    }
+  }
+  simEl.addEventListener("click", async e => {
+    const b = e.target.closest("button[data-sim]");
+    if (!b) return;
+    if (b.dataset.sim === "x") { sessionStorage.setItem("s5simDismissed", "1"); simEl.className = ""; return; }
+    b.disabled = true; b.textContent = b.dataset.sim === "on" ? "Starting…" : "Stopping…";
+    try {
+      const r = await fetch(API + "/api/sim", { method: "POST", credentials: "include", headers: { "Content-Type": "text/plain" },
+                                                body: JSON.stringify({ on: b.dataset.sim === "on" }) });
+      if (r.ok) { location.reload(); return; }   // pages reconnect to the new source
+      const d = await r.json().catch(() => ({}));
+      if (r.status !== 401) alert(d.error || "Couldn't switch simulation.");
+    } catch (e2) { /* brain unreachable */ }
+    sysPoll();
+  });
+
   addEventListener("keydown", e => { if (e.key === "Escape" && sysEl.classList.contains("open")) sysOpen(false); });
   window.S5SYS = { open: () => sysOpen(true), close: () => sysOpen(false) };
   sysOpen(false); sysPoll();
