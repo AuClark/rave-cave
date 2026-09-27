@@ -31,6 +31,16 @@ Add two files to `brain/visuals/sketches/`:
 
 Deploy with `brain/deploy.sh visuals` and pick it from the menu at the top of the control page. If the shader doesn't compile, the control page shows the error and the projector keeps the last working sketch.
 
+## Reaction-diffusion lab
+
+**`http://ravecave.local:8110/rd.html`** (on Android, use the IP) is a standalone test page running a real Gray-Scott reaction-diffusion simulation on the GPU, after [Karl Sims](https://www.karlsims.com/rd.html). It is not a sketch: it's there to find looks and to check what the projector's GPU can handle before simulations go into the shared renderer.
+
+- Pattern buttons set feed and kill (Coral, Mitosis, Mazes, Fingerprint, Worms, U-skate and more) and reseed. Draw with a finger or the mouse to add chemical.
+- **Pattern map**: Uniform, Karl's f/k map (every behaviour at once), or Radial (your pattern in the middle, spots at the rim).
+- Speed is in simulation steps per beat, so growth follows the tempo. **Seeds on beat** drops new growth on each beat (a burst on DROP); **Feed pulse** makes the pattern breathe with the kick. Beat comes from showbrain via `/api/events`, with a 120 BPM idle clock without it.
+- The stats show fps, simulation size, and the storage the GPU supports (float32, float16, or an 8-bit packed fallback that works everywhere). If the fps drops, lower the resolution.
+- URL options for bookmarking a look: `?preset=mazes&look=1&res=4&mode=2&speed=200&seeds=0.3&pulse=0&hud=0` (also `f=` and `k=`). **H** hides the panel.
+
 ## How it works
 
 - `visuals.py` serves the control page, the sketch (`/api/sketch`) and its values (`/api/params`). It pushes `sketch` and `params` messages to every open page over Server-Sent Events (`/api/events`), plus showbrain's state for the preview's beat clock.
