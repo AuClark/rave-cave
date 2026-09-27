@@ -31,6 +31,8 @@ import time
 import urllib.parse
 import urllib.request
 from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
+
+import s5auth
 from pathlib import Path
 
 HERE = Path(__file__).resolve().parent
@@ -204,6 +206,8 @@ class H(SimpleHTTPRequestHandler):
         return json.loads(self.rfile.read(n) or b"{}")
 
     def do_GET(self):
+        if s5auth.handle(self):
+            return
         path = self.path.split("?", 1)[0]
         if path == "/api/events":
             return self._events()
@@ -238,6 +242,8 @@ class H(SimpleHTTPRequestHandler):
 
     def do_POST(self):
         global layout, screen
+        if s5auth.handle(self) or not s5auth.guard(self, allow=("/api/screen",)):
+            return
         path = self.path.split("?", 1)[0]
         try:
             if path == "/api/layout":

@@ -29,6 +29,7 @@ from pathlib import Path
 import numpy as np
 
 from ddp import DDPOutput
+import s5auth
 from dmx import UDMX
 import looks
 
@@ -829,12 +830,18 @@ def make_handler(engine):
             self.wfile.write(body)
 
         def do_GET(self):
+            if s5auth.handle(self):
+                return
+            if self.path.split("?", 1)[0] == "/s5auth.js":
+                return self._send(200, (HERE / "s5auth.js").read_bytes(), "text/javascript")
             if self.path.startswith("/api/state"):
                 self._send(200, json.dumps(engine.state).encode())
             else:
                 self._send(200, page.read_bytes(), "text/html; charset=utf-8")
 
         def do_POST(self):
+            if s5auth.handle(self) or not s5auth.guard(self):
+                return
             n = int(self.headers.get("Content-Length", 0))
             try:
                 res = engine.command(json.loads(self.rfile.read(n) or b"{}"))

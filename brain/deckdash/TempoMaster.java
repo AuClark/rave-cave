@@ -111,6 +111,7 @@ public class TempoMaster {
             DeckDash.send(ex, 200, "application/json", json().getBytes(StandardCharsets.UTF_8));
             return;
         }
+        if (!Auth.require(ex)) return;
         Map<String, String> b = Library.flatJson(new String(ex.getRequestBody().readAllBytes(), StandardCharsets.UTF_8));
         try {
             if (!ENABLED) throw new IllegalStateException("tempo master is off (deckdash needs -Dtempo=on)");
