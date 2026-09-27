@@ -58,5 +58,15 @@
         "uv"
       ]
     }
-  ]
+  ],
+  "mixer": {
+    "channels": {
+      "1": 1,
+      "2": 2
+    },
+    "takeover_share": 0.7,
+    "takeover_s": 2.0,
+    "smoothing": 0.15,
+    "silent_db": -60
+  }
 }
