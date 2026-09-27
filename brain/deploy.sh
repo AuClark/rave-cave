@@ -115,13 +115,13 @@ if [[ $what == all || $what == mixer ]]; then
 fi
 
 if [[ $what == all || $what == projector ]]; then
-  rsync -a --exclude __pycache__ --exclude layouts brain/projector/ "$BRAIN":projector/
+  rsync -rlt --omit-dir-times --exclude __pycache__ --exclude layouts brain/projector/ "$BRAIN":/srv/rave/projector/
   rsync -a brain/system/projector.service "$BRAIN":/tmp/projector.service
   ssh "$BRAIN" 'sudo install -m 644 /tmp/projector.service /etc/systemd/system/ && sudo systemctl daemon-reload && sudo systemctl enable -q projector && sudo systemctl restart projector && echo "projector restarted"'
 fi
 
 if [[ $what == all || $what == visuals ]]; then
-  rsync -a --exclude __pycache__ --exclude state brain/visuals/ "$BRAIN":visuals/
+  rsync -rlt --omit-dir-times --exclude __pycache__ --exclude state brain/visuals/ "$BRAIN":/srv/rave/visuals/
   rsync -a brain/system/visuals.service "$BRAIN":/tmp/visuals.service
   ssh "$BRAIN" 'sudo install -m 644 /tmp/visuals.service /etc/systemd/system/ && sudo systemctl daemon-reload && sudo systemctl enable -q visuals && sudo systemctl restart visuals && echo "visuals restarted"'
 fi

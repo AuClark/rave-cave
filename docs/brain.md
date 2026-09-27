@@ -85,6 +85,8 @@ Each collaborator gets their own account on the brain, never the `pi` user (whic
 |---|---|---|
 | `pi` | Everything (owner) | |
 | `richard` | Edit the dashboard page in `/srv/rave/deckdash-web` (live) and `/srv/rave/deckdash-preview`; `sudo systemctl restart deckdash` / `status deckdash`; read logs (`systemd-journal` group) | Touch `showbrain`, the fixtures, system config, or anything else as root |
+| `chris` | Edit the projection mapping and generative visuals in `/srv/rave/projector` and `/srv/rave/visuals` (code, sketches, saved layouts and presets); `sudo systemctl restart` / `status` for `projector` and `visuals`; read logs | Touch `showbrain`, `deckdash`, the fixtures, system config, or anything else as root |
+| `ravesvc` | Runs the `projector` and `visuals` services (no login, no sudo, group `rave`), so editing their code never gives anyone root | |
 
 Shared folders are owned by `pi:rave`, group-writable and setgid, so files stay editable by the group. The narrow sudo rule lives in `/etc/sudoers.d/<user>`.
 
@@ -97,6 +99,11 @@ echo "<their ssh-ed25519 public key>" | sudo tee /home/name/.ssh/authorized_keys
 sudo chown name:name /home/name/.ssh/authorized_keys && sudo chmod 600 /home/name/.ssh/authorized_keys
 ```
 Removing them: `sudo deluser --remove-home name` (and delete any `/etc/sudoers.d/name`).
+
+**Working on projection mapping and visuals (Chris):**
+- Code lives in `/srv/rave/projector` and `/srv/rave/visuals`, and runs as `ravesvc`. Edit in place over SSH (`ssh chris@ravecave.local`), then `sudo systemctl restart visuals` (or `projector`). A new sketch in `/srv/rave/visuals/sketches/` shows up in the control page's menu after a restart.
+- Page-only changes (`web/`) just need a browser reload.
+- Anything worth keeping goes into a PR. `brain/deploy.sh projector` / `visuals` overwrites the code with what's in git (saved layouts, presets and live values are kept).
 
 **Working on the dashboard page:**
 - `http://ravecave.local:8080/` serves `/srv/rave/deckdash-web/index.html`, re-read on every request (no restart).
