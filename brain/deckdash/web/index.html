@@ -277,6 +277,34 @@ function playheadMs(p, now) {
   return pos;
 }
 
+// Smooth playhead. Positions arrive ~10x a second over Wi-Fi, each a little early or late, so
+// snapping to every one makes the waveform stutter. Instead:
+//  - time each reading by the Pi's own clock (st.now), with the Pi-to-browser offset taken from the
+//    fastest recent packet, so network delay doesn't count;
+//  - ease small errors in (a fifth per update) and snap only on real jumps (cue, loop, new track).
+const SNAP_MS = 80;
+let clockOff = null;                                  // browser ms - Pi ms, for the least-delayed packet
+function updatePosModel(st, rxNow) {
+  const off = rxNow - st.now;
+  // Minimum filter that creeps up ~1 ms/s, so it follows clock drift but ignores late packets.
+  clockOff = clockOff == null ? off : Math.min(off, clockOff + (rxNow - (updatePosModel.last || rxNow)) * 0.001);
+  updatePosModel.last = rxNow;
+  const sent = st.now + clockOff;                     // when the Pi read these positions, in browser time
+  for (const p of st.players) {
+    if (!p.position) continue;
+    const n = p.number, playing = p.status.playing, pitch = p.status.pitchPct || 0, rate = 1 + pitch / 100;
+    const target = p.position.ms + (playing ? (rxNow - sent) * rate : 0);
+    const pm = posModel[n];
+    let ms = target;
+    if (pm && playing && pm.playing) {
+      const shown = pm.ms + (rxNow - pm.rx) * (1 + pm.pitch / 100);
+      const err = target - shown;
+      if (Math.abs(err) < SNAP_MS) ms = shown + err * 0.2;
+    }
+    posModel[n] = { ms, rx: rxNow, playing, pitch };
+  }
+}
+
 // Where pos sits between two grid beats: beat number, fraction through it, and its length.
 function beatPhase(tl, pos) {
   const b = tl.beatMs;
@@ -390,8 +418,12 @@ function drawStack() {
   const g = cv.getContext("2d"), W = cv.width, LH = laneCss * dpr;
   g.clearRect(0, 0, W, cv.height);
   const winMs = view.windowSec * 1000, msPerPx = winMs / W;
-  const pos = {};
-  for (const p of players) pos[p.number] = playheadMs(p, now);
+  const pos = {}, t0q = {};
+  for (const p of players) {
+    pos[p.number] = playheadMs(p, now);
+    // Scroll in whole device pixels so every column keeps sampling the same slice of audio (no shimmer).
+    t0q[p.number] = Math.round((pos[p.number] - winMs / 2) / msPerPx) * msPerPx;
+  }
 
   if (overlay) {
     const mid = LH / 2, half = LH / 2 - 26 * dpr;
@@ -401,13 +433,13 @@ function drawStack() {
     g.globalCompositeOperation = "lighter";   // overlapping peaks add up to white
     for (const p of decks) {
       const d = details[p.number] && details[p.number].data;
-      if (d) drawDetail(g, d, pos[p.number], pos[p.number] - winMs / 2, msPerPx, W, mid, half, deckRgb(p.number));
+      if (d) drawDetail(g, d, pos[p.number], t0q[p.number], msPerPx, W, mid, half, deckRgb(p.number));
     }
     g.globalCompositeOperation = "source-over";
     decks.forEach((p, i) => {
       const tl = timelines[p.number] && timelines[p.number].data;
       const edge = decks.length === 1 ? "both" : i === 0 ? "top" : "bottom";
-      if (tl) drawGrid(g, tl, pos[p.number] - winMs / 2, winMs, msPerPx, 0, LH, dpr, deckRgb(p.number), edge, true);
+      if (tl) drawGrid(g, tl, t0q[p.number], winMs, msPerPx, 0, LH, dpr, deckRgb(p.number), edge, true);
     });
     g.fillStyle = "#fff"; g.fillRect(W / 2 - dpr, 0, 2 * dpr, LH);
     // Legend below the top ticks, phase against the master on the right.
@@ -434,7 +466,7 @@ function drawStack() {
   const MH = meterCss * dpr, HEAD = 22 * dpr;
   const laneY = i => i * LH + (i >= 1 ? MH : 0);
   players.forEach((p, li) => {
-    const y0 = laneY(li), s = p.status, t0 = pos[p.number] - winMs / 2, rgb = deckRgb(p.number);
+    const y0 = laneY(li), s = p.status, t0 = t0q[p.number], rgb = deckRgb(p.number);
     const wy = y0 + HEAD, wh = LH - HEAD - 4 * dpr, mid = wy + wh / 2;
     g.fillStyle = "#0e1019"; g.fillRect(0, y0, W, HEAD);
     g.fillStyle = rgba(rgb, 1); g.fillRect(0, y0, 4 * dpr, LH);
@@ -632,8 +664,10 @@ function drawWave(n, p) {
 function render(st) {
   lastState = st;
   const rxNow = performance.now();
-  for (const p of st.players) {
+  if (st.now) updatePosModel(st, rxNow);
+  else for (const p of st.players)
     if (p.position) posModel[p.number] = { ms: p.position.ms, rx: rxNow, playing: p.status.playing, pitch: p.status.pitchPct || 0 };
+  for (const p of st.players) {
     loadDetail(p.number, p.timelineKey);
     loadTimeline(p.number, p.timelineKey);
   }
@@ -995,12 +1029,35 @@ function renderShow(sh) {
 }
 $("#cmdLink").href = `http://${location.hostname}:8090/`;
 
+// Live updates come over SSE (/api/events). If the stream goes quiet (the server's push task can
+// stall while /api/state still answers), fall back to polling /api/state and keep retrying the stream.
+let es = null, lastMsg = 0, polling = false, pollBusy = false, lastRetry = 0;
+function setConn(cls, txt) { $("#conn").className = "pill " + cls; $("#conn").textContent = txt; }
 function connect() {
-  const es = new EventSource("/api/events");
-  es.onopen = () => { $("#conn").className = "pill live"; $("#conn").textContent = "LIVE"; };
-  es.onmessage = e => render(JSON.parse(e.data));
-  es.onerror = () => { $("#conn").className = "pill down"; $("#conn").textContent = "RECONNECTING"; };
+  if (es) es.close();
+  lastRetry = performance.now();
+  es = new EventSource("/api/events");
+  es.onopen = () => { if (!polling) setConn("live", "LIVE"); };
+  es.onmessage = e => { lastMsg = performance.now(); if (polling) { polling = false; setConn("live", "LIVE"); } render(JSON.parse(e.data)); };
+  es.onerror = () => { if (!polling) setConn("down", "RECONNECTING"); };
 }
+async function poll() {
+  if (pollBusy) return;
+  pollBusy = true;
+  try {
+    const r = await fetch("/api/state", { cache: "no-store" });
+    if (r.ok) { render(await r.json()); setConn("live", "LIVE · POLLING"); } else setConn("down", "RECONNECTING");
+  } catch (e) { setConn("down", "RECONNECTING"); }
+  pollBusy = false;
+}
+setInterval(() => {
+  const now = performance.now();
+  if (now - lastMsg > 2000) {
+    polling = true;
+    poll();
+    if (now - lastRetry > 15000) connect();     // try the stream again now and then
+  }
+}, 150);
 $("#vSide").onclick = () => { view.layout = "side"; applyView(); };
 $("#vStack").onclick = () => { view.layout = "stack"; applyView(); };
 $("#vWave").onclick = () => { view.waves = !view.waves; applyView(); };
