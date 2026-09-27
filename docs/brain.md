@@ -17,6 +17,7 @@ The computer that reads the decks and runs the show. Code: [`brain/`](../brain/)
    ```bash
    python3 brain/provision/make_cloudinit.py      # writes ~/tools/rpi/cloudinit/ (outside the repo)
    ```
+   It asks for as many Wi-Fi networks as you like (workshop, home…); the brain joins whichever is in range. `--add-wifi` adds one more to files you've already written, keeping the rest. In `.env` they're `S5_WIFI_SSID`/`S5_WIFI_PASSWORD`, `S5_WIFI2_…`, `S5_WIFI3_…`.
    This sets hostname `sektor5` (`S5_HOSTNAME` in `.env` to change it), user `pi` with your `~/.ssh/id_ed25519.pub`, no password login, Australia/Sydney, Wi-Fi, and `avahi-daemon`.
 4. Flash with Raspberry Pi Imager's command-line mode:
    ```bash
