@@ -1,0 +1,12 @@
+{
+ "tri": 1,
+ "rays": 16,
+ "raylen": 0.35,
+ "hue": 0.3,
+ "sat": 0.45,
+ "sclera": 0.8,
+ "look": 0.2,
+ "open": 0.65,
+ "fibres": 24,
+ "irings": 3
+}
