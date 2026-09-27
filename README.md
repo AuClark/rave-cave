@@ -1,10 +1,13 @@
 <p><picture><source media="(prefers-color-scheme: dark)" srcset="docs/brand/sektor5-stencil-white.svg"><img src="docs/brand/sektor5-stencil-black.svg" alt="SEKTOR5" height="40"></picture></p>
 
-# Sektor5
+A light and visuals rig driven by the DJ decks. A Raspberry Pi Compute Module 4 (the **brain**) joins the Pioneer DJ Link network and listens to the mixer over USB. It reads what each deck is playing, analyses every loaded track ahead of time to find breakdowns, builds and drops, and drives the lights and projection from one scene engine.
 
-A lighting rig driven by the DJ decks. A Raspberry Pi Compute Module 4 (the **brain**) joins the Pioneer DJ Link network, reads what each deck is playing, analyses every loaded track ahead of time to find breakdowns, builds and drops, and drives all the lights (the **fixtures**) from one scene engine.
-
-**Status (27 Sep 2026):** running end to end in the workshop. Two decks drive two LED tubes and a DMX par can. An LED pyramid is wired and taking test patterns, but isn't in the show yet.
+**Status (27 Sep 2026):** running end to end in the workshop.
+- Two XDJ-700s and a DJM-450 drive two LED tubes, a DMX par can and a mapped projector.
+- The live deck follows the mixer faders.
+- Generative visuals have 18 sketches with presets.
+- Anyone can watch the dashboard from a public link; changes need an admin PIN.
+- An LED pyramid is wired and taking test patterns, but isn't in the show yet.
 
 ## System
 
@@ -13,114 +16,114 @@ flowchart LR
   subgraph decks ["Decks"]
     d1["XDJ-700 #1"]
     d2["XDJ-700 #2"]
+    djm["DJM-450"]
   end
   sw(["Ethernet switch<br/>Pro DJ Link"])
   d1 --- sw
   d2 --- sw
 
-  subgraph brain ["brain/ · CM4 ravecave"]
+  subgraph brain ["brain/ · CM4"]
     dd["deckdash<br/>reads the decks · analyses tracks<br/>dashboard :8080"]
+    mx["mixer<br/>fader levels · set recording"]
     sb["showbrain<br/>scene engine · 50 fps<br/>Commander :8090"]
+    proj["projector<br/>projection mapping · stage :8100"]
+    vis["visuals<br/>generative sketches :8110"]
     dd -->|"beats, status,<br/>track timelines"| sb
+    mx -->|"which deck owns the mix"| sb
+    sb -->|"scene state"| proj
+    sb -->|"scene state"| vis
+    vis -->|"sketch + live params"| proj
   end
   sw --- dd
+  djm -->|"USB audio + MIDI"| mx
 
   subgraph fixtures ["fixtures/"]
-    tubes["tubes/<br/>rave-tube-1 · rave-tube-2<br/>ESP32 + WLED, 60 LEDs each"]
-    pyr["pyramid/<br/>rave-box (Pi 3 A+) → SP901E<br/>600 × WS2815"]
+    tubes["tubes/<br/>2 × ESP32 + WLED, 60 LEDs each"]
+    pyr["pyramid/<br/>Pi 3 A+ → SP901E<br/>600 × WS2815"]
     par["parcan/<br/>RGBWA+UV uplight"]
-    proj["brain/projector/<br/>projection mapping :8100"]
-    vis["brain/visuals/<br/>generative visuals :8110"]
-    panel["panel/<br/>HUB75 panels (retired)"]
+    pj["Projector<br/>(Chrome)"]
   end
   sb -->|"DDP over Wi-Fi"| tubes
   sb -->|"DDP over Wi-Fi"| pyr
   sb -->|"USB DMX (uDMX)"| par
-  sb -->|"scene state"| proj
-  vis -->|"sketch + live params"| proj
-  sb -.->|"DDP"| panel
+  proj -->|"WebGL page"| pj
 ```
-
-Every box in the diagram is a folder in this repo.
 
 ## How it works
 
-1. **Reading the decks.** `deckdash` joins the Pro DJ Link network as a virtual player using [beat-link](https://github.com/Deep-Symmetry/beat-link). It receives beat packets and each deck's status (playing, tempo master, BPM, pitch, beat position), and pulls metadata, artwork, beat grids and detailed colour waveforms from the rekordbox USB.
-2. **Reading ahead.** When a track loads, `deckdash` measures bass and energy for every bar from the waveform and labels the track: intro, groove, breakdown, build, drop, outro. A drop is where bass comes back strongly after a low-bass stretch, refined to the exact bar.
-3. **Scenes.** `showbrain` follows one live deck through GROOVE → BREAKDOWN → BUILD (holds while the DJ loops) → PRE-DROP (blackout on the last beat) → DROP. Everything is timed in beats, so tempo changes and loops are handled. Cueing the other deck doesn't steal the lights; see [docs/show-engine.md](docs/show-engine.md#which-deck-drives-the-lights).
-4. **Fixtures.** Each fixture renders its own look for the current scene. LED fixtures get frames over DDP (the protocol WLED uses) on UDP 4048; the par can gets DMX over USB. Per-fixture delays make every light hit the drop together.
+1. **Reading the decks.** `deckdash` joins Pro DJ Link as a virtual player (it shows up on the decks as *Sektor5*) using [beat-link](https://github.com/Deep-Symmetry/beat-link). It receives beats and each deck's status, and pulls metadata, artwork, beat grids and colour waveforms from the rekordbox USB.
+2. **Reading ahead.** When a track loads, `deckdash` measures bass and energy for every bar and labels the track: intro, groove, breakdown, build, drop, outro.
+3. **Following the mix.** `mixer` reads the DJM-450's post-fader levels over USB. The deck holding most of the mix drives the lights, with deck-state rules as a fallback. It also reacts to bass kills, filter and FX, and records every set to FLAC. See [docs/show-engine.md](docs/show-engine.md#which-deck-drives-the-lights).
+4. **Scenes.** `showbrain` steps through GROOVE → BREAKDOWN → BUILD → PRE-DROP → DROP, timed in beats, so tempo changes and loops are handled. Each fixture renders its own look for the scene. LED fixtures get frames over DDP on UDP 4048, and the par can gets DMX over USB. Per-fixture delays make everything hit the drop together.
+5. **Projection.** `projector` maps content onto surfaces with per-pixel homography in WebGL. One content source is the live sketch from `visuals`, which reacts to the beat, the scene and the playing track's waveform.
+6. **Tempo.** The brain can be the DJ Link tempo master: BPM reset, tempo ramps, and an automix that lines up the kicks so drops land together. See [docs/show-engine.md](docs/show-engine.md#tempo-master-bpm-reset-and-automix-tempo-ramps).
+
+## Pages
+
+All pages are served by the brain (`ravecave.local` on the rig's network). Changing anything needs the admin PIN; viewers can look but not touch ([details](docs/brain.md#admin-pin-viewers-and-admins)).
+
+| Page | Where | What it does |
+|---|---|---|
+| **Decks** (dashboard) | `:8080` | Live decks in XDJ-style waveform lanes with predicted sections and drops, plus a Serato-style track library. Click the logo for the **System** view: temperature, CPU, memory, services, clients, hardware and Tailscale. |
+| **Lighting** (Commander) | `:8090` | Performance pads (strobe, blinder, blackout, flash), latched scenes, colour lock, per-fixture mute and level, tap clock, drop control. |
+| **Projection** | `:8100/edit` | Mapping editor: surfaces, masks, content, presets. The projector itself opens `:8100/`. |
+| **Visuals** | `:8110` | Choose and reshape the live generative sketch and its presets. `:8110/rd.html` is a GPU test lab. |
+| **Stage** | `:8100/stage.html` | 3D view of the whole rig lit live from the show, with laser shows, projector brightness and a stage designer. |
+
+**Remote:** the brain is on Tailscale. The dashboard has a public, view-only link; the other pages are available to the team over the tailnet. See [docs/brain.md](docs/brain.md#remote-access-tailscale).
 
 ## Repository layout
 
 | Folder | What's in it | Docs |
 |---|---|---|
-| [`brain/`](brain/) | Everything on the CM4 | [docs/brain.md](docs/brain.md) |
-| [`brain/deckdash/`](brain/deckdash/) | Java Pro DJ Link client, track timeline analyser, dashboard | [docs/show-engine.md](docs/show-engine.md) |
-| [`brain/showbrain/`](brain/showbrain/) | Python scene engine, looks, fixture outputs, Commander, `config.json` | [docs/show-engine.md](docs/show-engine.md) |
-| [`brain/provision/`](brain/provision/) | Cloud-init generator for flashing the CM4 | [docs/brain.md](docs/brain.md#build-it-from-scratch) |
-| [`brain/system/`](brain/system/) | systemd units, udev rule, journald config | [docs/brain.md](docs/brain.md#3-packages-and-system-config) |
-| [`brain/projector/`](brain/projector/) | Projection mapping: output page and editor on :8100 | [docs/fixtures/projector.md](docs/fixtures/projector.md) |
-| [`brain/visuals/`](brain/visuals/) | Generative visuals: live-adjustable sketches, control page on :8110 | [docs/visuals.md](docs/visuals.md) |
-| [`brain/mixer/`](brain/mixer/) | DJM-450 USB bridge (post-fader levels, master, MIDI) | [docs/show-engine.md](docs/show-engine.md#which-deck-drives-the-lights) |
-| [`brain/tools/`](brain/tools/) | Receive-only Pro DJ Link decoder | |
+| [`brain/deckdash/`](brain/deckdash/) | Java Pro DJ Link client, track analyser, dashboard, system info, auth | [show-engine.md](docs/show-engine.md), [api.md](docs/api.md) |
+| [`brain/showbrain/`](brain/showbrain/) | Python scene engine, looks, fixture outputs, Commander, `config.json` | [show-engine.md](docs/show-engine.md) |
+| [`brain/mixer/`](brain/mixer/) | DJM-450 USB bridge: levels, MIDI, set recording | [show-engine.md](docs/show-engine.md#mixer-reactions-and-set-recording) |
+| [`brain/projector/`](brain/projector/) | Projection mapping and the Stage visualiser | [projector.md](docs/fixtures/projector.md), [stage.md](docs/stage.md) |
+| [`brain/visuals/`](brain/visuals/) | Generative sketches (GLSL + presets) and their control page | [visuals.md](docs/visuals.md) |
+| [`brain/common/`](brain/common/) | Shared by every service: the admin PIN (`s5auth.py`, and `web/s5auth.js` for the pages) | [brain.md](docs/brain.md#admin-pin-viewers-and-admins) |
+| [`brain/system/`](brain/system/), [`brain/provision/`](brain/provision/) | systemd units and config; cloud-init for flashing the CM4 | [brain.md](docs/brain.md#build-it-from-scratch) |
+| [`brain/tools/`](brain/tools/) | `set_pin.py`, a receive-only DJ Link decoder | |
 | [`brain/deploy.sh`](brain/deploy.sh) | Push code to the rig and restart services | |
-| [`fixtures/tubes/`](fixtures/tubes/) | Floor tube tools (WLED setup, Bluetooth probes) and enclosure CAD | [docs/fixtures/tubes.md](docs/fixtures/tubes.md), [tube-enclosure.md](docs/fixtures/tube-enclosure.md) |
-| [`fixtures/pyramid/`](fixtures/pyramid/) | WS2815 receiver and setup for rave-box | [docs/fixtures/pyramid.md](docs/fixtures/pyramid.md) |
-| [`fixtures/parcan/`](fixtures/parcan/) | Stand-alone uDMX sender | [docs/fixtures/parcan.md](docs/fixtures/parcan.md) |
-| [`fixtures/panel/`](fixtures/panel/) | HUB75 receiver, panel health test, status web UI | [docs/fixtures/panel.md](docs/fixtures/panel.md) |
-| [`docs/api.md`](docs/api.md) | Dashboard API reference (for front-end work) | |
-| [`docs/`](docs/) | All documentation, plus `history/` (original plan, first panel log) and `manuals/` | |
+| [`fixtures/`](fixtures/) | Tubes, pyramid, par can, and the retired HUB75 panels | [docs/fixtures/](docs/fixtures/) |
+| [`docs/`](docs/) | Everything else, including [brand/](docs/brand/), [design.md](docs/design.md), `history/` and `manuals/` | |
 
 ## Hardware
 
 | Part | Role |
 |---|---|
-| 2 × Pioneer XDJ-700 (fw 1.13) | Decks, linked through an unmanaged Ethernet switch. No DJM mixer is on the link, so there's no fader data. |
-| Raspberry Pi CM4 (4 GB, 32 GB eMMC, Wi-Fi), carrier board, fan | The brain. Ethernet to the decks, Wi-Fi to the fixtures. |
-| 2 × 103 cm RGB floor tubes, each with an ESP32 running WLED | `rave-tube-1`, `rave-tube-2` |
-| Raspberry Pi 3 A+, SP901E amplifier, 2 × 5 m WS2815 (12 V) | LED pyramid (`rave-box`) |
+| 2 × Pioneer XDJ-700 (fw 1.13) | Decks, linked through an unmanaged Ethernet switch |
+| Pioneer DJM-450 | Mixer, USB to the brain for fader levels and recording |
+| Raspberry Pi CM4 (4 GB, 32 GB eMMC, Wi-Fi), carrier board, fan | The brain. Ethernet to the decks, Wi-Fi to the fixtures |
+| 2 × 103 cm RGB floor tubes, each with an ESP32 running WLED | LED tubes |
 | Battery RGBWA+UV uplight, anyma uDMX | Par can, 10-channel DMX at address 1 |
-| Projector with Chrome | Projection mapping from `brain/projector` (:8100) |
-| Pioneer DJM-450 (USB to the brain) | Mixer levels: the lights follow the deck that owns the mix |
-| 4 × 32×16 HUB75 panels | Retired (faults on three panels) |
+| Projector with Chrome | Projection mapping and generative visuals |
+| Raspberry Pi 3 A+, SP901E amplifier, 2 × 5 m WS2815 (12 V) | LED pyramid (not in the show yet) |
 
-## Running it
+## Working on it
 
-- **Dashboard:** `http://ravecave.local:8080`. Live decks, artwork, and XDJ-style stacked scrolling waveforms (one lane per deck, with a phase meter) showing predicted sections and drops. It also has a Serato-style **library**: crates, search, BPM and key filters, and load to deck. See [docs/show-engine.md](docs/show-engine.md#dashboard-waveforms-and-library).
-- **Commander:** `http://ravecave.local:8090`. The lighting controller. It has performance pads (beat-synced strobe, blinder, blackout, flash), latched scenes, colour lock or cycle, half- and double-time, per-fixture mute and level, a tap clock for when no deck is playing, a live fixture view, and drop control (DROP NOW, BUILD, HOLD, skip or mark drops). See [docs/show-engine.md](docs/show-engine.md#commander-control-page-on-the-pi).
-- **Projection mapping:** `http://ravecave.local:8100/` on the projector, `http://ravecave.local:8100/edit` on your phone to set it up.
-- **Generative visuals:** `http://ravecave.local:8110/` to reshape the live sketch; set a surface's content to generative to show it.
-- **Stage:** `http://ravecave.local:8100/stage.html`. A 3D view of the stage with the whole rig lit live from the show (tubes, wash, projection), plus simulated lasers and strobe, and a designer for adding and moving fixtures. See [docs/stage.md](docs/stage.md).
-- **Deploy changes:** `brain/deploy.sh` (both brain services), or `brain/deploy.sh showbrain | deckdash | mixer | projector | visuals | web | preview | pyramid | panel`.
-- **Dashboard preview:** `http://ravecave.local:8080/preview/` for testing page changes against live data. See [docs/brain.md](docs/brain.md#access-for-collaborators).
-- **Add a fixture:** add it to [`brain/showbrain/config.json`](brain/showbrain/config.json) (`strip`, `panel` or `dmx_par`) and deploy.
-
-Both brain services start on boot. WLED fixtures fall back to their own idle effect whenever the stream stops.
-
-## Name and branding
-
-The project is **Sektor5** (formerly Rave Cave). Logo files, colours and usage are in [docs/brand/](docs/brand/). Device hostnames (`ravecave.local`, `rave-box`, `rave-tube-N`), the service account and `/srv/rave` paths still use the old name. They move to `sektor5` / `s5-box` / `s5-tube-N` in a later infrastructure rename.
-
-## Configuration and secrets
-
-Site-specific values (Wi-Fi SSID and password, host overrides) live in a git-ignored `.env` at the repo root. Copy [`.env.example`](.env.example) and fill it in. Settings are named `S5_*`; the old `RAVE_*` names still work. Scripts and the show config read it; `brain/deploy.sh` copies it to the Pi. Hosts are addressed by `.local` names by default, so no IP addresses are needed in the code.
+- **Team:** Richard owns the front end (dashboard, Stage), Chris owns projection mapping and visuals. The brain and fixtures expose everything they need through the [API](docs/api.md).
+- **Changes** go through a PR to `main`; collaborators merge their own. `main` is what's running. See [CONTRIBUTING.md](CONTRIBUTING.md).
+- **Deploy:** `brain/deploy.sh live <target>` deploys `origin/main`, one target at a time: `deckdash`, `web`, `preview`, `showbrain`, `mixer`, `projector`, `visuals`, `tools`, `pyramid`, `panel`. With no target it deploys every brain service.
+- **Try page changes** at `:8080/preview/` against live data before going live.
+- **Add a fixture:** list it in [`brain/showbrain/config.json`](brain/showbrain/config.json) (`strip`, `panel` or `dmx_par`) and deploy `showbrain`.
+- **Secrets and site settings** (Wi-Fi, host overrides) live in a git-ignored `.env`; copy [`.env.example`](.env.example). Settings are `S5_*` (old `RAVE_*` names still work). Never commit SSIDs, passwords or addresses.
 
 ## Rebuilding the rig
 
 1. **Brain:** flash and set up the CM4 → [docs/brain.md](docs/brain.md).
-2. **Decks:** connect both players and the brain's Ethernet to one switch. rekordbox-exported USB in a player.
-3. **Tubes:** move each tube's strip to an ESP32 and flash WLED → [docs/fixtures/tubes.md](docs/fixtures/tubes.md).
-4. **Par can:** plug the uDMX into the brain, set the light to 10-channel DMX at address 1 → [docs/fixtures/parcan.md](docs/fixtures/parcan.md).
-5. **Pyramid:** wire rave-box → SP901E → strips and run its setup → [docs/fixtures/pyramid.md](docs/fixtures/pyramid.md).
-6. List the fixtures in `config.json` and run `brain/deploy.sh`.
+2. **Decks:** both players and the brain's Ethernet on one switch; a rekordbox-exported USB in a player. DJM-450 USB to the brain.
+3. **Tubes:** ESP32 + WLED in each tube → [docs/fixtures/tubes.md](docs/fixtures/tubes.md).
+4. **Par can:** uDMX into the brain, light on 10-channel DMX at address 1 → [docs/fixtures/parcan.md](docs/fixtures/parcan.md).
+5. **Pyramid:** Pi 3 A+ → SP901E → strips → [docs/fixtures/pyramid.md](docs/fixtures/pyramid.md).
+6. List the fixtures in `config.json`, run `brain/deploy.sh`, then set the admin PIN (`ssh -t pi@ravecave.local 'python3 ~/tools/set_pin.py'`).
 
 ## Known limitations
 
-- **Drop detection** is waveform-based and tested on a limited number of tracks. It can be up to a bar out, and psytrance produces many candidates. rekordbox phrase analysis would give exact labels. Commander marks fix individual tracks and are logged for calibration.
-- **No fader data** without a DJM on the link, so the live deck is chosen by rules.
-- **rave-box's Wi-Fi** has dropped several times.
+- **Drop detection** is waveform-based and tested on a limited set of tracks. It can be a bar out, and psytrance gives many candidates. Commander marks fix individual tracks and are logged for calibration.
+- **The pyramid's Wi-Fi** has dropped several times.
 - **The Pi has no RTC**, so its clock is wrong until time syncs after boot.
 
 ## Next
 
-Pyramid pixel map and looks, projector visuals synced to the scenes, drop-prediction calibration, and laser and smoke outputs. Smoke will have hardware-enforced off-by-default, burst limits and arming.
+Pyramid pixel map and looks, drop-prediction calibration, and laser and smoke outputs. Smoke will have hardware-enforced off-by-default, burst limits and arming. The device hostnames, service account and `/srv/rave` paths still use the old Rave Cave name and move to `sektor5` / `s5-box` / `s5-tube-N` in a later rename; logos and colours are in [docs/brand/](docs/brand/).

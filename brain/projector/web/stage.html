@@ -851,7 +851,7 @@ $("#bReset").onclick = () => { if (confirm("Replace this layout with your curren
 $("#bExport").onclick = () => {
   const a = document.createElement("a");
   a.href = URL.createObjectURL(new Blob([JSON.stringify({ version: 1, fixtures: rig, calib }, null, 1)], { type: "application/json" }));
-  a.download = "rave-cave-stage.json"; a.click(); URL.revokeObjectURL(a.href);
+  a.download = "sektor5-stage.json"; a.click(); URL.revokeObjectURL(a.href);
 };
 $("#bImport").onclick = () => $("#file").click();
 $("#file").onchange = async e => {
