@@ -59,34 +59,6 @@ public class DeckDash {
         // Stay off the real players' numbers; metadata comes from the USB export via CrateDigger.
         vcdj.setUseStandardPlayerNumber(false);
         TempoMaster.configure(vcdj);            // -Dtempo=on: a standard number, so the Pi can be master
-        log("waiting for DJ Link devices...");
-        while (!vcdj.start()) {
-            log("no DJ Link network yet, retrying in 5 s");
-            Thread.sleep(5000);
-        }
-        log("joined as device " + vcdj.getDeviceNumber() + " on " + vcdj.getLocalAddress());
-
-        for (String name : List.of("MetadataFinder", "CrateDigger", "ArtFinder", "WaveformFinder",
-                                   "BeatGridFinder", "TimeFinder")) {
-            try {
-                switch (name) {
-                    case "MetadataFinder" -> MetadataFinder.getInstance().start();
-                    case "CrateDigger" -> CrateDigger.getInstance().start();
-                    case "ArtFinder" -> ArtFinder.getInstance().start();
-                    case "WaveformFinder" -> {
-                        WaveformFinder.getInstance().setColorPreferred(true);
-                        WaveformFinder.getInstance().setFindDetails(true);  // needed by the timeline analyser
-                        WaveformFinder.getInstance().start();
-                    }
-                    case "BeatGridFinder" -> BeatGridFinder.getInstance().start();
-                    case "TimeFinder" -> TimeFinder.getInstance().start();
-                }
-                log(name + " started");
-            } catch (Exception e) {
-                log(name + " failed to start: " + e);
-            }
-        }
-
         HttpServer http = HttpServer.create(new InetSocketAddress(PORT), 0);
         http.setExecutor(Executors.newCachedThreadPool());
         http.createContext("/", DeckDash::index);
@@ -127,6 +99,36 @@ public class DeckDash {
                 logOnce("sse push", t);
             }
         }, 0, 100, TimeUnit.MILLISECONDS);
+
+        // Join the decks last: the dashboard, API and System view are up without them (decks off,
+        // a new brain on the bench), and the players appear whenever the DJ Link network does.
+        log("waiting for DJ Link devices...");
+        while (!vcdj.start()) {
+            log("no DJ Link network yet, retrying in 5 s");
+            Thread.sleep(5000);
+        }
+        log("joined as device " + vcdj.getDeviceNumber() + " on " + vcdj.getLocalAddress());
+
+        for (String name : List.of("MetadataFinder", "CrateDigger", "ArtFinder", "WaveformFinder",
+                                   "BeatGridFinder", "TimeFinder")) {
+            try {
+                switch (name) {
+                    case "MetadataFinder" -> MetadataFinder.getInstance().start();
+                    case "CrateDigger" -> CrateDigger.getInstance().start();
+                    case "ArtFinder" -> ArtFinder.getInstance().start();
+                    case "WaveformFinder" -> {
+                        WaveformFinder.getInstance().setColorPreferred(true);
+                        WaveformFinder.getInstance().setFindDetails(true);  // needed by the timeline analyser
+                        WaveformFinder.getInstance().start();
+                    }
+                    case "BeatGridFinder" -> BeatGridFinder.getInstance().start();
+                    case "TimeFinder" -> TimeFinder.getInstance().start();
+                }
+                log(name + " started");
+            } catch (Exception e) {
+                log(name + " failed to start: " + e);
+            }
+        }
     }
 
     // ---------- HTTP ----------

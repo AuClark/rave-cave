@@ -45,16 +45,28 @@ Plug `eth0` into a free port on the deck switch. Every device connects to the sw
 
 ### 3. Packages and system config
 
+**One command does this step, the `/srv/rave` folders and accounts, the eth0 link-local setup (step 2) and the beat-link download (step 4)**, from the Mac:
+
+```bash
+brain/provision/setup_brain.sh sektor5-2.local     # or no argument for S5_BRAIN_HOST / sektor5.local
+S5_BRAIN_HOST=sektor5-2.local brain/deploy.sh      # then the code
+ssh pi@sektor5-2.local 'sudo reboot'               # eth0 switches to link-local at boot
+```
+
+It's safe to run again. What it does, by hand:
+
 ```bash
 sudo apt-get update && sudo apt-get -y full-upgrade
-sudo apt-get -y install openjdk-21-jdk-headless python3-numpy python3-usb tcpdump
+sudo apt-get -y install openjdk-21-jdk-headless python3-numpy python3-usb tcpdump alsa-utils flac avahi-utils
 ```
+
+Accounts and folders: group `rave`, system user `ravesvc` (group `rave`, no login), `pi` in `rave`, and `/srv/rave/{deckdash-web,deckdash-preview,projector,visuals,recordings}` owned `pi:rave`, mode `2775`. eth0: `/etc/netplan/60-sektor5-eth0.yaml` with `dhcp4: false`, `dhcp6: false`, `link-local: [ipv4, ipv6]`.
 
 From [`brain/system/`](../brain/system/):
 
 | File | Install to | Purpose |
 |---|---|---|
-| `deckdash.service`, `showbrain.service` | `/etc/systemd/system/` | The two services (then `sudo systemctl enable --now deckdash showbrain`) |
+| `deckdash.service`, `showbrain.service`, `mixer.service`, `projector.service`, `visuals.service` | `/etc/systemd/system/` | The services (then `sudo systemctl enable deckdash showbrain mixer projector visuals`) |
 | `50-udmx.rules` | `/etc/udev/rules.d/` | Lets the `pi` user drive the uDMX (par can) without root |
 | `journald-rave.conf` | `/etc/systemd/journald.conf.d/rave.conf` | Persistent logs, capped at 100 MB |
 | `avahi-alias-ravecave.service` | `/etc/systemd/system/` | Transition only: also answers the old name `ravecave.local` (needs `avahi-utils`). Only on the brain renamed from `ravecave`; remove it once nothing uses the old name. |
