@@ -110,6 +110,11 @@
     .herobar .hint { display: none; }
   }
 
+  /* Section tabs (under the display, pinned with it): one section of controls at a time. */
+  .hero > .s5sect { margin: 0 -24px; }
+  .panel.tabbed { display: block; max-width: 860px; margin: 0 auto; }
+  .panel.tabbed > .card, .panel.tabbed > #groups > .card { border-right: 0; }
+  @media (max-width: 760px) { .hero > .s5sect { margin: 0; } }
 </style>
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;500;600&display=swap" rel="stylesheet">
@@ -130,7 +135,7 @@
       <button id="bEdit">Handles on wall</button><button id="bTest">Test pattern</button>
     </div>
   </section>
-  <section class="panel">
+  <section class="panel tabbed">
     <div class="card">
       <h3>Surfaces</h3>
       <div class="list" id="surfaces"></div>
@@ -376,6 +381,10 @@ function frame(now) {
   requestAnimationFrame(frame);
 }
 requestAnimationFrame(frame);
+
+// Section tabs under the display (shared, /s5auth.js).
+if (window.S5AUTH && S5AUTH.sectionTabs) S5AUTH.sectionTabs({ panel: document.querySelector(".panel"), mount: document.querySelector(".hero"),
+  items: () => [...document.querySelectorAll(".panel > .card")], title: c => c.querySelector("h3").textContent.trim() });
 </script>
 </body>
 </html>

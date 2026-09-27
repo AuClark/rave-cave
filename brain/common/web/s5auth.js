@@ -47,6 +47,14 @@
   html.s5-viewer .s5bar > .s5who { color: #ff5a1f; border-color: rgba(255,90,31,.55); }
   html.s5-admin .s5bar > .s5who { color: #7ccf8a; border-color: rgba(124,207,138,.55); }
   .s5who svg { width: 15px; height: 15px; }
+  /* Section tabs under a page's display (S5AUTH.sectionTabs): only the chosen section shows. */
+  .s5sect { display: flex; overflow-x: auto; scrollbar-width: none; background: #1c1c1c; border-top: 1px solid #3e3e3e; }
+  .s5sect::-webkit-scrollbar { display: none; }
+  .s5sect button { flex: 1 0 auto; margin: 0; padding: 13px 16px; background: transparent; border: 0; border-bottom: 2px solid transparent; border-radius: 0;
+    color: #9a9a9a; cursor: pointer; white-space: nowrap; font: 600 11px/1 ${FONT}; letter-spacing: .12em; text-transform: uppercase; }
+  .s5sect button:hover { color: #f2f2f2; }
+  .s5sect button[aria-selected="true"] { color: #f2f2f2; border-bottom-color: #ff5a1f; }
+  .s5-hide { display: none !important; }
   /* Phones: the page links move to a tab bar at the bottom (Decks in the middle). */
   .s5tabs { display: none; }
   @media (max-width: 760px) {
@@ -136,6 +144,36 @@
     Projection: '<rect x="2" y="8" width="20" height="10" rx="2"/><circle cx="8" cy="13" r="3"/><path d="M14 11h5M14 14h3M6 18v2M18 18v2"/>',
     Visuals: '<path d="M2 12c2.5-6 4.5-6 6.5 0s4.5 6 7 0 4-6 6.5 0"/><path d="M2 17c2.5-3 4.5-3 6.5 0s4.5 3 7 0 4-3 6.5 0" opacity=".5"/>',
     Stage: '<path d="M3 4h18M7 4v3M17 4v3"/><path d="M7 7 4 20M7 7l4 13M17 7l-4 13M17 7l3 13" opacity=".6"/><path d="M3 20h18"/>',
+  };
+  // Section tabs: one tab per section of a page's controls, in `mount` (under the display); only the
+  // chosen section shows. Follows sections that come and go (e.g. a sketch's groups), and remembers
+  // the choice per page. Returns { select(title) }.
+  S5.sectionTabs = ({ panel, items, title, mount, first = false }) => {
+    const key = "s5sect:" + location.pathname, tabs = el("nav", { class: "s5sect", role: "tablist" });
+    if (first) mount.prepend(tabs); else mount.appendChild(tabs);
+    let current = localStorage.getItem(key), sig = "";
+    const esc = t => t.replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]);
+    function build() {
+      const list = items(), names = list.map(title);
+      if (!list.length) return;
+      if (!names.includes(current)) current = names[0];
+      const now = names.join("|") + "#" + current;
+      if (now !== sig) {
+        sig = now;
+        tabs.innerHTML = names.map(n => `<button type="button" role="tab" data-t="${esc(n)}" aria-selected="${n === current}">${esc(n)}</button>`).join("");
+      }
+      list.forEach((sec, i) => sec.classList.toggle("s5-hide", names[i] !== current));
+    }
+    tabs.addEventListener("click", e => {
+      const b = e.target.closest("button[data-t]");
+      if (!b) return;
+      api.select(b.dataset.t);
+      b.scrollIntoView({ block: "nearest", inline: "nearest", behavior: "smooth" });
+    });
+    new MutationObserver(recs => { if (recs.some(r => !tabs.contains(r.target))) build(); }).observe(panel, { childList: true, subtree: true });
+    const api = { select(t) { current = t; localStorage.setItem(key, t); build(); } };
+    build();
+    return api;
   };
   const svg = (name, extra = "") => `<svg viewBox="0 0 24 24" aria-hidden="true" ${extra}>${ICON[name]}</svg>`;
   S5.icon = svg;

@@ -109,6 +109,11 @@
 
   .panel .card .row { margin: 0 0 10px; }
   .panel #err:empty { display: none; }
+  /* Section tabs (under the display, pinned with it): one section of controls at a time. */
+  .hero > .s5sect { margin: 0 -24px; }
+  .panel.tabbed { display: block; max-width: 860px; margin: 0 auto; }
+  .panel.tabbed > .card, .panel.tabbed > #groups > .card { border-right: 0; }
+  @media (max-width: 760px) { .hero > .s5sect { margin: 0; } }
 </style>
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;500;600&display=swap" rel="stylesheet">
@@ -128,7 +133,7 @@
         (<a id="editLink" data-port="8100" data-path="/edit">mapping editor</a>, content → generative).</span>
     </div>
   </section>
-  <section class="panel">
+  <section class="panel tabbed">
     <div class="card">
       <h3>Sketch</h3>
       <select id="sketch" class="big" title="The live sketch"></select>
@@ -230,6 +235,10 @@ $("bSave").onclick = async () => {
   if (!r.ok) alert((await r.json()).error); refreshPresets();
 };
 $("bLoad").onclick = () => { const n = $("presetList").value; if (n) fetch(`/api/presets/${encodeURIComponent(n)}/load`, { method: "POST" }); };
+
+// Section tabs under the display (shared, /s5auth.js).
+if (window.S5AUTH && S5AUTH.sectionTabs) S5AUTH.sectionTabs({ panel: document.querySelector(".panel"), mount: document.querySelector(".hero"),
+  items: () => [...document.querySelectorAll(".panel > .card, .panel > #groups > .card")], title: c => (c.querySelector("h3").firstChild.textContent || "").trim() });
 </script>
 </body>
 </html>
