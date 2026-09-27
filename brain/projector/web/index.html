@@ -1,0 +1,111 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no">
+<meta name="mobile-web-app-capable" content="yes">
+<title>Rave Cave · Projector</title>
+<style>
+  html, body { margin: 0; height: 100%; background: #000; overflow: hidden; cursor: none; }
+  canvas { display: block; width: 100vw; height: 100vh; }
+  #hud { position: fixed; left: 12px; bottom: 10px; font: 14px/1.4 ui-monospace, monospace;
+         color: #8f8; background: #000a; padding: 6px 10px; border-radius: 6px; white-space: pre; }
+  #tap { position: fixed; inset: 0; display: flex; align-items: center; justify-content: center;
+         color: #fff8; font: 600 3vw system-ui, sans-serif; letter-spacing: .2em; }
+  .hidden { display: none !important; }
+</style>
+</head>
+<body>
+<canvas id="c"></canvas>
+<div id="hud" class="hidden"></div>
+<div id="tap">TAP FOR FULLSCREEN</div>
+<script>
+// Keys (or remote): T = test pattern, I = info HUD, F = fullscreen.
+// URL flags: ?test=1 starts on the test pattern, ?hud=1 shows the HUD.
+const cv = document.getElementById('c'), g = cv.getContext('2d');
+const hud = document.getElementById('hud'), tap = document.getElementById('tap');
+const q = new URLSearchParams(location.search);
+let test = q.get('test') === '1';
+if (q.get('hud') === '1') hud.classList.remove('hidden');
+
+// Live state from showbrain, beat extrapolated locally between polls.
+let st = null, stAt = 0, ok = false;
+async function poll() {
+  try {
+    const r = await fetch('/api/state', { cache: 'no-store' });
+    if (r.ok) { st = await r.json(); stAt = performance.now(); ok = true; } else ok = false;
+  } catch { ok = false; }
+  setTimeout(poll, 250);
+}
+poll();
+
+function beatNow() {
+  if (!st || !st.bpm) return performance.now() / 500;  // 120 bpm idle clock
+  return st.beat + (performance.now() - stAt) / 1000 * st.bpm / 60;
+}
+
+function resize() {
+  const d = devicePixelRatio || 1;
+  cv.width = innerWidth * d; cv.height = innerHeight * d;
+}
+addEventListener('resize', resize); resize();
+
+function fullscreen() {
+  document.documentElement.requestFullscreen?.().catch(() => {});
+  tap.classList.add('hidden');
+}
+addEventListener('click', fullscreen);
+addEventListener('keydown', e => {
+  const k = e.key.toLowerCase();
+  if (k === 't') test = !test;
+  else if (k === 'i') hud.classList.toggle('hidden');
+  else if (k === 'f' || k === 'enter') fullscreen();
+});
+document.addEventListener('fullscreenchange', () =>
+  tap.classList.toggle('hidden', !!document.fullscreenElement || tap.dataset.done === '1'));
+setTimeout(() => { tap.dataset.done = '1'; tap.classList.add('hidden'); }, 8000);
+
+// Alignment card: grid, centre cross, corner markers, circle (checks aspect/keystone).
+function drawTest(w, h) {
+  g.fillStyle = '#000'; g.fillRect(0, 0, w, h);
+  const step = Math.min(w, h) / 10;
+  g.strokeStyle = '#333'; g.lineWidth = 1;
+  for (let x = 0; x <= w; x += step) { g.beginPath(); g.moveTo(x, 0); g.lineTo(x, h); g.stroke(); }
+  for (let y = 0; y <= h; y += step) { g.beginPath(); g.moveTo(0, y); g.lineTo(w, y); g.stroke(); }
+  g.strokeStyle = '#fff'; g.lineWidth = 3; g.strokeRect(1.5, 1.5, w - 3, h - 3);
+  g.beginPath(); g.moveTo(w / 2, 0); g.lineTo(w / 2, h); g.moveTo(0, h / 2); g.lineTo(w, h / 2); g.stroke();
+  g.beginPath(); g.arc(w / 2, h / 2, Math.min(w, h) * 0.4, 0, Math.PI * 2); g.stroke();
+  const m = step * 0.8, cols = ['#f00', '#0f0', '#00f', '#ff0'];
+  [[0, 0], [w - m, 0], [0, h - m], [w - m, h - m]].forEach(([x, y], i) => {
+    g.fillStyle = cols[i]; g.fillRect(x, y, m, m);
+  });
+  g.fillStyle = '#fff'; g.font = `600 ${step * 0.5}px system-ui`; g.textAlign = 'center';
+  g.fillText(`RAVE CAVE  ${w}×${h}`, w / 2, h / 2 - step * 0.3);
+}
+
+// Placeholder visual until the mapping lands: beat pulse in the show's hue.
+function drawShow(w, h, b) {
+  const frac = b - Math.floor(b), hue = st ? st.hue * 360 : 280;
+  const pulse = Math.pow(1 - frac, 3) * (st ? st.intensity ?? 0.8 : 0.4);
+  g.fillStyle = '#000'; g.fillRect(0, 0, w, h);
+  const r = Math.min(w, h) * (0.15 + 0.3 * pulse);
+  const grd = g.createRadialGradient(w / 2, h / 2, 0, w / 2, h / 2, r * 1.6);
+  grd.addColorStop(0, `hsla(${hue},100%,60%,${0.3 + 0.7 * pulse})`);
+  grd.addColorStop(1, 'hsla(0,0%,0%,0)');
+  g.fillStyle = grd; g.fillRect(0, 0, w, h);
+}
+
+function frame() {
+  const w = cv.width, h = cv.height, b = beatNow();
+  test ? drawTest(w, h) : drawShow(w, h, b);
+  if (!hud.classList.contains('hidden')) {
+    hud.textContent = ok && st
+      ? `${st.scene}  ${st.bpm?.toFixed(1)} bpm  bar ${st.bar}  ${st.section ?? ''}\n${st.title ?? ''}`
+      : 'showbrain: no data';
+  }
+  requestAnimationFrame(frame);
+}
+requestAnimationFrame(frame);
+</script>
+</body>
+</html>

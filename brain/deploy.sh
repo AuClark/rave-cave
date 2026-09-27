@@ -1,12 +1,13 @@
 #!/usr/bin/env bash
 # Push code from this repo to the rig and restart what changed.
 #
-#   brain/deploy.sh            # deckdash + showbrain on the brain (CM4)
+#   brain/deploy.sh            # deckdash + showbrain + projector on the brain (CM4)
 #   brain/deploy.sh deckdash   # just one service
 #   brain/deploy.sh web        # dashboard page only (no restart)
 #   brain/deploy.sh preview    # page to /preview/ for testing
 #   brain/deploy.sh showbrain
 #   brain/deploy.sh mixer      # DJM-450 USB bridge
+#   brain/deploy.sh projector  # projection-mapping page on :8100
 #   brain/deploy.sh pyramid    # pyramid receiver on rave-box (restart needs sudo there)
 #   brain/deploy.sh panel      # HUB75 panel receiver on rave-box
 #
@@ -41,6 +42,12 @@ fi
 if [[ $what == all || $what == mixer ]]; then
   rsync -a brain/mixer/ "$BRAIN":mixer/
   ssh "$BRAIN" 'sudo systemctl restart mixer 2>/dev/null && echo "mixer restarted" || echo "mixer service not installed (see docs/brain.md)"'
+fi
+
+if [[ $what == all || $what == projector ]]; then
+  rsync -a --exclude __pycache__ --exclude layouts brain/projector/ "$BRAIN":projector/
+  rsync -a brain/system/projector.service "$BRAIN":/tmp/projector.service
+  ssh "$BRAIN" 'sudo install -m 644 /tmp/projector.service /etc/systemd/system/ && sudo systemctl daemon-reload && sudo systemctl enable -q projector && sudo systemctl restart projector && echo "projector restarted"'
 fi
 
 if [[ $what == pyramid ]]; then
