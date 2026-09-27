@@ -79,7 +79,7 @@
   .s5bar > .s5sim i { width: 7px; height: 7px; border-radius: 50%; background: currentColor; }
   .s5bar > .s5sim.on i { animation: s5pulse 1.2s ease-in-out infinite; }
   .s5bar > .s5sim.on + .s5who, .s5bar > .s5sim.offer + .s5who { margin-left: 0; }
-  html.s5-sim #conn { display: none !important; }   /* the page's LIVE pill: it's the simulator, not the decks */
+  html.s5-sim .s5bar #conn, html.s5-sim .herobar #conn { display: none !important; }   /* the page's LIVE pill: it's the simulator, not the decks */
   @keyframes s5pulse { 50% { opacity: .35; } }
   .s5home .hdot { position: absolute; left: 88px; top: 50%; width: 7px; height: 7px; margin-top: -3.5px; border-radius: 50%; background: #555;
     opacity: 0; transition: opacity .4s, background .4s; }

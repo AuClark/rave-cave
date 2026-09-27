@@ -41,12 +41,12 @@
   .s5bar > :not(.s5home):not(nav.pages):not(.s5who) { animation: s5in .45s ease; }
   .s5bar ~ :not(.s5tabs) { animation: s5in .35s ease; }   /* no fill: nothing lingers (stacking) once faded */
   /* Viewer / admin: a lock at the right end of the bar (stays in view if the bar scrolls sideways). */
-  .s5bar > .s5who { margin-left: auto; position: sticky; right: 0; flex: none; width: 38px; height: 38px; padding: 0; display: none;
+  .s5bar > .s5who { margin-left: auto; position: sticky; right: 0; flex: none; width: 30px; height: 30px; padding: 0; display: none;
     align-items: center; justify-content: center; cursor: pointer; background: #242424; color: #9a9a9a; border: 1px solid #555; }
   html.s5-viewer .s5bar > .s5who, html.s5-admin .s5bar > .s5who { display: flex; }
   html.s5-viewer .s5bar > .s5who { color: #ff5a1f; border-color: rgba(255,90,31,.55); }
   html.s5-admin .s5bar > .s5who { color: #7ccf8a; border-color: rgba(124,207,138,.55); }
-  .s5who svg { width: 18px; height: 18px; }
+  .s5who svg { width: 15px; height: 15px; }
   /* Phones: the page links move to a tab bar at the bottom (Decks in the middle). */
   .s5tabs { display: none; }
   @media (max-width: 760px) {
