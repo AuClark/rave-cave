@@ -47,6 +47,7 @@ class Decks:
         self.status = {}        # player -> dict (+ "_rx" local receive time)
         self.master = 0
         self.beats = {}         # player -> (rx_time, bwb, bpm)
+        self.mixer = None       # latest DJM message from brain/mixer (+ "_rx")
         self.timelines = {}     # ref -> timeline dict
         self.fetching = set()
         threading.Thread(target=self._listen, daemon=True).start()
@@ -74,6 +75,9 @@ class Decks:
                             del self.status[n]
                 elif msg["t"] == "beat":
                     self.beats[msg["player"]] = (now, msg["bwb"], msg["bpm"])
+                elif msg["t"] == "mixer":
+                    msg["_rx"] = now
+                    self.mixer = msg
 
     def _fetch(self, player, ref):
         for _ in range(30):
@@ -95,6 +99,13 @@ class Decks:
     def snapshot(self):
         with self.lock:
             return dict(self.status), self.master, dict(self.beats), self.timelines
+
+    def mixer_state(self):
+        with self.lock:
+            m = self.mixer
+        if not m or not m.get("connected") or time.time() - m["_rx"] > 1.0:
+            return None
+        return m
 
 
 # ---------------------------------------------------------------- helpers
@@ -156,6 +167,9 @@ class Engine:
         self.last_live = None
         self.frozen_progress = 0.0
         self.playing_since = {}         # player -> time it started playing (for hand-over)
+        self.share_smooth = {}          # player -> smoothed share of the mix (from the DJM)
+        self.dominant_since = {}        # player -> time its share went above the take-over threshold
+        self.live_reason = ""
         self.outro_since = None
         self.last_beat_seen = {}        # player -> rx time of the last beat packet we measured
         self.phase_err = []             # recent (model - packet) errors in ms, for the diagnostic
@@ -198,6 +212,44 @@ class Engine:
         sec = next((s for s in tl["sections"] if s["startBeat"] <= beat <= s["endBeat"] + 0.999), None)
         return (sec["type"] if sec else None), beat
 
+    def mixer_pick(self, status, t):
+        """Live deck from the DJM's post-fader levels. Returns a player, None (nothing audible),
+        or False (no mixer data: fall back to the deck-state rules)."""
+        m = self.decks.mixer_state()
+        if m is None:
+            return False
+        cfg = CONFIG.get("mixer", {})
+        chmap = {int(k): v for k, v in cfg.get("channels", {"1": 1, "2": 2}).items()}   # mixer ch -> player
+        take, hold_s, alpha = cfg.get("takeover_share", 0.7), cfg.get("takeover_s", 2.0), cfg.get("smoothing", 0.15)
+        silent = cfg.get("silent_db", -60.0)
+        shares = {}
+        for ch, player in chmap.items():
+            raw = m.get("share", {}).get(f"ch{ch}", 0.0)
+            if m.get("channels", {}).get(f"ch{ch}", {}).get("rms_db", -200) < silent:
+                raw = 0.0
+            prev = self.share_smooth.get(player, raw)
+            shares[player] = prev + alpha * (raw - prev)
+        self.share_smooth = shares
+        if all(v < 0.05 for v in shares.values()):
+            self.live_reason = "mixer: nothing audible"
+            return self.last_live if self.last_live in status else None
+        for player, v in shares.items():
+            if v >= take:
+                self.dominant_since.setdefault(player, t)
+            else:
+                self.dominant_since.pop(player, None)
+        cur = self.last_live
+        for player, since in self.dominant_since.items():
+            if player != cur and player in status and t - since >= hold_s:
+                self.live_reason = f"mixer: deck {player} holds {shares[player]:.0%} of the mix"
+                return player
+        if cur in shares and cur in status:
+            self.live_reason = f"mixer: staying on deck {cur} ({shares[cur]:.0%})"
+            return cur
+        best = max(shares, key=shares.get)
+        self.live_reason = f"mixer: deck {best} loudest"
+        return best if best in status else None
+
     def live_deck(self, status, master, timelines=None, t=None):
         """Which deck the lights follow. Sticky: cueing or previewing another deck never steals it.
 
@@ -208,9 +260,14 @@ class Engine:
         timelines = timelines or {}
         t = t or time.time()
         if self.follow and self.follow in status:
+            self.live_reason = "locked in Commander"
             return self.follow
+        pick = self.mixer_pick(status, t)
+        if pick is not False:
+            return pick
         playing = {n: p for n, p in status.items() if p.get("playing")}
         on_air = [n for n, p in playing.items() if p.get("onAir")]
+        self.live_reason = "deck state (no mixer data)"
         if on_air:                                   # real fader data wins when we have it
             cur = self.last_live if self.last_live in on_air else on_air[0]
             return cur
@@ -720,6 +777,8 @@ def main():
             "fixture_ctl": engine.fixture_ctl,
             "preview": {f.name: f.preview for f in fixtures},
             "fps": round(fps_meas, 1),
+            "live_reason": engine.live_reason,
+            "mixer_share": {str(k): round(v, 3) for k, v in engine.share_smooth.items()},
             "dmx": {k: d.status for k, d in UDMX_DEVICES.items()}}
         if ctx["scene"] != last_scene:
             extra = f" ({ctx['beats_to_drop']:.1f} beats to drop)" if ctx.get("beats_to_drop") else ""

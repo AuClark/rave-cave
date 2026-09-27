@@ -85,13 +85,11 @@ Per-track overrides from the Commander ("mark drop here", "not a drop") are save
 
 ## Which deck drives the lights
 
-No mixer is on the link, so there's no fader data. The live deck is chosen by rules (`Engine.live_deck`):
-1. A deck locked in the Commander ("follow deck 1 / 2").
-2. Mixer on-air flags, if a Pioneer DJM ever joins the link. This is the closest thing to "fader up".
-3. Otherwise, **sticky**: stay on the current deck while it plays. Cueing, previewing or beatmatching the other deck doesn't move the lights, even when tempo master moves.
-4. Hand over when the current deck stops or ends, when it has been in its outro for 16 s while the other has played for 30 s, or when the incoming deck hits a predicted drop while the outgoing one is in its outro.
+Rules in priority order (`Engine.live_deck`, reason shown as `show.live_reason` in the API):
 
-An earlier version followed the tempo master. That jumped to a newly cued deck, so it was replaced.
+1. **Locked** in the Commander ("follow deck 1 / 2").
+2. **Mixer** (DJM-450 over USB, via `brain/mixer`): each channel's **post-fader** level gives its share of the mix. A deck takes over when its (smoothed) share stays at or above **70% for 2 s**, i.e. the DJ has brought its fader up and the other down. During a blend neither dominates, so the lights stay put. A deck cued in headphones with its fader down has ~0% share and can't take over. Settings: `mixer` in `config.json` (`channels` maps mixer channel → player, `takeover_share`, `takeover_s`, `smoothing`, `silent_db`).
+3. **Deck state** (no mixer connected): mixer on-air flags if a DJ Link mixer is present; otherwise sticky: stay on the current deck while it plays, hand over when it stops/ends, when it has been in its outro 16 s while the other has played 30 s, or when the incoming deck hits a predicted drop while the outgoing one is in its outro.
 
 ## Scene flow (state machine)
 

@@ -1,0 +1,69 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no">
+<meta name="mobile-web-app-capable" content="yes">
+<title>Rave Cave · Projector</title>
+<style>
+  html, body { margin: 0; height: 100%; background: #000; overflow: hidden; cursor: none; }
+  canvas { position: fixed; inset: 0; width: 100vw; height: 100vh; display: block; }
+  #hud { position: fixed; left: 12px; bottom: 10px; font: 14px/1.4 ui-monospace, monospace; z-index: 3;
+         color: #8f8; background: #000a; padding: 6px 10px; border-radius: 6px; white-space: pre; }
+  #tap { position: fixed; inset: 0; display: flex; align-items: center; justify-content: center; z-index: 4;
+         color: #fff8; font: 600 3vw system-ui, sans-serif; letter-spacing: .2em; text-align: center; }
+  .hidden { display: none !important; }
+</style>
+</head>
+<body>
+<canvas id="gl"></canvas>
+<canvas id="ov"></canvas>
+<div id="hud" class="hidden"></div>
+<div id="tap">TAP FOR FULLSCREEN<br><span style="font-size:1.4vw">set up from a phone: /edit</span></div>
+<script src="render.js"></script>
+<script>
+// Projector output. Keys (or remote): T = test pattern, I = info HUD, F / Enter = fullscreen.
+// URL flags: ?test=1 forces the test pattern, ?hud=1 shows the HUD.
+const q = new URLSearchParams(location.search);
+const hud = document.getElementById("hud"), tap = document.getElementById("tap");
+if (q.get("hud") === "1") hud.classList.remove("hidden");
+let localTest = q.get("test") === "1", online = false;
+
+const R = new MapRenderer(document.getElementById("gl"), document.getElementById("ov"));
+connectEvents(R, { onStatus: ok => (online = ok) });
+connectVisuals(R);   // generative sketch + live params for "gen" surfaces
+
+function resize() {
+  const d = devicePixelRatio || 1, w = Math.round(innerWidth * d), h = Math.round(innerHeight * d);
+  R.resize(w, h);
+  fetch("/api/screen", { method: "POST", body: JSON.stringify({ w, h }) }).catch(() => {});
+}
+addEventListener("resize", resize); resize();
+
+function fullscreen() {
+  document.documentElement.requestFullscreen?.().catch(() => {});
+  tap.classList.add("hidden");
+}
+addEventListener("click", fullscreen);
+addEventListener("keydown", e => {
+  const k = e.key.toLowerCase();
+  if (k === "t") localTest = !localTest;
+  else if (k === "i") hud.classList.toggle("hidden");
+  else if (k === "f" || k === "enter") fullscreen();
+});
+setTimeout(() => tap.classList.add("hidden"), 8000);
+
+function frame(now) {
+  R.draw(now, { test: localTest });
+  if (!hud.classList.contains("hidden")) {
+    const s = R.clock.s, L = R.layout;
+    hud.textContent = (online ? "" : "NO CONNECTION TO BRAIN\n")
+      + (s ? `${s.scene}  ${s.bpm?.toFixed(1)} bpm  deck ${s.live}  bar ${s.bar}  ${s.section ?? ""}\n${s.title ?? ""}\n` : "show engine: no data\n")
+      + (L ? `${L.surfaces.length} surfaces, ${L.masks.length} masks, lead ${L.lead_ms} ms  ${R.cv.width}×${R.cv.height}` : "");
+  }
+  requestAnimationFrame(frame);
+}
+requestAnimationFrame(frame);
+</script>
+</body>
+</html>

@@ -5,7 +5,7 @@ The computer that reads the decks and runs the show. Code: [`brain/`](../brain/)
 - **Hardware:** Raspberry Pi Compute Module 4 (4 GB RAM, 32 GB eMMC, Wi-Fi) on a carrier board, with heatsink and fan. Powered from a solid USB-C supply; a bad cable caused brownouts. The fan runs flat out from 5 V: at full load the CPU stays under 40 °C.
 - **OS:** Raspberry Pi OS Lite 64-bit (Debian 13), user `pi`, SSH key login only.
 - **Network:** Ethernet to the deck switch (link-local only, never the default route), Wi-Fi to the fixtures and the rest of the network.
-- **Services:** `deckdash` (dashboard :8080) and `showbrain` (Commander :8090). Both start on boot and restart on failure.
+- **Services:** `deckdash` (dashboard :8080), `showbrain` (Commander :8090), `mixer` (DJM-450 USB bridge) `projector` (projection mapping :8100, opened in Chrome on the projector) and `visuals` (generative visuals control :8110, see [visuals.md](visuals.md)). All start on boot and restart on failure.
 
 ## Build it from scratch
 
@@ -99,7 +99,7 @@ Removing them: `sudo deluser --remove-home name` (and delete any `/etc/sudoers.d
 **Working on the dashboard page:**
 - `http://ravecave.local:8080/` serves `/srv/rave/deckdash-web/index.html`, re-read on every request (no restart).
 - `http://ravecave.local:8080/preview/` serves `/srv/rave/deckdash-preview/`, a work-in-progress copy with the same live data. Break it freely.
-- The API allows cross-origin requests, so the page can also be developed on a laptop against `http://ravecave.local:8080/api/...`.
+- API reference: [api.md](api.md). The API allows cross-origin requests, so the page can also be developed on a laptop against `http://ravecave.local:8080/api/...`.
 - From the repo: `brain/deploy.sh preview` (test) and `brain/deploy.sh web` (live). Live changes go through a PR to `main` first.
 
 ## Operations
