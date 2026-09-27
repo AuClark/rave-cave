@@ -32,6 +32,7 @@ Everything is beat-locked: speeds are in cycles per beat, and **Beat punch** set
 | `seed` | Neon branching trees over glowing flower dots (after Vincent Houze's Seed video). Trees, levels, branch angle and shrink, sway, grows a level at a time through the section; width, glow, blossoms, ground flowers, colour from trunk to tips. |
 | `orb` | A black glass orb with a pearl circling inside on vintage paper (after Whiskas fx's Harmonisch Serie video). Size, wobble, pearl size, orbit, gloss; paper, mirror into four or tile, RGB split on the kick, pearl tint. |
 | `pipes` | White square pipes in a grey tiled room (after Graphset's Echoes Reality video). Cells, pipe width, density, round to square corners, one or two drifting layers, re-roll every few bars, shadows, room tiles, tint. |
+| `wavelength` | Lines made of waves. Mode 0 ridgeline (stacked waveforms, each hiding the ones behind, like Unknown Pleasures), 1 flowing sine lines, 2 an oscilloscope trace with harmonics. Lines, amplitude, frequency, detail, ridge width, speed in cycles per beat, phase per line, width, glow, colour or a rainbow in the colours of visible light. Presets: unknown-pleasures, ridge-spectrum, ridge-gold, spectrum, moire, scope, scope-rgb. |
 
 Low sides with no roundness, zero wave frequency and some twist gives the stacked, rotating-polygon spirograph look. High frequency with small amplitude gives rippling contour lines. In `field`, turning up Links with some Wander gives a drifting net; Wave with no Wander gives a clean grid of dots swelling in bands.
 

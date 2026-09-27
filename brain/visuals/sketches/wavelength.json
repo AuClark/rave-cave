@@ -1,0 +1,27 @@
+{
+  "title": "Wavelength",
+  "about": "Lines made of waves: 0 ridgeline (stacked waveforms hiding the ones behind, Unknown Pleasures), 1 flowing sine lines in the colours of visible light, 2 an oscilloscope trace. Beat-locked, swelling on the kick.",
+  "groups": [
+    {"name": "Waves", "params": [
+      {"id": "mode",      "label": "Mode (0 ridgeline, 1 spectrum lines, 2 scope)", "min": 0, "max": 2, "step": 1, "default": 0},
+      {"id": "lines",     "label": "Lines (scope: traces, up to 4)", "min": 1, "max": 80, "step": 1, "default": 40},
+      {"id": "amp",       "label": "Amplitude", "min": 0, "max": 0.4, "step": 0.005, "default": 0.1},
+      {"id": "freq",      "label": "Frequency", "min": 1, "max": 40, "step": 0.5, "default": 22},
+      {"id": "detail",    "label": "Detail (harmonics)", "min": 0, "max": 1, "step": 0.01, "default": 0.8},
+      {"id": "spread",    "label": "Ridge width", "min": 0.05, "max": 1, "step": 0.01, "default": 0.14}
+    ]},
+    {"name": "Motion", "params": [
+      {"id": "speed",     "label": "Speed (cycles/beat)", "min": -2, "max": 2, "step": 0.01, "default": 0.25},
+      {"id": "phase",     "label": "Phase per line", "min": 0, "max": 3.2, "step": 0.01, "default": 0.3},
+      {"id": "beat",      "label": "Beat punch", "min": 0, "max": 1, "step": 0.01, "default": 0.5}
+    ]},
+    {"name": "Look", "params": [
+      {"id": "width",     "label": "Line width", "min": 0.0005, "max": 0.01, "step": 0.0005, "default": 0.0015},
+      {"id": "glow",      "label": "Glow", "min": 0, "max": 1, "step": 0.01, "default": 0.3},
+      {"id": "spectrum",  "label": "Rainbow (light spectrum)", "min": 0, "max": 1, "step": 1, "default": 0},
+      {"id": "hue",       "label": "Hue", "min": 0, "max": 1, "step": 0.005, "default": 0},
+      {"id": "sat",       "label": "Saturation (0 = white)", "min": 0, "max": 1, "step": 0.01, "default": 0},
+      {"id": "follow",    "label": "Follow show hue", "min": 0, "max": 1, "step": 1, "default": 0}
+    ]}
+  ]
+}
