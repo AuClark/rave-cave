@@ -826,6 +826,7 @@ def make_handler(engine):
             self.send_response(code)
             self.send_header("Content-Type", ctype)
             self.send_header("Cache-Control", "no-cache")
+            self.send_header("Access-Control-Allow-Origin", "*")   # other pages read the state (e.g. simulation audio)
             self.end_headers()
             self.wfile.write(body)
 
