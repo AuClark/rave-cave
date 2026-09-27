@@ -28,12 +28,14 @@ flowchart LR
     pyr["pyramid/<br/>rave-box (Pi 3 A+) → SP901E<br/>600 × WS2815"]
     par["parcan/<br/>RGBWA+UV uplight"]
     proj["brain/projector/<br/>projection mapping :8100"]
+    vis["brain/visuals/<br/>generative visuals :8110"]
     panel["panel/<br/>HUB75 panels (retired)"]
   end
   sb -->|"DDP over Wi-Fi"| tubes
   sb -->|"DDP over Wi-Fi"| pyr
   sb -->|"USB DMX (uDMX)"| par
   sb -->|"scene state"| proj
+  vis -->|"sketch + live params"| proj
   sb -.->|"DDP"| panel
 ```
 
@@ -56,6 +58,7 @@ Every box in the diagram is a folder in this repo.
 | [`brain/provision/`](brain/provision/) | Cloud-init generator for flashing the CM4 | [docs/brain.md](docs/brain.md#build-it-from-scratch) |
 | [`brain/system/`](brain/system/) | systemd units, udev rule, journald config | [docs/brain.md](docs/brain.md#3-packages-and-system-config) |
 | [`brain/projector/`](brain/projector/) | Projection mapping: output page and editor on :8100 | [docs/fixtures/projector.md](docs/fixtures/projector.md) |
+| [`brain/visuals/`](brain/visuals/) | Generative visuals: live-adjustable sketches, control page on :8110 | [docs/visuals.md](docs/visuals.md) |
 | [`brain/mixer/`](brain/mixer/) | DJM-450 USB bridge (post-fader levels, master, MIDI) | [docs/show-engine.md](docs/show-engine.md#which-deck-drives-the-lights) |
 | [`brain/tools/`](brain/tools/) | Receive-only Pro DJ Link decoder | |
 | [`brain/deploy.sh`](brain/deploy.sh) | Push code to the rig and restart services | |
@@ -84,7 +87,8 @@ Every box in the diagram is a folder in this repo.
 - **Dashboard:** `http://ravecave.local:8080`. Live decks, artwork, waveforms with predicted sections and drops, and a stacked scrolling two-deck view.
 - **Commander:** `http://ravecave.local:8090`. DROP NOW, BUILD, HOLD, STROBE, BLACKOUT, skip or mark drops (saved per track), follow deck, intensity, latency.
 - **Projection mapping:** `http://ravecave.local:8100/` on the projector, `http://ravecave.local:8100/edit` on your phone to set it up.
-- **Deploy changes:** `brain/deploy.sh` (both brain services), or `brain/deploy.sh showbrain | deckdash | mixer | projector | web | preview | pyramid | panel`.
+- **Generative visuals:** `http://ravecave.local:8110/` to reshape the live sketch; set a surface's content to generative to show it.
+- **Deploy changes:** `brain/deploy.sh` (both brain services), or `brain/deploy.sh showbrain | deckdash | mixer | projector | visuals | web | preview | pyramid | panel`.
 - **Dashboard preview:** `http://ravecave.local:8080/preview/` for testing page changes against live data. See [docs/brain.md](docs/brain.md#access-for-collaborators).
 - **Add a fixture:** add it to [`brain/showbrain/config.json`](brain/showbrain/config.json) (`strip`, `panel` or `dmx_par`) and deploy.
 

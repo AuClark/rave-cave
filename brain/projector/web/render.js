@@ -5,6 +5,8 @@
 // (0..1, y down). Content is drawn per pixel through the inverse homography of that
 // quad, so it lands with correct perspective on angled surfaces. Masks are black
 // polygons drawn on top. All content is beat-locked to the show engine's state.
+// Surfaces can have rounded corners and a border band drawn over their content.
+// Content "gen" is the live generative sketch from the visuals service (:8110).
 
 "use strict";
 
@@ -86,6 +88,7 @@ precision mediump float;
 uniform vec2 u_res; uniform mat3 u_Hinv; uniform float u_aspect;
 uniform float u_beat, u_frac, u_bwb, u_bar, u_hue, u_scene, u_progress, u_since, u_energy, u_sp;
 uniform float u_opacity, u_bright, u_sel, u_time;
+uniform float u_radius, u_border, u_bbright, u_bsat, u_bpulse;
 uniform sampler2D u_tex;
 vec3 hsv(float h, float s, float v) {
   vec3 k = clamp(abs(mod(h * 6.0 + vec3(0.0, 4.0, 2.0), 6.0) - 3.0) - 1.0, 0.0, 1.0);
@@ -99,10 +102,19 @@ void main() {
   vec3 q = u_Hinv * vec3(p, 1.0);
   vec2 uv = q.xy / q.z;
   if (q.z <= 0.0 || uv.x < 0.0 || uv.x > 1.0 || uv.y < 0.0 || uv.y > 1.0) discard;
-  float e = min(min(uv.x, 1.0 - uv.x), min(uv.y, 1.0 - uv.y));
-  float a = smoothstep(0.0, 0.003, e) * u_opacity;
+  // Rounded-rectangle distance in surface units (height = 1): < 0 inside.
+  vec2 hs = vec2(u_aspect, 1.0) * 0.5, sp = (uv - 0.5) * vec2(u_aspect, 1.0);
+  float rad = min(u_radius, min(hs.x, hs.y));
+  vec2 qd = abs(sp) - hs + rad;
+  float sd = length(max(qd, 0.0)) + min(max(qd.x, qd.y), 0.0) - rad;
+  float a = smoothstep(0.0, 0.003, -sd) * u_opacity;
   vec3 c = content(uv) * u_bright;
-  if (u_sel > 0.5) c = mix(c, vec3(0.2, 0.9, 1.0), 0.25 * step(e, 0.012));
+  if (u_border > 0.0) {
+    float band = smoothstep(-u_border - 0.003, -u_border, sd);
+    vec3 bc = mix(vec3(1.0), hsv(u_hue, 1.0, 1.0), u_bsat) * u_bbright * mix(1.0, kick(), u_bpulse);
+    c = mix(c, bc * u_bright, band);
+  }
+  if (u_sel > 0.5) c = mix(c, vec3(0.2, 0.9, 1.0), 0.25 * step(-sd, 0.012));
   gl_FragColor = vec4(c, a);
 }
 `;
@@ -216,9 +228,23 @@ class MapRenderer {
     this.titleVer = -1;
     this.layout = null;
     this.clock = new ShowClock();
+    this.genParams = {};      // live values from the visuals service
+    this.genError = null;
   }
 
-  _program(fsrc) {
+  // Compile the visuals service's sketch as content "gen". A broken sketch keeps the last good one.
+  setSketch(sk) {
+    try {
+      const ids = sk.groups.flatMap(g => g.params.map(p => p.id));
+      const prog = this._program(COMMON + sk.glsl, ids.map(id => "p_" + id));
+      prog.ids = ids; prog.name = sk.name;
+      this.progs.gen = prog; this.genError = null;
+    } catch (e) {
+      this.genError = String(e); console.error("sketch", sk.name, e);
+    }
+  }
+
+  _program(fsrc, extra = []) {
     const gl = this.gl;
     const sh = (type, src) => {
       const s = gl.createShader(type); gl.shaderSource(s, src); gl.compileShader(s);
@@ -231,7 +257,8 @@ class MapRenderer {
     if (!gl.getProgramParameter(p, gl.LINK_STATUS)) throw new Error(gl.getProgramInfoLog(p));
     const u = {};
     for (const n of ["u_res", "u_Hinv", "u_aspect", "u_beat", "u_frac", "u_bwb", "u_bar", "u_hue", "u_scene", "u_progress",
-                     "u_since", "u_energy", "u_sp", "u_opacity", "u_bright", "u_sel", "u_time", "u_tex"])
+                     "u_since", "u_energy", "u_sp", "u_opacity", "u_bright", "u_sel", "u_time", "u_tex",
+                     "u_radius", "u_border", "u_bbright", "u_bsat", "u_bpulse", ...extra])
       u[n] = gl.getUniformLocation(p, n);
     return { p, u, a: gl.getAttribLocation(p, "a") };
   }
@@ -285,6 +312,10 @@ class MapRenderer {
       gl.uniform1f(u.u_opacity, s.opacity ?? 1); gl.uniform1f(u.u_bright, L.brightness ?? 1);
       gl.uniform1f(u.u_sel, L.edit && L.selected === s.id ? 1 : 0);
       gl.uniform1f(u.u_time, now / 1000);
+      gl.uniform1f(u.u_radius, s.radius || 0); gl.uniform1f(u.u_border, s.border || 0);
+      gl.uniform1f(u.u_bbright, s.border_bright ?? 1); gl.uniform1f(u.u_bsat, s.border_sat ?? 0);
+      gl.uniform1f(u.u_bpulse, s.border_pulse ?? 0);
+      if (pr.ids) for (const id of pr.ids) gl.uniform1f(u["p_" + id], this.genParams[id] ?? 0);
       gl.activeTexture(gl.TEXTURE0); gl.bindTexture(gl.TEXTURE_2D, this.tex); gl.uniform1i(u.u_tex, 0);
       gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
     }
@@ -338,11 +369,11 @@ class MapRenderer {
   }
 }
 
-// Connect to the projector host's event stream; calls onLayout/onScreen as they arrive.
-function connectEvents(renderer, { onLayout, onScreen, onStatus } = {}) {
+// Connect to an event stream (the projector host's by default); calls the handlers as messages arrive.
+function connectEvents(renderer, { onLayout, onScreen, onStatus, onSketch, onParams, url = "/api/events" } = {}) {
   let es;
   const open = () => {
-    es = new EventSource("/api/events");
+    es = new EventSource(url);
     es.onopen = () => onStatus && onStatus(true);
     es.onerror = () => onStatus && onStatus(false);
     es.onmessage = e => {
@@ -350,8 +381,15 @@ function connectEvents(renderer, { onLayout, onScreen, onStatus } = {}) {
       if (m.t === "state") renderer.clock.update(m.s);
       else if (m.t === "layout") onLayout ? onLayout(m.layout) : (renderer.layout = m.layout);
       else if (m.t === "screen" && onScreen) onScreen(m.screen);
+      else if (m.t === "sketch") { renderer.setSketch(m.sketch); onSketch && onSketch(m.sketch); }
+      else if (m.t === "params") { renderer.genParams = m.params; onParams && onParams(m.params); }
     };
   };
   open();
   return () => es && es.close();
+}
+
+// The visuals service (:8110, same host) feeds content "gen": its sketch and live params.
+function connectVisuals(renderer, opts = {}) {
+  return connectEvents(renderer, { ...opts, url: `${location.protocol}//${location.hostname}:8110/api/events` });
 }

@@ -1,0 +1,13 @@
+[Unit]
+Description=Rave Cave generative visuals (control page + live params on :8110)
+After=showbrain.service network-online.target
+
+[Service]
+User=pi
+WorkingDirectory=/home/pi/visuals
+ExecStart=/usr/bin/python3 -u visuals.py 8110
+Restart=always
+RestartSec=2
+
+[Install]
+WantedBy=multi-user.target
