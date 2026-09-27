@@ -1,0 +1,26 @@
+{
+  "title": "Cipher",
+  "about": "A wall of scrambling code (pigpen, binary rain or a numbers station) with a message in the middle row that decodes letter by letter: across each period, through the build, and fully on the drop.",
+  "groups": [
+    {"name": "Code", "params": [
+      {"id": "style",    "label": "Style (0 pigpen, 1 binary rain, 2 numbers station)", "min": 0, "max": 2, "step": 1, "default": 0},
+      {"id": "rows",     "label": "Rows",                "min": 3,     "max": 40,   "step": 1,     "default": 11},
+      {"id": "scramble", "label": "Scramble (changes/beat)", "min": 0, "max": 8,    "step": 0.25,  "default": 1},
+      {"id": "speed",    "label": "Rain speed",          "min": 0,     "max": 4,    "step": 0.05,  "default": 1},
+      {"id": "dim",      "label": "Code brightness",     "min": 0,     "max": 1,    "step": 0.01,  "default": 0.35}
+    ]},
+    {"name": "Message", "params": [
+      {"id": "msg",      "label": "Message (-1 cycle; 0 watching, 1 eye, 2 novus ordo, 3 annuit, 4 wake up, 5 trust, 6 nothing, 7 not alone)", "min": -1, "max": 7, "step": 1, "default": -1},
+      {"id": "period",   "label": "Decode every (bars)", "min": 1,     "max": 16,   "step": 1,     "default": 4},
+      {"id": "glow",     "label": "Message glow",        "min": 0,     "max": 1,    "step": 0.01,  "default": 0.4},
+      {"id": "beat",     "label": "Beat punch",          "min": 0,     "max": 1,    "step": 0.01,  "default": 0.5}
+    ]},
+    {"name": "Look", "params": [
+      {"id": "width",    "label": "Pigpen stroke",       "min": 0.01,  "max": 0.12, "step": 0.005, "default": 0.04},
+      {"id": "hue",      "label": "Code hue",            "min": 0,     "max": 1,    "step": 0.005, "default": 0.38},
+      {"id": "hue2",     "label": "Decoded hue",         "min": 0,     "max": 1,    "step": 0.005, "default": 0.11},
+      {"id": "sat",      "label": "Saturation",          "min": 0,     "max": 1,    "step": 0.01,  "default": 0.8},
+      {"id": "follow",   "label": "Follow show hue",     "min": 0,     "max": 1,    "step": 1,     "default": 0}
+    ]}
+  ]
+}

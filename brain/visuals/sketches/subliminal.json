@@ -1,0 +1,27 @@
+{
+  "title": "Subliminal",
+  "about": "They Live-style messages in time with the music: flash each bar, strobe each beat, steady with glitch, or hidden until the drop. Words 0-8 are the obey set (OBEY, CONSUME ...), 9-15 the wake-up set (WAKE UP, THEY LIVE ...).",
+  "groups": [
+    {"name": "Words", "params": [
+      {"id": "mode",   "label": "Mode (0 flash, 1 strobe, 2 steady, 3 reveal on drop)", "min": 0, "max": 3, "step": 1, "default": 0},
+      {"id": "first",  "label": "First word (0 obey set, 9 wake-up set)", "min": 0, "max": 15, "step": 1, "default": 0},
+      {"id": "count",  "label": "How many words",        "min": 1,     "max": 16,   "step": 1,     "default": 9},
+      {"id": "random", "label": "Random order",          "min": 0,     "max": 1,    "step": 1,     "default": 1},
+      {"id": "hold",   "label": "Hold (beats, or of a beat in strobe)", "min": 0.05, "max": 4, "step": 0.05, "default": 0.25},
+      {"id": "size",   "label": "Size",                  "min": 0.05,  "max": 0.9,  "step": 0.01,  "default": 0.35}
+    ]},
+    {"name": "Look", "params": [
+      {"id": "invert", "label": "Black on white",        "min": 0,     "max": 1,    "step": 1,     "default": 0},
+      {"id": "bg",     "label": "Background flash",      "min": 0,     "max": 1,    "step": 0.01,  "default": 0},
+      {"id": "glitch", "label": "RGB glitch",            "min": 0,     "max": 1,    "step": 0.01,  "default": 0.3},
+      {"id": "jitter", "label": "Jitter",                "min": 0,     "max": 1,    "step": 0.01,  "default": 0.3},
+      {"id": "grain",  "label": "Grain and scanlines",   "min": 0,     "max": 1,    "step": 0.01,  "default": 0.3},
+      {"id": "beat",   "label": "Beat punch",            "min": 0,     "max": 1,    "step": 0.01,  "default": 0.5}
+    ]},
+    {"name": "Colour", "params": [
+      {"id": "hue",    "label": "Hue",                   "min": 0,     "max": 1,    "step": 0.005, "default": 0},
+      {"id": "sat",    "label": "Saturation (0 = white)","min": 0,     "max": 1,    "step": 0.01,  "default": 0},
+      {"id": "follow", "label": "Follow show hue",       "min": 0,     "max": 1,    "step": 1,     "default": 0}
+    ]}
+  ]
+}

@@ -1,0 +1,28 @@
+{
+  "title": "CCTV",
+  "about": "A surveillance camera: figures walk through a night scene in night vision, thermal or grey; a targeting box jumps between them on the beat; REC, camera number and timestamp; scanlines, rolling bar and glitch.",
+  "groups": [
+    {"name": "Camera", "params": [
+      {"id": "palette", "label": "Palette (0 night vision, 1 thermal, 2 grey)", "min": 0, "max": 2, "step": 1, "default": 0},
+      {"id": "cam",     "label": "Camera number",       "min": 0,     "max": 9,    "step": 1,     "default": 1},
+      {"id": "rec",     "label": "REC",                 "min": 0,     "max": 1,    "step": 1,     "default": 1},
+      {"id": "stamp",   "label": "Timestamp",           "min": 0,     "max": 1,    "step": 1,     "default": 1}
+    ]},
+    {"name": "Subjects", "params": [
+      {"id": "people",  "label": "People",              "min": 0,     "max": 8,    "step": 1,     "default": 5},
+      {"id": "walk",    "label": "Walk speed",          "min": 0,     "max": 2,    "step": 0.01,  "default": 0.6},
+      {"id": "boxes",   "label": "Targeting box",       "min": 0,     "max": 1,    "step": 1,     "default": 1},
+      {"id": "every",   "label": "New target every (beats)", "min": 0.5, "max": 16, "step": 0.5, "default": 4},
+      {"id": "label",   "label": "Label (2 subject, 3 tracking, 4 motion, 5 match, 7 restricted)", "min": 2, "max": 7, "step": 1, "default": 2}
+    ]},
+    {"name": "Signal", "params": [
+      {"id": "grain",   "label": "Grain",               "min": 0,     "max": 1,    "step": 0.01,  "default": 0.4},
+      {"id": "scan",    "label": "Scanlines",           "min": 0,     "max": 1,    "step": 0.01,  "default": 0.5},
+      {"id": "roll",    "label": "Rolling bar",         "min": 0,     "max": 1,    "step": 0.01,  "default": 0.4},
+      {"id": "vignette","label": "Vignette",            "min": 0,     "max": 1,    "step": 0.01,  "default": 0.6},
+      {"id": "glitch",  "label": "Glitch on kick",      "min": 0,     "max": 1,    "step": 0.01,  "default": 0.3},
+      {"id": "zoom",    "label": "Zoom punch",          "min": 0,     "max": 1,    "step": 0.01,  "default": 0.5},
+      {"id": "beat",    "label": "Beat punch",          "min": 0,     "max": 1,    "step": 0.01,  "default": 0.5}
+    ]}
+  ]
+}
