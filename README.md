@@ -1,4 +1,4 @@
-<p><img src="docs/brand/png/sektor5-logo-orange-on-black.png" alt="SEKTOR5" height="48"></p>
+<p><picture><source media="(prefers-color-scheme: dark)" srcset="docs/brand/sektor5-stencil-white.svg"><img src="docs/brand/sektor5-stencil-black.svg" alt="SEKTOR5" height="40"></picture></p>
 
 # Sektor5
 
