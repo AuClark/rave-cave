@@ -28,3 +28,8 @@ Each page defines these as CSS variables in its "design system" block.
 - **Panels:** square, flat, divided by hairlines rather than floating with gaps. Section headings are numbered `01 — Name`, with the number in orange.
 - **Buttons:** outlined rectangles. The edge goes orange on hover, and the button fills orange when on. Status tags are outlined in their status colour.
 - **Page links:** the top bar of every control page has the same links (Decks, Lighting, Projection, Visuals), with the current page underlined in orange, so you never scroll to switch pages.
+
+## Top bar and phones
+
+- **One top bar on every page** (`.s5bar`, styled by `brain/common/web/s5auth.js`): 64 px, never wraps. Logo (opens System) and page links on the left, in the same place on every page; page-specific bits fade in; the **SIM / NO DECKS** pill and the **lock** (orange view only, green admin) sit at the right end.
+- **Phones (≤ 760 px):** the page links move to a bottom tab bar with icons: Lighting · Projection · **Decks** (middle) · Visuals · Stage. Pages must never be wider than the screen: tables and wide rows scroll sideways inside their panel.

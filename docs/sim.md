@@ -46,8 +46,8 @@ Press Ctrl-C to stop everything. Each service's log is in `brain/sim/logs/`. Edi
 
 The brain can run the same synthetic rig, so a Pi on the bench (or at home, with no decks) shows the whole app working, and the real lights follow the generated set.
 
-- **When no decks are found**, every page shows a strip at the bottom: **No decks found · Start simulation**. Starting it needs admin (the PIN).
-- **While it runs**, the strip says **SIMULATION** with **Back to real decks**. Everything else is real: showbrain, the lights, projection, visuals, the Stage view, the admin PIN and the System view.
+- **When no decks are found**, every page shows a **NO DECKS** pill at the top right, next to the lock. Tap it for **Start simulation** (needs admin, the PIN) or **Not now**.
+- **While it runs**, an amber **SIM** pill replaces the page's LIVE pill (it's the simulator, not the decks). Tap it for sound, volume and **Back to real decks**. Everything else is real: showbrain, the lights, projection, visuals, the Stage view, the admin PIN and the System view.
 - **Nothing sticks:** stopping it, restarting deckdash or rebooting goes back to the real decks.
 - API: `GET /api/sim`, `POST /api/sim {"on": true|false, "bpm": 126}` (admin). Also in `/api/system` as `sim`.
 
@@ -55,4 +55,4 @@ How it works: deckdash ([`Sim.java`](../brain/deckdash/Sim.java)) runs `fakerig.
 
 ### Sound
 
-**Play sound** on the SIMULATION strip plays music in that browser, in time with the show. The synthetic tracks have structure but no audio, so [`s5audio.js`](../brain/common/web/s5audio.js) synthesises house music that follows showbrain's beat clock (`/api/state`): kick, open hats, clap and an offbeat bassline in grooves and drops; no kick, a pad and a dark filter in breakdowns; a filter sweep, a snare roll that speeds up and a riser through builds; a beat of silence before the drop. It's all generated in the browser, so there's nothing to license. Browsers only start sound after a click, which is why it's a button. Each browser plays its own copy: turn it on in one.
+**Sound** in the SIM panel plays music in that browser, in time with the show. The synthetic tracks have structure but no audio, so [`s5audio.js`](../brain/common/web/s5audio.js) synthesises house music that follows showbrain's beat clock (`/api/state`): kick, open hats, clap and an offbeat bassline in grooves and drops; no kick, a pad and a dark filter in breakdowns; a filter sweep, a snare roll that speeds up and a riser through builds; a beat of silence before the drop. It's all generated in the browser, so there's nothing to license. Browsers only start sound after a click, which is why it's a button. Each browser plays its own copy: turn it on in one.
