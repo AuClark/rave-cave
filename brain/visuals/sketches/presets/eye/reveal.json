@@ -1,0 +1,10 @@
+{
+ "open": 0.08,
+ "build": 1,
+ "drop": 1,
+ "rays": 24,
+ "raylen": 0.6,
+ "rspin": 0.4,
+ "glow": 0.9,
+ "blink": 0
+}

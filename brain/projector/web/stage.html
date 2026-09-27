@@ -288,12 +288,13 @@ function loadRenderJs() {
   });
 }
 function connect() {
-  const es = new EventSource(`${PROJ}/api/events`);
+  const es = new EventSource(`${PROJ}/api/events?frames=1`);
   es.onopen = () => { $("#conn").className = "pill ok"; $("#conn").textContent = "LIVE"; };
   es.onerror = () => { $("#conn").className = "pill bad"; $("#conn").textContent = "RECONNECTING"; };
   es.onmessage = e => {
     const m = JSON.parse(e.data);
-    if (m.t === "state") { show = m.s; showAt = performance.now(); addFrames(m.s); if (mapRenderer) mapRenderer.clock.update(m.s); if (visRenderer) visRenderer.clock.update(m.s); }
+    if (m.t === "frames") addFrames(m.f);
+    else if (m.t === "state") { show = m.s; showAt = performance.now(); if (m.s && m.s.frames) addFrames(m.s.frames); if (mapRenderer) mapRenderer.clock.update(m.s); if (visRenderer) visRenderer.clock.update(m.s); }
     else if (m.t === "layout") { if (mapRenderer) mapRenderer.layout = m.layout; }
     else if (m.t === "stage" && !dragging && Date.now() - lastSaveAt > 1500 && m.stage && m.stage.fixtures) {
       if (m.stage.calib) { calib = { ...calib, ...m.stage.calib }; showCalib(); }
@@ -331,29 +332,46 @@ function ledColour(hex, out, gain) {
   if (peak > 1) { r /= peak; g /= peak; b /= peak; }
   return out.setRGB(r, g, b, THREE.LinearSRGBColorSpace);
 }
-// Output frames: showbrain sends its last few 50 fps frames, time-stamped, with every update. Keep
-// them in order and play them back at their real spacing, a little behind (Wi-Fi delivery is
-// uneven), so rain, sparkles and fills move as smoothly as on the real tubes.
-const PLAY_DELAY = 0.06;                     // s behind the fastest delivery seen
-let frameBuf = [], latency = null, curPreview = null;
-function addFrames(s) {
-  if (!s || !s.frames || !s.frames.length) return;
-  const nowS = Date.now() / 1000;
-  for (const [t, p] of s.frames) {
-    if (!frameBuf.length || t > frameBuf[frameBuf.length - 1].t) frameBuf.push({ t, p });
-    const l = nowS - t;                     // clock offset + delivery delay; keep the smallest
-    latency = latency == null ? l : Math.min(l, latency + 0.0004);
+// Output frames: showbrain's 50 fps output, time-stamped, each frame once (the projector sends
+// them to this page only). Play them back in order at their real spacing, far enough behind to
+// ride out uneven Wi-Fi delivery: the delay adapts to how late and bursty they've been arriving,
+// so rain, sparkles and fills move as smoothly as on the real tubes.
+const BASE_DELAY = 0.05;                     // s, on top of the measured delivery spread
+let frameBuf = [], lagWin = [], lagLo = 0, lagSpread = 0, lastFramesAt = 0, curPreview = null;
+function unpack(p) {                         // {"tube1": "rrggbb..."} -> {"tube1": ["#rrggbb", ...]}
+  const out = {};
+  for (const [k, v] of Object.entries(p)) {
+    if (Array.isArray(v)) { out[k] = v; continue; }
+    const a = new Array(v.length / 6);
+    for (let i = 0; i < a.length; i++) a[i] = "#" + v.substr(i * 6, 6);
+    out[k] = a;
   }
-  if (frameBuf.length > 80) frameBuf.splice(0, frameBuf.length - 80);
+  return out;
+}
+function addFrames(list) {
+  if (!list || !list.length) return;
+  const nowS = Date.now() / 1000;
+  lastFramesAt = performance.now();
+  if (frameBuf.length && list[0][0] < frameBuf[frameBuf.length - 1].t - 5) { frameBuf = []; lagWin = []; }   // its clock jumped back
+  for (const [t, p] of list) {
+    if (frameBuf.length && t <= frameBuf[frameBuf.length - 1].t) continue;
+    frameBuf.push({ t, p: unpack(p) });
+    lagWin.push(nowS - t);                   // Pi-to-here clock offset + delivery delay
+  }
+  if (lagWin.length > 300) lagWin.splice(0, lagWin.length - 300);
+  const sorted = lagWin.slice().sort((x, y) => x - y);
+  lagLo = sorted[Math.floor(sorted.length * 0.05)];
+  lagSpread = Math.min(1.5, sorted[Math.floor(sorted.length * 0.95)] - lagLo);
+  if (frameBuf.length > 200) frameBuf.splice(0, frameBuf.length - 200);
 }
 function pickPreview() {
-  if (!frameBuf.length) return show && show.preview;            // an older showbrain: latest only
-  const target = Date.now() / 1000 - latency - PLAY_DELAY;
+  if (!timedFrames()) return show && show.preview;              // no frames coming: latest only
+  const target = Date.now() / 1000 - lagLo - lagSpread - BASE_DELAY;
   let pick = frameBuf[0];
   for (const f of frameBuf) { if (f.t <= target) pick = f; else break; }
   return pick.p;
 }
-const timedFrames = () => frameBuf.length > 0 && Date.now() / 1000 - frameBuf[frameBuf.length - 1].t - latency < 1;
+const timedFrames = () => frameBuf.length > 0 && performance.now() - lastFramesAt < 3000;
 function livePixels(name) { const p = curPreview; return p && p[name] && p[name].length ? p[name] : null; }
 
 // ------------------------------------------------------------------ fixtures
@@ -758,7 +776,7 @@ showCalib();
 await loadRenderJs();
 connect();
 requestAnimationFrame(frame);
-window.stage = { scene, camera, orbit, rig: () => rig, built, show: () => show, map: () => mapRenderer, projCanvas, frames: () => ({ buffered: frameBuf.length, latency, timed: timedFrames() }) };   // for poking at from the console
+window.stage = { scene, camera, orbit, rig: () => rig, built, show: () => show, map: () => mapRenderer, projCanvas, frames: () => ({ buffered: frameBuf.length, delayS: +(lagSpread + BASE_DELAY).toFixed(3), spreadS: +lagSpread.toFixed(3), timed: timedFrames() }) };   // for poking at from the console
 </script>
 </body>
 </html>

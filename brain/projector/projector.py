@@ -3,7 +3,8 @@
 
   /                 the output page, opened full-screen in Chrome on the projector
   /edit             the mapping editor, for a phone or laptop
-  /api/events       Server-Sent Events: {"t":"state"} ~25x/s (showbrain state) and
+  /api/events       Server-Sent Events: {"t":"state"} ~25x/s; with ?frames=1 also {"t":"frames"}
+                    (showbrain's output frames, each once: the Stage view plays them back) (showbrain state) and
                     {"t":"layout"} whenever the layout changes
   /api/state        showbrain state (one-off)
   /api/layout       GET current layout; POST a new layout (saved and pushed live)
@@ -57,6 +58,7 @@ CONTENTS = {"show", "pulse", "tunnel", "bars", "title", "solid", "test", "gen"} 
 
 lock = threading.Lock()
 clients = []            # queue.Queue per connected page
+frame_clients = set()   # the ones that asked for output frames (/api/events?frames=1: the Stage view)
 layout = None
 screen = {"w": 1920, "h": 1080}
 last_state = b"null"
@@ -133,9 +135,9 @@ def save_layout():
     (LAYOUTS / "current.json").write_text(json.dumps(layout, indent=1))
 
 
-def push(data):
+def push(data, only=None):
     with lock:
-        for q in list(clients):
+        for q in list(clients if only is None else only):
             try:
                 q.put_nowait(data)
             except queue.Full:
@@ -147,17 +149,30 @@ def broadcast(obj):
 
 
 def state_pump():
-    """Poll showbrain and push its state to every connected page."""
+    """Poll showbrain and push its state to every connected page. Its recent output frames go
+    separately, each frame once, only to pages that asked for them (they're most of the bytes)."""
     global last_state
+    last_frame_t = 0.0
     while True:
         t0 = time.time()
+        new = []
         try:
             with urllib.request.urlopen(SHOWBRAIN, timeout=0.3) as r:
-                last_state = r.read()
+                s = json.loads(r.read())
+            frames = s.pop("frames", None) or []
+            s.pop("preview", None)                         # per-LED colours: the frames stream carries them
+            last_state = json.dumps(s, separators=(",", ":")).encode()
             payload = b'{"t":"state","s":' + last_state + b"}"
+            if frames and frames[-1][0] < last_frame_t - 5:
+                last_frame_t = 0.0                         # showbrain's clock jumped back (no RTC)
+            new = [f for f in frames if f[0] > last_frame_t]
+            if new:
+                last_frame_t = new[-1][0]
         except Exception:
             payload = b'{"t":"state","s":null}'
         push(b"data: " + payload + b"\n\n")
+        if new and frame_clients:
+            push(b"data: " + json.dumps({"t": "frames", "f": new}, separators=(",", ":")).encode() + b"\n\n", only=frame_clients)
         time.sleep(max(0.0, 1 / STATE_HZ - (time.time() - t0)))
 
 
@@ -277,12 +292,15 @@ class H(SimpleHTTPRequestHandler):
         self._json(404, {"error": "not found"})
 
     def _events(self):
-        q = queue.Queue(maxsize=60)
+        wants_frames = "frames=1" in self.path
+        q = queue.Queue(maxsize=150 if wants_frames else 60)
         self.send_response(200)
         self.send_header("Content-Type", "text/event-stream")
         self.end_headers()
         with lock:
             clients.append(q)
+            if wants_frames:
+                frame_clients.add(q)
             first = ("data: " + json.dumps({"t": "hello", "version": code_version()}) + "\n\n"
                      "data: " + json.dumps({"t": "layout", "layout": layout}) + "\n\n"
                      "data: " + json.dumps({"t": "screen", "screen": screen}) + "\n\n").encode()
@@ -302,6 +320,7 @@ class H(SimpleHTTPRequestHandler):
             with lock:
                 if q in clients:
                     clients.remove(q)
+                frame_clients.discard(q)
 
 
 if __name__ == "__main__":
