@@ -198,7 +198,9 @@
   /* Master BPM sits just under the top bar (the bar itself is the same on every page). */
   /* The display: the show engine in one line over the waveforms, pinned under the top bar; the
      section tabs sit at its bottom and pick one section below. */
-  .deckhero { position: sticky; top: var(--s5bar, 48px); z-index: 30; background: var(--bg); border-bottom: 1px solid var(--line); }
+  main.tabbed { grid-template-columns: minmax(0, 1fr); }   /* never wider than the screen */
+  .deckhero { position: sticky; top: var(--s5bar, 48px); z-index: 30; min-width: 0; background: var(--bg); border-bottom: 1px solid var(--line); }
+  .deckhero canvas { max-width: 100%; }
   .deckhero > section.stack { border: 0; }
   .showline { display: flex; align-items: center; flex-wrap: wrap; gap: 8px 16px; max-width: 1680px; margin: 0 auto; padding: 10px 24px 6px; }
   .showline .showscene { font-size: 22px; font-weight: 300; letter-spacing: .04em; }
@@ -669,7 +671,9 @@ function drawStack() {
   // One lane per deck (deck 1 on top, like the XDJ / rekordbox), with a phase meter strip after
   // the first lane. Each lane: header (art, track, tags, tempo), scrolling waveform, overview.
   const loaded = players.filter(p => p.status.trackLoaded);
-  const HEADc = 52, WAVEc = 104, OVc = 30, laneCss = HEADc + WAVEc + OVc + 6;
+  // Narrow screens (phones): slimmer lanes, so the pinned display leaves room for the controls.
+  const slim = cv.clientWidth < 560;
+  const HEADc = slim ? 44 : 52, WAVEc = slim ? 62 : 104, OVc = slim ? 24 : 30, laneCss = HEADc + WAVEc + OVc + 6;
   const meterCss = Math.max(34, 16 * loaded.length + 6);
   const Wc = cv.clientWidth, Hc = Math.max(1, players.length) * laneCss + meterCss;
   if (cv.width !== Math.round(Wc * dpr) || cv.height !== Math.round(Hc * dpr)) {
@@ -717,7 +721,7 @@ function drawStack() {
     drawOverview(g, p, 0, wy + wh + 2 * dpr, W, OV, dpr, pos[p.number], tl);
 
     // --- header
-    const art = artFor(p), ax = 34 * dpr, as = 44 * dpr, ay = y0 + 4 * dpr;
+    const art = artFor(p), ax = 34 * dpr, as = (slim ? 36 : 44) * dpr, ay = y0 + 4 * dpr;
     g.font = `300 ${28 * dpr}px ${CANVAS_FONT}`; g.fillStyle = rgba(rgb, 1); g.fillText(p.number, 11 * dpr, y0 + 36 * dpr);
     if (art) g.drawImage(art, ax, ay, as, as);
     else { g.fillStyle = "#1f1f1f"; g.fillRect(ax, ay, as, as); g.fillStyle = "#555"; g.font = `${18 * dpr}px ${CANVAS_FONT}`; g.fillText("♪", ax + 15 * dpr, ay + 29 * dpr); }
