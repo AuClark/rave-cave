@@ -189,11 +189,11 @@ Anyone can open the pages and watch. **Changing anything needs admin**: loading 
 
 The brain is on the owner's tailnet as `sektor5` (MagicDNS `sektor5.<tailnet>.ts.net`; the real name is in the Tailscale admin console, not in git).
 
-- **Public link (Tailscale Funnel):** only the dashboard is published, at `https://sektor5.<tailnet>.ts.net/`. Anyone with the link can watch; changes need the admin PIN (above).
-- **Everything else stays private:** the Commander, projector and visuals are reachable only on the rig's Wi-Fi (`http://sektor5.local:8090/` etc.) or over the tailnet at `https://sektor5.<tailnet>.ts.net:18090/`, `:18100`, `:18110`. They must be **https** (browsers always use HTTPS for `ts.net` names), and on **port + 10000**: `tailscale serve --bg --https=18090 http://127.0.0.1:8090` (same for 18100 → 8100, 18110 → 8110). Serving HTTPS on the service's own port stops that service from restarting (`Address already in use`). The dashboard is on 443. The page links handle this for you.
-- **Top-bar page links** (`a[data-port]`, wired by `s5auth.js`) are greyed out for viewers. For admins they're greyed out only if that page can't be reached from where you are (e.g. on the public link without Tailscale).
+- **Public link (Tailscale Funnel):** `https://sektor5.<tailnet>.ts.net/`. Funnel can only publish one port, so it publishes the dashboard, and **every other page goes through the dashboard's address by path**: `/lighting/`, `/projection/edit`, `/projection/stage.html`, `/visuals/` (deckdash [`Proxy.java`](../brain/deckdash/Proxy.java) passes them to showbrain, the projector and visuals, event streams included). Anyone with the link can look at every page; changes need the admin PIN, as everywhere (each service checks the cookie, which is passed through). Over the tailnet the same `https://…ts.net/` address and paths work.
+- **On the rig's network** each page keeps its own port (`http://sektor5.local:8090/` etc.). The page links (and the phone tab bar) pick the right form: ports over plain HTTP, paths over HTTPS. [`s5auth.js`](../brain/common/web/s5auth.js) sends a page's own `/api/...` requests and event streams through its path.
+- **Top-bar page links** (`a[data-port]`, wired by `s5auth.js`) are greyed out for viewers.
 - **Controls:** the System panel (click the logo) has a Tailscale card: status, devices online, the public link, and buttons to turn the public link or Tailscale itself off and on (admin). Turning Tailscale off while you're using it cuts you off; turn it back on from the rig's Wi-Fi.
-- **Setup (done once):** `sudo tailscale up --hostname=sektor5`, `sudo tailscale set --operator=pi` (so deckdash can run the CLI without sudo), `tailscale funnel --bg --https=443 http://127.0.0.1:8080`, and the three `tailscale serve` lines above (`18090`, `18100`, `18110`). All of it survives reboots. Check with `tailscale serve status`.
+- **Setup (done once):** `sudo tailscale up --hostname=sektor5`, `sudo tailscale set --operator=pi` (so deckdash can run the CLI without sudo) and `tailscale funnel --bg --https=443 http://127.0.0.1:8080`. That's all: every page is on 443 by path. Never serve a service's own port (8090/8100/8110) over Tailscale: that service then can't restart (`Address already in use`). All of it survives reboots. Check with `tailscale serve status`.
 - **Sharing with a collaborator:** share the `sektor5` machine from the admin console (Machines → sektor5 → Share) or invite them to the tailnet.
 - Funnel needs HTTPS certificates and the `funnel` node attribute enabled in the tailnet policy (both already on).
 
@@ -203,7 +203,7 @@ The brain was renamed from `ravecave` to `sektor5` on 27 Sep 2026. What that too
 - `sudo hostnamectl set-hostname sektor5`, and the `127.0.1.1` line in `/etc/hosts`.
 - cloud-init resets the hostname on every boot from `/boot/firmware/user-data` (`hostname:`), so change it there too. `/etc/cloud/cloud.cfg.d/99-sektor5-hostname.cfg` (`preserve_hostname: true`) stops it resetting.
 - `sudo systemctl restart avahi-daemon` for the new `.local` name. `avahi-alias-ravecave.service` keeps the old name answering (it publishes the Wi-Fi address at start; restart it if that address changes).
-- Tailscale: `tailscale set --hostname=sektor5`, then rebuild the serve config for the new name: `tailscale serve reset`, the funnel line and the three serve lines from above. The old `ts.net` link stops working.
+- Tailscale: `tailscale set --hostname=sektor5`, then rebuild the serve config for the new name: `tailscale serve reset` and the funnel line from above. The old `ts.net` link stops working.
 
 ## Argon ONE case
 

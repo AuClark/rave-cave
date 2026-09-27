@@ -103,17 +103,29 @@
     return e;
   }
 
-  // Another control page on this host. Over HTTPS (Tailscale) the dashboard is on 443 and every
-  // other page on its port + 10000 (18090, 18100, 18110): Tailscale can't share a port with the
-  // service itself, or the service can't restart.
+  // Another control page on this host. On the rig's network each service has its own port. Over
+  // HTTPS (Tailscale, and the public link, which can only publish one port) every page goes through
+  // the dashboard's address instead, by path: /lighting/, /projection/, /visuals/ (deckdash
+  // Proxy.java). A page loaded under one of those paths sends its own /api/... requests there too.
+  const PREFIX = { 8090: "/lighting", 8100: "/projection", 8110: "/visuals" };
+  S5.base = Object.values(PREFIX).find(p => location.pathname === p || location.pathname.startsWith(p + "/")) || "";
+  const viaPaths = location.protocol === "https:" || !!S5.base;
   S5.url = (port, path = "/") => {
-    if (location.protocol !== "https:") return `${location.protocol}//${location.hostname}:${port}${path}`;
-    return +port === 8080 ? `https://${location.hostname}${path}` : `https://${location.hostname}:${+port + 10000}${path}`;
+    if (!viaPaths) return `${location.protocol}//${location.hostname}:${port}${path}`;
+    const port0 = location.port ? ":" + location.port : "";
+    return `${location.protocol}//${location.hostname}${port0}${PREFIX[+port] || ""}${path}`;
   };
+  // Root paths ("/api/...") from a page under a prefix go through that prefix.
+  const routed = u => (S5.base && typeof u === "string" && u[0] === "/" && u[1] !== "/" && !u.startsWith(S5.base + "/")) ? S5.base + u : u;
+  S5.routed = routed;
+  if (S5.base && window.EventSource) {
+    const ES = window.EventSource;
+    window.EventSource = class extends ES { constructor(u, o) { super(routed(String(u)), o); } };
+  }
   const reach = {};   // port -> Promise<boolean>
   function reachable(port) {
     if (S5.url(port, "") === location.origin) return Promise.resolve(true);
-    return (reach[port] ||= rawFetch(S5.url(port, "/s5auth.js"), { mode: "no-cors", cache: "no-store", signal: AbortSignal.timeout(5000) })
+    return (reach[port] ||= rawFetch(S5.url(port, "/s5auth.js"), { mode: "no-cors", cache: "no-store", signal: AbortSignal.timeout ? AbortSignal.timeout(5000) : undefined })
       .then(() => true, () => false));
   }
   const ICON = {
@@ -216,6 +228,7 @@
 
   // Changes (non-GET) need admin: ask for the PIN first if we know we're view-only, and again on 401.
   window.fetch = async (input, init = {}) => {
+    if (typeof input === "string") input = routed(input);
     const method = String(init.method || (input instanceof Request ? input.method : "GET")).toUpperCase();
     const url = String(input instanceof Request ? input.url : input);
     if (method === "GET" || method === "HEAD" || url.includes("/api/auth") || url.includes("/api/screen")) return rawFetch(input, init);

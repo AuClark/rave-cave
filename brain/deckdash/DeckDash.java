@@ -81,6 +81,7 @@ public class DeckDash {
             else send(ex, 200, "application/json", t.getBytes(StandardCharsets.UTF_8));
         }));
         Library.register(http);
+        Proxy.register(http);                   // /lighting/, /projection/, /visuals/: every page via this address
         TempoMaster.start(http);
         http.start();
         log("dashboard on http://0.0.0.0:" + PORT + "/");

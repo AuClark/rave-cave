@@ -165,7 +165,7 @@
 // Page links (a[data-port]) are wired by /s5auth.js.
 // The projector service (:8100) serves this page, its state feed and the projection renderer.
 // When the page is opened from somewhere else (the dashboard's /preview/), use :8100 directly.
-window.PROJ = ["8100", "18100"].includes(location.port) ? "" : `${location.protocol}//${location.hostname}:${location.protocol === "https:" ? 18100 : 8100}`;   // Tailscale HTTPS: port + 10000
+window.PROJ = window.S5AUTH ? S5AUTH.url(8100, "") : location.port === "8100" ? "" : `${location.protocol}//${location.hostname}:8100`;   // /projection over HTTPS
 </script>
 <script type="module">
 import * as THREE from "three";

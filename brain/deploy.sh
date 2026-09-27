@@ -94,11 +94,11 @@ if [[ -z ${DEPLOY_LABEL:-} ]]; then
 fi
 
 if [[ $what == all || $what == deckdash ]]; then
-  rsync -a brain/deckdash/DeckDash.java brain/deckdash/Timeline.java brain/deckdash/Library.java brain/deckdash/TempoMaster.java brain/deckdash/SystemInfo.java brain/deckdash/Auth.java brain/deckdash/Tailscale.java brain/deckdash/Sim.java "$BRAIN":deckdash/
+  rsync -a brain/deckdash/DeckDash.java brain/deckdash/Timeline.java brain/deckdash/Library.java brain/deckdash/TempoMaster.java brain/deckdash/SystemInfo.java brain/deckdash/Auth.java brain/deckdash/Tailscale.java brain/deckdash/Sim.java brain/deckdash/Proxy.java "$BRAIN":deckdash/
   rsync -rlt --omit-dir-times brain/deckdash/web/ brain/common/web/s5auth.js brain/common/web/s5system.js brain/common/web/s5audio.js "$BRAIN":/srv/rave/deckdash-web/
   ssh "$BRAIN" 'mkdir -p ~/sim' && rsync -a brain/sim/fakerig.py "$BRAIN":sim/     # simulation mode (no decks), see Sim.java
   # Compile to classes.new and swap only on success, so a failed build leaves the running one alone.
-  ssh "$BRAIN" 'cd ~/deckdash && rm -rf classes.new && javac -cp "lib/*" -d classes.new DeckDash.java Timeline.java Library.java TempoMaster.java SystemInfo.java Auth.java Tailscale.java Sim.java && rm -rf classes && mv classes.new classes && sudo systemctl restart deckdash && echo "deckdash restarted"'
+  ssh "$BRAIN" 'cd ~/deckdash && rm -rf classes.new && javac -cp "lib/*" -d classes.new DeckDash.java Timeline.java Library.java TempoMaster.java SystemInfo.java Auth.java Tailscale.java Sim.java Proxy.java && rm -rf classes && mv classes.new classes && sudo systemctl restart deckdash && echo "deckdash restarted"'
 fi
 
 if [[ $what == web ]]; then       # page only: no compile, no restart (the page is re-read on every request)
