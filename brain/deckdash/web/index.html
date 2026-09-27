@@ -111,6 +111,61 @@
   pre { background: #0b0c13; border: 1px solid var(--line); border-radius: 10px; padding: 12px; overflow: auto; max-height: 420px; font-size: 12px; }
   @media (max-width: 700px) { .players { grid-template-columns: 1fr; } .row2 { grid-template-columns: 1fr; }
     .top { grid-template-columns: 80px 1fr; } .art { width: 80px; height: 80px; } .tempo { grid-column: 1 / -1; text-align: left; } }
+  /* Library (Serato-style): crates on the left, search + track table on the right. */
+  section.lib { padding:0; overflow:hidden; }
+  section.lib.hidden { display:none; }
+  .libdecks { display:flex; gap:10px; flex-wrap:wrap; padding:10px 12px; border-bottom:1px solid var(--line); background:#0e1019; }
+  .ldeck { display:flex; gap:6px; align-items:center; padding:4px 6px 4px 10px; border-radius:10px; border:1px solid var(--line); background:#131522; min-width:0; flex:1 1 320px; }
+  .ldeck .n { font-weight:900; font-size:18px; }
+  .ldeck .tt { flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font-size:12px; color:var(--dim); }
+  .ldeck .tt b { color:var(--text); }
+  .lbtn { font:inherit; font-size:11px; font-weight:800; letter-spacing:.05em; padding:5px 9px; border-radius:7px; border:1px solid var(--line); background:#1b1e2e; color:var(--text); cursor:pointer; white-space:nowrap; }
+  .lbtn:hover { border-color:var(--accent2); }
+  .lbtn.on { background:var(--accent2); color:#000; border-color:var(--accent2); }
+  .lbtn.play.on { background:var(--good); border-color:var(--good); }
+  .lbtn:disabled { opacity:.35; cursor:not-allowed; }
+  .libbody { display:grid; grid-template-columns:240px 1fr; min-height:420px; }
+  .crates { border-right:1px solid var(--line); padding:10px 8px; overflow:auto; max-height:560px; background:#0f1019; }
+  .crates select { width:100%; font:inherit; font-size:12px; padding:6px; border-radius:8px; background:#151827; color:var(--text); border:1px solid var(--line); margin-bottom:8px; }
+  .crates ul { list-style:none; margin:0; padding:0 0 0 12px; } .crates > ul { padding:0; }
+  .crates li > span, .crates summary { display:block; padding:4px 8px; border-radius:6px; cursor:pointer; font-size:13px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .crates li > span:hover, .crates summary:hover { background:#1b1e2e; }
+  .crates li > span.on { background:var(--accent); color:#000; font-weight:700; }
+  .crates .cnt { color:var(--dim); font-size:11px; margin-left:4px; } .crates .on .cnt { color:rgba(0,0,0,.6); }
+  .crates details > summary { color:var(--dim); font-weight:700; }
+  .tracks { display:flex; flex-direction:column; min-width:0; }
+  .ltools { display:flex; gap:8px; align-items:center; flex-wrap:wrap; padding:10px 12px; border-bottom:1px solid var(--line); }
+  .ltools input[type=search] { flex:1 1 220px; font:inherit; padding:8px 12px; border-radius:10px; border:1px solid var(--line); background:#0b0c13; color:var(--text); }
+  .ltools input[type=search]:focus { outline:none; border-color:var(--accent2); }
+  .ltools select { font:inherit; font-size:12px; padding:6px; border-radius:8px; background:#151827; color:var(--text); border:1px solid var(--line); }
+  .ltools .count { color:var(--dim); font-size:12px; margin-left:auto; }
+  .tscroll { overflow:auto; max-height:520px; flex:1; }
+  table.tt { font-size:13px; }
+  table.tt thead th { position:sticky; top:0; background:var(--panel); z-index:1; cursor:pointer; user-select:none; white-space:nowrap; }
+  table.tt thead th.sorted { color:var(--accent2); }
+  table.tt td { white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:280px; padding:5px 8px; }
+  table.tt tbody tr { cursor:default; }
+  table.tt tbody tr:hover { background:#161927; }
+  table.tt tbody tr.sel { background:#23284a; box-shadow:inset 3px 0 0 var(--accent2); }
+  table.tt tbody tr.played td:not(.ld) { color:#5b6180; }
+  table.tt tbody tr.compat .key { color:var(--good); font-weight:700; }
+  table.tt td.num { text-align:right; font-variant-numeric:tabular-nums; }
+  table.tt td.ld { width:1%; }
+  .onDeck { display:inline-block; font-size:10px; font-weight:900; padding:1px 5px; border-radius:4px; color:#000; margin-right:3px; }
+  .ctag { display:inline-block; width:8px; height:8px; border-radius:2px; margin-right:6px; vertical-align:middle; }
+  table.tt tbody tr[draggable] { cursor:grab; }
+  .ldeck[draggable] { cursor:grab; }
+  .droptarget { outline:2px dashed var(--accent2); outline-offset:2px; }
+  .droptarget.warn { outline-color:var(--bad); }
+  .automix { display:flex; gap:8px; align-items:center; flex-wrap:wrap; padding:10px 12px; border-bottom:1px solid var(--line); background:#101221; }
+  .automix select { font:inherit; font-size:12px; padding:5px; border-radius:8px; background:#151827; color:var(--text); border:1px solid var(--line); }
+  .automix .amstatus { flex:1 1 280px; font-size:12px; color:var(--dim); min-width:0; }
+  .automix .amstatus b { color:var(--text); }
+  .lbtn.amon { background:var(--good); color:#000; border-color:var(--good); box-shadow:0 0 12px rgba(61,255,139,.4); }
+  .toast { position:fixed; left:50%; bottom:24px; transform:translateX(-50%); background:#1b1e2e; border:1px solid var(--line); padding:10px 16px; border-radius:12px;
+           font-weight:700; opacity:0; transition:opacity .25s; pointer-events:none; z-index:20; max-width:90vw; }
+  .toast.on { opacity:1; } .toast.err { border-color:var(--bad); color:var(--bad); }
+  @media (max-width: 800px) { .libbody { grid-template-columns:1fr; } .crates { max-height:200px; border-right:0; border-bottom:1px solid var(--line); } }
 </style>
 </head>
 <body>
@@ -119,9 +174,9 @@
   <span id="conn" class="pill">CONNECTING</span>
   <span id="self" class="pill">—</span>
   <div class="viewctl">
-    <button id="vSide">SIDE BY SIDE</button><button id="vStack">STACKED</button>
+    <button id="vSide" title="Deck cards side by side">CARDS ⇆</button><button id="vStack" title="Deck cards in one column">CARDS ⇅</button>
     <span class="sep"></span>
-    <button id="vWave">WAVEFORMS</button><button id="vOverlay">OVERLAY</button><button id="vLanes">LANES</button>
+    <button id="vLib" title="Track library (search, crates, load to deck)">LIBRARY</button><button id="vWave">WAVEFORMS</button><button id="vLanes" title="One lane per deck, deck 1 on top (XDJ / rekordbox style)">STACKED</button><button id="vOverlay" title="All decks in one lane, for beat matching">OVERLAY</button>
     <span class="sep"></span>
     <button id="zOut" title="Zoom out (scroll or pinch on the waveform)">−</button><span id="zLbl" class="zlbl">8 s</span><button id="zIn" title="Zoom in">+</button>
   </div>
@@ -129,6 +184,30 @@
 </header>
 <main>
   <section id="stack" class="panel stack"><canvas id="stackcv"></canvas></section>
+  <section id="lib" class="panel lib">
+    <div class="automix">
+      <button class="lbtn" id="amOn" title="Mixes from deck to deck on its own. Keep both channel faders up.">AUTOMIX</button>
+      <select id="amMode" title="How the next track is chosen"><option value="queue">Next in this list</option><option value="harmonic">Best match (BPM + key)</option></select>
+      <select id="amOverlap" title="How long both tracks play together"><option value="16">4-bar mix</option><option value="32">8-bar mix</option><option value="64">16-bar mix</option></select>
+      <span class="amstatus" id="amStatus">Automix is off.</span>
+      <button class="lbtn" id="amSkip" title="Choose a different next track">SKIP</button>
+      <button class="lbtn" id="amNow" title="Start the mix at the next bar">MIX NOW</button>
+    </div>
+    <div class="libdecks" id="libdecks"></div>
+    <div class="libbody">
+      <aside class="crates"><select id="libsrc"></select><ul id="crates"></ul></aside>
+      <div class="tracks">
+        <div class="ltools">
+          <input id="libq" type="search" placeholder="Search title, artist, album, genre, key…  ( / )" autocomplete="off">
+          <select id="libgenre"><option value="">All genres</option></select>
+          <button class="lbtn" id="fBpm" title="Within ±6% of the master tempo (or half / double)">BPM ≈ MASTER</button>
+          <button class="lbtn" id="fKey" title="Harmonically compatible with the master deck (Camelot ±1, relative)">KEY MATCH</button>
+          <span class="count" id="libcount"></span>
+        </div>
+        <div class="tscroll" id="tscroll"><table class="tt"><thead id="thead"></thead><tbody id="tbody"></tbody></table></div>
+      </div>
+    </div>
+  </section>
   <div id="players" class="players"><div class="empty">Waiting for players…</div></div>
   <div class="row3">
     <section class="panel">
@@ -158,6 +237,7 @@
   </div>
   <section class="panel"><details><summary>Raw data (everything the Pi receives, live)</summary><pre id="raw"></pre></details></section>
 </main>
+<div id="toast" class="toast"></div>
 <script>
 const $ = (s, r = document) => r.querySelector(s);
 const cards = {}, waves = {}, artRefs = {}, timelines = {};
@@ -166,7 +246,9 @@ const details = {}, posModel = {};
 const ZOOM_MIN = 0.5, ZOOM_MAX = 60, ZOOM_DEFAULT = 8;
 let savedView = {};
 try { savedView = JSON.parse(localStorage.getItem("deckdashView") || "{}"); } catch (e) {}
-const view = Object.assign({ layout: "side", waves: true, waveMode: "overlay", windowSec: ZOOM_DEFAULT }, savedView);
+// v2 made stacked lanes the default; drop the overlay choice saved by older versions.
+if (savedView.v !== 2) { delete savedView.waveMode; savedView.v = 2; }
+const view = Object.assign({ layout: "side", waves: true, lib: true, waveMode: "lanes", windowSec: ZOOM_DEFAULT }, savedView);
 function saveView() {
   try { localStorage.setItem("deckdashView", JSON.stringify(view)); } catch (e) {}
   $("#zLbl").textContent = view.windowSec < 10 ? view.windowSec.toFixed(1) + " s" : Math.round(view.windowSec) + " s";
@@ -180,6 +262,8 @@ function applyView() {
   $("#vOverlay").classList.toggle("on", view.waveMode === "overlay");
   $("#vLanes").classList.toggle("on", view.waveMode === "lanes");
   $("#stack").classList.toggle("hidden", !view.waves);
+  $("#vLib").classList.toggle("on", view.lib);
+  $("#lib").classList.toggle("hidden", !view.lib);
 }
 function zoomBy(k) {
   view.windowSec = Math.min(ZOOM_MAX, Math.max(ZOOM_MIN, view.windowSec * k));
@@ -208,6 +292,34 @@ function playheadMs(p, now) {
   let pos = pm ? pm.ms : 0;
   if (pm && pm.playing) pos += (now - pm.rx) * (1 + pm.pitch / 100);
   return pos;
+}
+
+// Smooth playhead. Positions arrive ~10x a second over Wi-Fi, each a little early or late, so
+// snapping to every one makes the waveform stutter. Instead:
+//  - time each reading by the Pi's own clock (st.now), with the Pi-to-browser offset taken from the
+//    fastest recent packet, so network delay doesn't count;
+//  - ease small errors in (a fifth per update) and snap only on real jumps (cue, loop, new track).
+const SNAP_MS = 80;
+let clockOff = null;                                  // browser ms - Pi ms, for the least-delayed packet
+function updatePosModel(st, rxNow) {
+  const off = rxNow - st.now;
+  // Minimum filter that creeps up ~1 ms/s, so it follows clock drift but ignores late packets.
+  clockOff = clockOff == null ? off : Math.min(off, clockOff + (rxNow - (updatePosModel.last || rxNow)) * 0.001);
+  updatePosModel.last = rxNow;
+  const sent = st.now + clockOff;                     // when the Pi read these positions, in browser time
+  for (const p of st.players) {
+    if (!p.position) continue;
+    const n = p.number, playing = p.status.playing, pitch = p.status.pitchPct || 0, rate = 1 + pitch / 100;
+    const target = p.position.ms + (playing ? (rxNow - sent) * rate : 0);
+    const pm = posModel[n];
+    let ms = target;
+    if (pm && playing && pm.playing) {
+      const shown = pm.ms + (rxNow - pm.rx) * (1 + pm.pitch / 100);
+      const err = target - shown;
+      if (Math.abs(err) < SNAP_MS) ms = shown + err * 0.2;
+    }
+    posModel[n] = { ms, rx: rxNow, playing, pitch };
+  }
 }
 
 // Where pos sits between two grid beats: beat number, fraction through it, and its length.
@@ -288,18 +400,40 @@ function phaseReadout(decks, pos) {
     const tl = timelines[p.number] && timelines[p.number].data;
     const ph = tl && beatPhase(tl, pos[p.number]);
     const dBpm = (p.status.effectiveBpm || 0) - (master.status.effectiveBpm || 0);
-    let txt = `${p.number} vs ${master.number}  ${dBpm >= 0 ? "+" : ""}${dBpm.toFixed(2)} BPM`, ok = Math.abs(dBpm) < 0.05;
+    let txt = `${p.number} vs ${master.number}  ${dBpm >= 0 ? "+" : ""}${dBpm.toFixed(2)} BPM`, ok = Math.abs(dBpm) < 0.05, phase = null;
     if (ph && mph) {
       const diff = ((ph.frac - mph.frac) % 1 + 1.5) % 1 - 0.5;   // beats, in (-0.5, 0.5]
       const ms = diff * mph.len;
+      phase = diff;
       txt += `  ·  ${ms >= 0 ? "+" : ""}${ms.toFixed(0)} ms ${Math.abs(ms) < 3 ? "in phase" : ms > 0 ? "ahead" : "behind"}`;
       ok = ok && Math.abs(ms) < 10;
       const bwA = p.status.beatWithinBar, bwM = master.status.beatWithinBar;
       if (bwA > 0 && bwM > 0 && bwA !== bwM && Math.abs(diff) < 0.25) { txt += `  ·  bar off by ${((bwA - bwM) + 4) % 4} beat`; ok = false; }
     }
-    out.push({ txt, ok, rgb: deckRgb(p.number) });
+    out.push({ txt, ok, rgb: deckRgb(p.number), num: p.number, phase });
   }
   return out;
+}
+
+// Where each deck's lane is on the waveform canvas (CSS px), for drag and drop; set by drawStack.
+let laneHits = [], dropTarget = null, dragging = null;
+function laneAt(y) { const h = laneHits.find(l => y >= l.y0 && y < l.y1); return h ? h.n : null; }
+
+function drawDropHint(g, dpr, W) {
+  // dragover repeats every ~50 ms while hovering; a stale target means the drag ended elsewhere.
+  if (!dropTarget || !dragging || performance.now() - dropTarget.at > 400) return;
+  const h = laneHits.find(l => l.n === dropTarget.n); if (!h) return;
+  const y0 = h.y0 * dpr, y1 = h.y1 * dpr, warn = dropTarget.playing;
+  g.fillStyle = warn ? "rgba(255,77,94,.22)" : "rgba(47,230,255,.18)"; g.fillRect(0, y0, W, y1 - y0);
+  g.strokeStyle = warn ? "#ff4d5e" : "#2fe6ff"; g.lineWidth = 2 * dpr; g.setLineDash([8 * dpr, 6 * dpr]);
+  g.strokeRect(dpr, y0 + dpr, W - 2 * dpr, y1 - y0 - 2 * dpr); g.setLineDash([]);
+  const txt = `${warn ? `Deck ${dropTarget.n} is PLAYING · ` : ""}${dropTarget.shift ? "Load + play" : "Load"} "${dragging.title}" on deck ${dropTarget.n}`;
+  const sub = dropTarget.shift ? "" : "hold Shift to load and play";
+  g.font = `800 ${16 * dpr}px system-ui`;
+  const w = Math.max(g.measureText(txt).width, 10), cy = (y0 + y1) / 2;
+  g.fillStyle = "rgba(7,7,12,.88)"; g.fillRect((W - w) / 2 - 14 * dpr, cy - (sub ? 26 : 18) * dpr, w + 28 * dpr, (sub ? 48 : 32) * dpr);
+  g.fillStyle = warn ? "#ff4d5e" : "#fff"; g.fillText(txt, (W - w) / 2, cy + (sub ? -4 : 4) * dpr);
+  if (sub) { g.font = `600 ${12 * dpr}px system-ui`; g.fillStyle = "#8a8fa8"; const sw = g.measureText(sub).width; g.fillText(sub, (W - sw) / 2, cy + 14 * dpr); }
 }
 
 function drawStack() {
@@ -311,16 +445,23 @@ function drawStack() {
   // Master first so it owns the top edge of the overlay.
   const decks = overlay ? players.filter(p => p.status.trackLoaded)
       .sort((a, b) => (b.status.tempoMaster - a.status.tempoMaster) || (a.number - b.number)) : players;
-  const lanes = overlay ? 1 : Math.max(1, players.length), laneCss = overlay ? 220 : 118;
-  const Wc = cv.clientWidth, Hc = lanes * laneCss;
+  // STACKED: one lane per deck (deck 1 on top, like the XDJ / rekordbox), with a phase meter
+  // strip after the first lane. OVERLAY: every deck in one lane.
+  const loaded = players.filter(p => p.status.trackLoaded);
+  const laneCss = overlay ? 220 : 128, meterCss = overlay ? 0 : Math.max(34, 16 * loaded.length + 6);
+  const Wc = cv.clientWidth, Hc = overlay ? laneCss : Math.max(1, players.length) * laneCss + meterCss;
   if (cv.width !== Math.round(Wc * dpr) || cv.height !== Math.round(Hc * dpr)) {
     cv.width = Math.round(Wc * dpr); cv.height = Math.round(Hc * dpr); cv.style.height = Hc + "px";
   }
-  const g = cv.getContext("2d"), W = cv.width, LH = cv.height / lanes;
+  const g = cv.getContext("2d"), W = cv.width, LH = laneCss * dpr;
   g.clearRect(0, 0, W, cv.height);
   const winMs = view.windowSec * 1000, msPerPx = winMs / W;
-  const pos = {};
-  for (const p of players) pos[p.number] = playheadMs(p, now);
+  const pos = {}, t0q = {};
+  for (const p of players) {
+    pos[p.number] = playheadMs(p, now);
+    // Scroll in whole device pixels so every column keeps sampling the same slice of audio (no shimmer).
+    t0q[p.number] = Math.round((pos[p.number] - winMs / 2) / msPerPx) * msPerPx;
+  }
 
   if (overlay) {
     const mid = LH / 2, half = LH / 2 - 26 * dpr;
@@ -330,13 +471,13 @@ function drawStack() {
     g.globalCompositeOperation = "lighter";   // overlapping peaks add up to white
     for (const p of decks) {
       const d = details[p.number] && details[p.number].data;
-      if (d) drawDetail(g, d, pos[p.number], pos[p.number] - winMs / 2, msPerPx, W, mid, half, deckRgb(p.number));
+      if (d) drawDetail(g, d, pos[p.number], t0q[p.number], msPerPx, W, mid, half, deckRgb(p.number));
     }
     g.globalCompositeOperation = "source-over";
     decks.forEach((p, i) => {
       const tl = timelines[p.number] && timelines[p.number].data;
       const edge = decks.length === 1 ? "both" : i === 0 ? "top" : "bottom";
-      if (tl) drawGrid(g, tl, pos[p.number] - winMs / 2, winMs, msPerPx, 0, LH, dpr, deckRgb(p.number), edge, true);
+      if (tl) drawGrid(g, tl, t0q[p.number], winMs, msPerPx, 0, LH, dpr, deckRgb(p.number), edge, true);
     });
     g.fillStyle = "#fff"; g.fillRect(W / 2 - dpr, 0, 2 * dpr, LH);
     // Legend below the top ticks, phase against the master on the right.
@@ -353,27 +494,91 @@ function drawStack() {
       g.fillStyle = "rgba(7,7,12,.75)"; g.fillRect(W - w - 8 * dpr, y - 15 * dpr, w, 20 * dpr);
       g.fillStyle = r.ok ? "#3dff8b" : rgba(r.rgb, 1); g.fillText(r.txt, W - w, y);
     });
+    // One lane holds every deck: split it into a drop band per deck (top = first deck).
+    const bands = players.length ? players : [];
+    laneHits = bands.map((p, i) => ({ n: p.number, y0: i * laneCss / bands.length, y1: (i + 1) * laneCss / bands.length }));
+    drawDropHint(g, dpr, W);
     return;
   }
 
+  if (!players.length) {
+    g.fillStyle = "#3c415a"; g.font = `${14 * dpr}px system-ui`; g.fillText("Waiting for decks…", 12 * dpr, LH / 2);
+    return;
+  }
+  const MH = meterCss * dpr, HEAD = 22 * dpr;
+  const laneY = i => i * LH + (i >= 1 ? MH : 0);
+  laneHits = players.map((p, li) => ({ n: p.number, y0: laneY(li) / dpr, y1: (laneY(li) + LH) / dpr }));
   players.forEach((p, li) => {
-    const y0 = li * LH, mid = y0 + LH / 2, s = p.status, t0 = pos[p.number] - winMs / 2;
+    const y0 = laneY(li), s = p.status, t0 = t0q[p.number], rgb = deckRgb(p.number);
+    const wy = y0 + HEAD, wh = LH - HEAD - 4 * dpr, mid = wy + wh / 2;
+    g.fillStyle = "#0e1019"; g.fillRect(0, y0, W, HEAD);
+    g.fillStyle = rgba(rgb, 1); g.fillRect(0, y0, 4 * dpr, LH);
+    g.fillStyle = "#171a28"; g.fillRect(0, mid, W, dpr);
     const d = details[p.number] && details[p.number].data;
-    if (d) drawDetail(g, d, pos[p.number], t0, msPerPx, W, mid, LH / 2 - 10, null);
+    if (d) drawDetail(g, d, pos[p.number], t0, msPerPx, W, mid, wh / 2 - 2 * dpr, null);
     else {
       g.fillStyle = "#3c415a"; g.font = `${14 * dpr}px system-ui`;
-      g.fillText(s.trackLoaded ? "loading waveform…" : "no track", 12 * dpr, mid);
+      g.fillText(s.trackLoaded ? "loading waveform…" : "no track", 14 * dpr, mid + 5 * dpr);
     }
     const tl = timelines[p.number] && timelines[p.number].data;
-    if (tl) drawGrid(g, tl, t0, winMs, msPerPx, y0 + 4, LH - 8, dpr, [255, 255, 255], "both", false);
-    g.fillStyle = "#fff"; g.fillRect(W / 2 - dpr, y0, 2 * dpr, LH);
-    g.fillStyle = s.tempoMaster ? "#ff2fd0" : "#2fe6ff";
-    g.font = `900 ${22 * dpr}px system-ui`; g.fillText(p.number, 10 * dpr, y0 + 26 * dpr);
-    g.fillStyle = "#e8e9f3"; g.font = `600 ${12 * dpr}px system-ui`;
-    const t = p.track;
-    g.fillText(`${t ? t.title : "—"}  ·  ${s.effectiveBpm ? s.effectiveBpm.toFixed(2) : "—"} BPM${s.tempoMaster ? "  ·  MASTER" : ""}${s.playing ? "" : "  ·  " + s.playState1}`, 34 * dpr, y0 + 22 * dpr);
-    if (li > 0) { g.fillStyle = "#262a3d"; g.fillRect(0, y0, W, dpr); }
+    if (tl) drawGrid(g, tl, t0, winMs, msPerPx, wy, wh, dpr, [255, 255, 255], "both", false);
+    g.fillStyle = "#fff"; g.fillRect(W / 2 - dpr, wy, 2 * dpr, wh);
+    g.beginPath(); g.moveTo(W / 2 - 6 * dpr, wy); g.lineTo(W / 2 + 6 * dpr, wy); g.lineTo(W / 2, wy + 7 * dpr); g.fill();
+
+    // Header: deck, title, then tempo / key / remaining / countdown on the right.
+    const t = p.track, yT = y0 + 16 * dpr;
+    g.font = `900 ${15 * dpr}px system-ui`; g.fillStyle = rgba(rgb, 1); g.fillText(p.number, 12 * dpr, yT);
+    g.font = `700 ${12 * dpr}px system-ui`; g.fillStyle = "#e8e9f3";
+    const title = t ? `${t.title || "Untitled"}${t.artist ? "  —  " + t.artist : ""}` : (s.trackLoaded ? `Track #${s.rekordboxId}` : "empty");
+    const right = [];
+    if (s.looping) right.push(["LOOP", "#2fe6ff"]);
+    if (s.tempoMaster) right.push(["MASTER", "#ff2fd0"]);
+    if (!s.playing && s.trackLoaded) right.push([s.cued ? "CUE" : "PAUSED", "#ffb02e"]);
+    if (tl && s.playing) {
+      const ph = beatPhase(tl, pos[p.number]), nxt = ph && tl.drops.find(dr => dr.beat > ph.beat);
+      if (nxt) right.push([`DROP ${Math.ceil(nxt.beat - ph.beat - ph.frac)}`, "#ff2fd0"]);
+    }
+    if (t && t.key) right.push([t.key, "#9b8cff"]);
+    const pc = s.pitchPct || 0;
+    right.push([`${s.effectiveBpm ? s.effectiveBpm.toFixed(2) : "—"} BPM  ${pc > 0 ? "+" : ""}${pc.toFixed(2)}%`, "#e8e9f3"]);
+    if (t) right.push(["-" + fmt(t.durationSec * 1000 - pos[p.number]), "#ff2fd0"]);
+    let rx = W - 10 * dpr;
+    g.font = `800 ${12 * dpr}px system-ui`;
+    for (const [txt, col] of right.reverse()) {
+      const w = g.measureText(txt).width;
+      rx -= w; g.fillStyle = col; g.fillText(txt, rx, yT); rx -= 14 * dpr;
+    }
+    g.font = `700 ${12 * dpr}px system-ui`; g.fillStyle = "#e8e9f3";
+    let tt = title; const maxW = rx - 34 * dpr;
+    while (tt.length > 3 && g.measureText(tt).width > maxW) tt = tt.slice(0, -2);
+    g.fillText(tt === title ? tt : tt + "…", 32 * dpr, yT);
   });
+
+  // Phase meter (rekordbox style): each deck's beat in the bar, and its phase against the master.
+  const my = LH, rows = loaded, rh = rows.length ? (MH - 6 * dpr) / rows.length : 0;
+  g.fillStyle = "#0e1019"; g.fillRect(0, my, W, MH);
+  const phases = Object.fromEntries(phaseReadout(rows, pos).map(r => [r.num, r]));
+  const gx = 34 * dpr, cw = 26 * dpr, gap = 4 * dpr, gaugeX = gx + 4 * (cw + gap) + 20 * dpr, gaugeW = Math.min(360 * dpr, W * 0.3);
+  rows.forEach((p, i) => {
+    const y = my + 3 * dpr + i * rh, rgb = deckRgb(p.number), bwb = p.status.beatWithinBar, h = rh - 4 * dpr;
+    g.font = `900 ${11 * dpr}px system-ui`; g.fillStyle = rgba(rgb, 1); g.fillText(p.number, 14 * dpr, y + h - 1 * dpr);
+    for (let k = 0; k < 4; k++) {
+      g.fillStyle = bwb === k + 1 ? (k === 0 ? "#fff" : rgba(rgb, 1)) : "#1d2031";
+      g.fillRect(gx + k * (cw + gap), y, cw, h);
+    }
+    // Gauge: centre = in phase with the master; left = behind, right = ahead (±half a beat).
+    g.fillStyle = "#1d2031"; g.fillRect(gaugeX, y + h / 2 - dpr, gaugeW, 2 * dpr);
+    g.fillStyle = "#3c415a"; g.fillRect(gaugeX + gaugeW / 2 - dpr, y, 2 * dpr, h);
+    const r = phases[p.number];
+    if (r && r.phase != null) {
+      g.fillStyle = r.ok ? "#3dff8b" : rgba(rgb, 1);
+      g.fillRect(gaugeX + gaugeW / 2 + r.phase * gaugeW - 3 * dpr, y, 6 * dpr, h);
+    }
+    g.font = `800 ${11 * dpr}px system-ui`;
+    g.fillStyle = r ? (r.ok ? "#3dff8b" : rgba(rgb, 1)) : "#8a8fa8";
+    g.fillText(r ? r.txt : (p.status.tempoMaster ? "MASTER" : ""), gaugeX + gaugeW + 16 * dpr, y + h - 1 * dpr);
+  });
+  drawDropHint(g, dpr, W);
 }
 
 // Wheel and trackpad pinch zoom (pinch arrives as ctrl+wheel); two-finger pinch on touch.
@@ -409,6 +614,7 @@ function cardFor(n) {
   if (cards[n]) return cards[n];
   const el = document.createElement("div");
   el.className = "card";
+  el.dataset.deck = n;
   el.innerHTML = `
     <div class="flash"></div>
     <div class="phead"><div class="pnum">${n}</div><div><div class="pmodel"></div><div class="pmeta"></div></div></div>
@@ -503,8 +709,10 @@ function drawWave(n, p) {
 function render(st) {
   lastState = st;
   const rxNow = performance.now();
-  for (const p of st.players) {
+  if (st.now) updatePosModel(st, rxNow);
+  else for (const p of st.players)
     if (p.position) posModel[p.number] = { ms: p.position.ms, rx: rxNow, playing: p.status.playing, pitch: p.status.pitchPct || 0 };
+  for (const p of st.players) {
     loadDetail(p.number, p.timelineKey);
     loadTimeline(p.number, p.timelineKey);
   }
@@ -581,8 +789,476 @@ function render(st) {
   renderMixer(st.mixer);
   renderShow(st.show);
   if ($("details").open) $("#raw").textContent = JSON.stringify(st, null, 2);
+  libOnState(st);
 }
 
+
+// ---------------------------------------------------------------- library (Serato-style)
+// Crates from the rekordbox export on the players' USB/SD, search + filters + sort in the browser,
+// load to a deck over Pro DJ Link. Keys: / search, ↑↓ select, shift+← / shift+→ load to the
+// first / second deck, Esc clears the search.
+const lib = { sources: [], src: null, tree: [], playlist: 0, tracks: [], view: [], sel: -1,
+              sort: { k: "n", dir: 1 }, q: "", genre: "", fBpm: false, fKey: false, sig: "" };
+let played = new Set();
+try { played = new Set(JSON.parse(localStorage.getItem("deckdashPlayed") || "[]")); } catch (e) {}
+const COLS = [["n", "#", "num"], ["title", "Title"], ["artist", "Artist"], ["bpm", "BPM", "num"], ["key", "Key"],
+              ["dur", "Time", "num"], ["genre", "Genre"], ["album", "Album"], ["rating", "★", "num"], ["added", "Added"]];
+const RB_COLOURS = { Pink: "#ff5fd2", Red: "#ff4d5e", Orange: "#ff9a2e", Yellow: "#ffe14d", Green: "#3dff8b", Aqua: "#2fe6ff", Blue: "#4d7cff", Purple: "#9b8cff" };
+
+function toast(msg, err) {
+  const t = $("#toast"); t.textContent = msg; t.className = "toast on" + (err ? " err" : "");
+  clearTimeout(toast.h); toast.h = setTimeout(() => t.className = "toast", 2600);
+}
+
+// Camelot: "8A" as is; musical keys (Am, F#m, Db...) converted. Returns [number, letter] or null.
+const CAMELOT = { "Abm": "1A", "G#m": "1A", "B": "1B", "Ebm": "2A", "D#m": "2A", "F#": "2B", "Gb": "2B", "Bbm": "3A", "A#m": "3A", "Db": "3B", "C#": "3B",
+  "Fm": "4A", "Ab": "4B", "G#": "4B", "Cm": "5A", "Eb": "5B", "D#": "5B", "Gm": "6A", "Bb": "6B", "A#": "6B", "Dm": "7A", "F": "7B",
+  "Am": "8A", "C": "8B", "Em": "9A", "G": "9B", "Bm": "10A", "D": "10B", "F#m": "11A", "Gbm": "11A", "A": "11B", "C#m": "12A", "Dbm": "12A", "E": "12B" };
+function camelot(k) {
+  if (!k) return null;
+  k = k.trim().replace("♯", "#").replace("♭", "b");
+  const m = /^(\d{1,2})([AB])$/i.exec(k) || /^(\d{1,2})([AB])$/.exec(CAMELOT[k] || CAMELOT[k.replace(/min(or)?$/i, "m").replace(/maj(or)?$/i, "")] || "");
+  return m ? [+m[1], m[2].toUpperCase()] : null;
+}
+function keyCompatible(a, b) {
+  const x = camelot(a), y = camelot(b);
+  if (!x || !y) return false;
+  const d = Math.min((x[0] - y[0] + 12) % 12, (y[0] - x[0] + 12) % 12);
+  return (x[1] === y[1] && d <= 1) || (x[0] === y[0]);
+}
+function bpmCompatible(bpm, master) {
+  if (!bpm || !master) return false;
+  return [1, 0.5, 2].some(f => Math.abs(bpm * f / master - 1) <= 0.06);
+}
+
+async function getJson(url) { const r = await fetch(url); const j = await r.json(); if (!r.ok) throw new Error(j.error || r.status); return j; }
+
+async function libSources() {
+  try {
+    const j = await getJson("/api/library");
+    lib.sources = j.sources;
+    const sel = $("#libsrc");
+    const opts = j.sources.map(s => `<option value="${esc(s.src)}"${s.ready ? "" : " disabled"}>P${s.player} ${s.slot.replace("_SLOT", "")} · ${esc(s.name || "")} · ${s.tracks} tracks${s.ready ? "" : " (reading…)"}</option>`).join("");
+    if (sel.dataset.opts !== opts) { sel.innerHTML = opts || "<option>No USB / SD in the players</option>"; sel.dataset.opts = opts; }
+    const ready = j.sources.filter(s => s.ready);
+    if (!ready.find(s => s.src === lib.src)) {
+      lib.src = ready.length ? ready[0].src : null; lib.playlist = 0;
+      if (lib.src) { sel.value = lib.src; await libLoadSource(); } else { lib.tracks = []; lib.tree = []; libRenderTree(); libRender(); }
+    }
+    if (lib.missing) { lib.missing = false; lib.sig = ""; }
+  } catch (e) {
+    // Older deckdash builds have no /api/library (the page comes back instead of JSON).
+    if (!lib.missing) {
+      lib.missing = true;
+      $("#libsrc").innerHTML = "<option>Library not available yet</option>"; $("#libsrc").dataset.opts = "";
+      lib.sig = ""; libRender(); if (lastState) libRenderDecks();
+    }
+  }
+}
+
+async function libLoadSource() {
+  try { lib.tree = (await getJson(`/api/library/tree?src=${encodeURIComponent(lib.src)}`)).items; } catch (e) { lib.tree = []; }
+  libRenderTree();
+  await libLoadTracks();
+}
+
+async function libLoadTracks() {
+  try { lib.tracks = (await getJson(`/api/library/tracks?src=${encodeURIComponent(lib.src)}&playlist=${lib.playlist}`)).tracks; }
+  catch (e) { lib.tracks = []; toast("Library: " + e.message, true); }
+  const genres = [...new Set(lib.tracks.map(t => t.genre).filter(Boolean))].sort();
+  $("#libgenre").innerHTML = `<option value="">All genres</option>` + genres.map(g => `<option${g === lib.genre ? " selected" : ""}>${esc(g)}</option>`).join("");
+  if (!genres.includes(lib.genre)) lib.genre = "";
+  lib.sel = -1;
+  libRender();
+}
+
+function libRenderTree() {
+  const total = (lib.sources.find(s => s.src === lib.src) || {}).tracks;
+  const node = items => items.map(it => it.folder
+    ? `<li><details open><summary>▸ ${esc(it.name)}</summary><ul>${node(it.children || [])}</ul></details></li>`
+    : `<li><span data-pl="${it.id}" class="${lib.playlist === it.id ? "on" : ""}">${esc(it.name)}<span class="cnt">${it.count}</span></span></li>`).join("");
+  $("#crates").innerHTML = lib.src ? `<li><span data-pl="0" class="${lib.playlist === 0 ? "on" : ""}">♫ All tracks<span class="cnt">${total || ""}</span></span></li>` + node(lib.tree) : "";
+}
+
+function masterInfo() {
+  const st = lastState; if (!st) return {};
+  const m = st.players.find(p => p.status.tempoMaster && p.status.trackLoaded) || st.players.find(p => p.status.playing);
+  return { bpm: st.master.bpm || (m && m.status.effectiveBpm), key: m && m.track && m.track.key };
+}
+
+// Which library tracks are on which deck right now (same source media and rekordbox id).
+function onDecks() {
+  const out = {}, st = lastState;
+  if (!st || !lib.src) return out;
+  const [sp, ss] = lib.src.split(":");
+  for (const p of st.players) {
+    const s = p.status;
+    if (s.trackLoaded && String(s.trackSourcePlayer) === sp && s.trackSourceSlot === ss) (out[s.rekordboxId] = out[s.rekordboxId] || []).push(p.number);
+  }
+  return out;
+}
+
+function libFilter() {
+  const words = lib.q.toLowerCase().split(/\s+/).filter(Boolean), mi = masterInfo();
+  let v = lib.tracks.filter(t => {
+    if (lib.genre && t.genre !== lib.genre) return false;
+    if (lib.fBpm && !bpmCompatible(t.bpm, mi.bpm)) return false;
+    if (lib.fKey && !keyCompatible(t.key, mi.key)) return false;
+    if (!words.length) return true;
+    const hay = [t.title, t.artist, t.album, t.genre, t.label, t.remixer, t.key, t.comment, t.bpm && t.bpm.toFixed(0)].join(" ").toLowerCase();
+    return words.every(w => hay.includes(w));
+  });
+  const { k, dir } = lib.sort;
+  v.sort((a, b) => {
+    const x = a[k], y = b[k];
+    if (x == null || x === "") return 1; if (y == null || y === "") return -1;
+    return (typeof x === "number" ? x - y : String(x).localeCompare(String(y), undefined, { sensitivity: "base", numeric: true })) * dir;
+  });
+  return v;
+}
+
+function libRender() {
+  $("#thead").innerHTML = "<tr><th></th>" + COLS.map(([k, l]) => `<th data-k="${k}" class="${lib.sort.k === k ? "sorted" : ""}">${l}${lib.sort.k === k ? (lib.sort.dir > 0 ? " ▴" : " ▾") : ""}</th>`).join("") + "<th>Load</th></tr>";
+  lib.view = libFilter();
+  const decks = deckNumbers(), od = onDecks(), mi = masterInfo(), LIMIT = 1500;
+  const playing = new Set((lastState ? lastState.players : []).filter(p => p.status.playing).map(p => p.number));
+  $("#tbody").innerHTML = lib.view.slice(0, LIMIT).map((t, i) => {
+    const on = od[t.id] || [];
+    const cls = [i === lib.sel ? "sel" : "", played.has(lib.src + "/" + t.id) ? "played" : "", mi.key && keyCompatible(t.key, mi.key) ? "compat" : ""].join(" ");
+    return `<tr data-i="${i}" class="${cls}" draggable="true"><td class="ld">${on.map(n => `<span class="onDeck" style="background:${rgba(deckRgb(n), 1)}">${n}</span>`).join("")}</td>
+      <td class="num">${t.n}</td>
+      <td title="${esc(t.title)}">${t.color && RB_COLOURS[t.color] ? `<span class="ctag" style="background:${RB_COLOURS[t.color]}"></span>` : ""}${esc(t.title)}</td>
+      <td title="${esc(t.artist)}">${esc(t.artist)}</td><td class="num">${t.bpm ? t.bpm.toFixed(2) : ""}</td><td class="key">${esc(t.key)}</td>
+      <td class="num">${fmt(t.dur * 1000)}</td><td>${esc(t.genre)}</td><td title="${esc(t.album)}">${esc(t.album)}</td>
+      <td class="num">${t.rating ? "★".repeat(t.rating) : ""}</td><td>${esc(t.added)}</td>
+      <td class="ld">${decks.map(n => `<button class="lbtn" data-load="${n}" title="${playing.has(n) ? "Deck " + n + " is playing" : "Load to deck " + n}"${playing.has(n) ? " style='opacity:.5'" : ""}>${n}</button>`).join(" ")}</td></tr>`;
+  }).join("") || `<tr><td colspan="13" class="pmeta" style="padding:24px">${lib.missing ? "Browsing and loading tracks, and PLAY / SYNC / MASTER, need the deckdash update (Library.java) on the brain. The repo owner deploys that; until then this panel can't reach the decks." : lib.src ? (lib.tracks.length ? "No tracks match." : "Empty playlist.") : "Insert a rekordbox USB into a player to browse its library."}</td></tr>`;
+  $("#libcount").textContent = lib.tracks.length ? `${lib.view.length} of ${lib.tracks.length}${lib.view.length > LIMIT ? ` (showing ${LIMIT})` : ""}` : "";
+  $("#fBpm").classList.toggle("on", lib.fBpm); $("#fKey").classList.toggle("on", lib.fKey);
+}
+
+const deckNumbers = () => (lastState ? lastState.players.map(p => p.number) : []).sort((a, b) => a - b);
+
+async function deckCmd(deck, action, extra) {
+  try {
+    const r = await fetch("/api/deck", { method: "POST", body: JSON.stringify(Object.assign({ deck, action }, extra || {})) });
+    const j = await r.json();
+    if (!j.ok) throw new Error(j.error || "failed");
+    return true;
+  } catch (e) { toast(`Deck ${deck}: ${e.message}`, true); return false; }
+}
+
+async function loadTo(deck, t, src = lib.src, play = false) {
+  if (!t) return;
+  const p = lastState && lastState.players.find(x => x.number === deck);
+  let force = false;
+  if (p && p.status.playing) {
+    if (!confirm(`Deck ${deck} is PLAYING "${p.track ? p.track.title : ""}".\nLoad "${t.title}" anyway?`)) return;
+    force = true;
+  }
+  if (await deckCmd(deck, "load", { src, id: t.id, force })) {
+    played.add(src + "/" + t.id);
+    try { localStorage.setItem("deckdashPlayed", JSON.stringify([...played].slice(-2000))); } catch (e) {}
+    toast(`Loading "${t.title}" → deck ${deck}${play ? " and playing" : ""}`);
+    if (play) playWhenLoaded(deck, t);
+  }
+}
+
+// Press play once the deck reports the new track loaded (it takes a second or two to load).
+async function playWhenLoaded(deck, t) {
+  const start = performance.now();
+  await new Promise(r => setTimeout(r, 1000));          // let the old track's status clear first
+  while (performance.now() - start < 12000) {
+    const p = lastState && lastState.players.find(x => x.number === deck);
+    const s = p && p.status;
+    if (s && s.trackLoaded && s.rekordboxId === t.id && !s.busy) {
+      if (!s.playing) await deckCmd(deck, "play");
+      return;
+    }
+    await new Promise(r => setTimeout(r, 250));
+  }
+  toast(`Deck ${deck} didn't report "${t.title}" loaded, so it wasn't started`, true);
+}
+
+// ---------------------------------------------------------------- automix
+// Runs in this browser tab. The Pi can drive the decks (load, play, stop, sync, master) but not the
+// mixer's faders, so this mixes like rekordbox Automix on CDJs: with both channel faders up, the next
+// track starts on the bar where the playing one's outro begins, both play for the overlap, then the old
+// deck stops on a bar line and the new one becomes master. Then it repeats the other way round.
+const AM_LEAD_MS = 25;                                  // network + deck start latency to send early
+const am = { on: false, mode: view.amMode || "queue", overlap: +(view.amOverlap || 32), phase: "off",
+             next: null, skipped: new Set(), loadSent: 0, syncSent: 0, masterSent: 0, startTimer: null,
+             stopTimer: null, forceStart: null, said: "" };
+
+function amSay(html) { if (html !== am.said) { am.said = html; $("#amStatus").innerHTML = html; } }
+function barFirstAtOrBefore(tl, b) { let r = tl.barFirstBeat[0]; for (const x of tl.barFirstBeat) { if (x <= b) r = x; else break; } return r; }
+function barFirstAtOrAfter(tl, b) { const x = tl.barFirstBeat.find(x => x >= b); return x || tl.beatMs.length; }
+function barNumber(tl, beat) { return tl.barFirstBeat.filter(x => x <= beat).length; }
+function mixStartBeat(tl, overlap) {
+  const last = tl.beatMs.length, outro = tl.sections.filter(s => s.type === "outro").pop();
+  const b = outro ? outro.startBeat : last - overlap;
+  return barFirstAtOrBefore(tl, Math.max(1, Math.min(b, last - overlap)));
+}
+// Browser time (performance.now) at which a deck reaches a beat of its grid.
+function timeOfBeat(p, tl, beat) {
+  const now = performance.now(), rate = 1 + (p.status.pitchPct || 0) / 100;
+  return now + (tl.beatMs[Math.max(0, Math.min(tl.beatMs.length - 1, beat - 1))] - playheadMs(p, now)) / rate;
+}
+const deckKey = s => `${s.trackSourcePlayer}:${s.trackSourceSlot}/${s.rekordboxId}`;
+
+function amPickNext(currentId) {
+  const onDeck = new Set(lastState.players.map(p => p.status.rekordboxId));
+  const ok = t => !onDeck.has(t.id) && !played.has(lib.src + "/" + t.id) && !am.skipped.has(t.id) && t.id !== currentId;
+  if (am.mode === "harmonic") {
+    const mi = masterInfo();
+    const drift = t => Math.min(...[1, 0.5, 2].map(f => Math.abs(t.bpm * f / (mi.bpm || t.bpm) - 1)));
+    const score = t => (keyCompatible(t.key, mi.key) ? 1 : 0) - drift(t) * 10;
+    const c = lib.tracks.filter(ok).filter(t => t.bpm && drift(t) <= 0.06).sort((a, b) => score(b) - score(a));
+    return c[0] || null;
+  }
+  const v = lib.view.length ? lib.view : lib.tracks, i = v.findIndex(t => t.id === currentId);
+  return (i >= 0 ? v.slice(i + 1).concat(v.slice(0, i)) : v).find(ok) || null;
+}
+
+function amStop(reason) {
+  clearTimeout(am.startTimer); clearTimeout(am.stopTimer);
+  am.startTimer = am.stopTimer = null; am.forceStart = null;
+  am.phase = am.on ? "prep" : "off";
+  if (reason) amSay(reason);
+}
+
+function amTick() {
+  $("#amOn").classList.toggle("amon", am.on);
+  if (!am.on) return amSay("Automix is off. Keep both channel faders up, then switch it on.");
+  if (lib.missing || !lib.src || !lastState) return amSay("Automix needs the library.");
+  if (am.phase === "mixing") return;                   // the stop timer owns this phase
+  const ps = lastState.players.slice().sort((a, b) => a.number - b.number), playing = ps.filter(p => p.status.playing);
+  if (ps.length < 2) return amSay("Automix needs two decks on the link.");
+  if (!playing.length) { amStop(); return amSay("Start a track on either deck and automix takes it from there."); }
+  if (playing.length > 1) { amStop(); return amSay("Both decks are playing, so automix waits until one stops."); }
+  const A = playing[0], B = ps.find(p => p !== A), bs = B.status, now = performance.now();
+
+  // 1. The next track on the idle deck. A track you put there yourself (not played yet) is used as is.
+  const bOwn = bs.trackLoaded && bs.rekordboxId && bs.rekordboxId !== A.status.rekordboxId && !played.has(deckKey(bs));
+  if (am.next && am.next.deck !== B.number) am.next = null;
+  if (bOwn && (!am.next || (bs.rekordboxId !== am.next.id && now - am.loadSent > 8000)))
+    am.next = { id: bs.rekordboxId, title: (B.track && B.track.title) || `Track #${bs.rekordboxId}`, deck: B.number };
+  if (!am.next) {
+    const t = amPickNext(A.status.rekordboxId);
+    if (!t) return amSay("No tracks left to mix into. Pick another playlist or switch modes.");
+    am.next = { id: t.id, title: t.title, deck: B.number };
+  }
+  const nextTitle = `<b>${esc(am.next.title)}</b>`;
+  if (bs.rekordboxId !== am.next.id) {
+    if (now - am.loadSent > 8000) { am.loadSent = now; deckCmd(B.number, "load", { src: lib.src, id: am.next.id }); }
+    return amSay(`Loading ${nextTitle} on deck ${B.number}…`);
+  }
+  if (!bs.trackLoaded || bs.busy) return amSay(`Loading ${nextTitle} on deck ${B.number}…`);
+  // Retry a few times (a deck can miss a command), then leave it: the mix still starts on the bar.
+  const tries = am.next.tries || (am.next.tries = { sync: 0, master: 0 });
+  if (!bs.synced && tries.sync < 3 && now - am.syncSent > 3000) { am.syncSent = now; tries.sync++; deckCmd(B.number, "sync_on"); }
+  if (!A.status.tempoMaster && tries.master < 3 && now - am.masterSent > 3000) { am.masterSent = now; tries.master++; deckCmd(A.number, "master"); }
+
+  // 2. When to start it: the bar where deck A's outro begins (or MIX NOW's bar).
+  const tl = timelines[A.number] && timelines[A.number].data;
+  if (!tl) return amSay(`Next: ${nextTitle} on deck ${B.number}. Waiting for deck ${A.number}'s beat grid…`);
+  const ph = beatPhase(tl, playheadMs(A, now)), cur = ph.beat + ph.frac;
+  let start = am.forceStart || mixStartBeat(tl, am.overlap);
+  if (start < cur + 1) start = am.forceStart = barFirstAtOrAfter(tl, cur + 2);   // switched on late: next bar
+  const beatsLeft = start - cur;
+  if (!am.startTimer && beatsLeft <= 16) amSchedule(A, B, tl, start);
+  amSay(`Next: ${nextTitle} on deck ${B.number} · mixes in at bar ${barNumber(tl, start)} of deck ${A.number} ` +
+        `(<b>${Math.ceil(beatsLeft)}</b> beats) · ${am.overlap / 4}-bar overlap`);
+}
+
+function amSchedule(A, B, tl, start) {
+  const a = A.number, b = B.number, next = am.next;
+  am.startTimer = setTimeout(async () => {
+    am.startTimer = null;
+    const pa = lastState.players.find(p => p.number === a), pb = lastState.players.find(p => p.number === b);
+    // Only if nothing changed in the meantime.
+    if (!am.on || !pa || !pb || !pa.status.playing || pb.status.playing || pb.status.rekordboxId !== next.id) return;
+    if (!(await deckCmd(b, "play"))) return;
+    am.phase = "mixing"; am.forceStart = null;
+    played.add(deckKey(pb.status));
+    toast(`Automix: "${next.title}" in on deck ${b}`);
+    amSay(`Mixing: deck ${a} → deck ${b} (<b>${esc(next.title)}</b>) over ${am.overlap / 4} bars`);
+    const stopBeat = Math.min(tl.beatMs.length, barFirstAtOrAfter(tl, start + am.overlap));
+    am.stopTimer = setTimeout(async () => {
+      am.stopTimer = null;
+      const nb = lastState.players.find(p => p.number === b);
+      am.phase = am.on ? "prep" : "off"; am.next = null;
+      if (!am.on || !nb || !nb.status.playing) return;  // you took over: leave deck A alone
+      await deckCmd(b, "master");
+      await deckCmd(a, "stop");
+      toast(`Automix: deck ${b} leads, picking the next track for deck ${a}`);
+    }, timeOfBeat(pa, tl, stopBeat) - performance.now() - AM_LEAD_MS);
+  }, timeOfBeat(A, tl, start) - performance.now() - AM_LEAD_MS);
+}
+
+$("#amMode").value = am.mode; $("#amOverlap").value = String(am.overlap);
+$("#amMode").onchange = e => { am.mode = view.amMode = e.target.value; saveView(); if (am.phase !== "mixing") { am.next = null; amStop(); } };
+$("#amOverlap").onchange = e => { am.overlap = view.amOverlap = +e.target.value; saveView(); if (am.phase !== "mixing") amStop(); };
+$("#amOn").onclick = () => {
+  am.on = !am.on;
+  if (am.on) { am.phase = "prep"; am.next = null; am.skipped.clear(); toast("Automix on. Keep both channel faders up."); }
+  else { amStop(); toast("Automix off"); }
+  amTick();
+};
+$("#amSkip").onclick = () => {
+  if (!am.on || am.phase === "mixing" || !am.next) return;
+  am.skipped.add(am.next.id); am.next = null; am.loadSent = 0; amStop(); amTick();
+};
+$("#amNow").onclick = () => {
+  if (!am.on || am.phase === "mixing") return;
+  const A = lastState && lastState.players.find(p => p.status.playing), tl = A && timelines[A.number] && timelines[A.number].data;
+  if (!tl) return toast("Nothing playing to mix out of", true);
+  clearTimeout(am.startTimer); am.startTimer = null;
+  const ph = beatPhase(tl, playheadMs(A, performance.now()));
+  am.forceStart = barFirstAtOrAfter(tl, ph.beat + ph.frac + 2);
+  amTick();
+};
+setInterval(amTick, 200);
+
+// ---------------------------------------------------------------- drag and drop
+// Drag a library row, or a deck (its waveform lane or its chip above the library), onto a deck's
+// waveform lane, deck card or chip to load it there. Shift while dropping loads and plays.
+const DRAG_T = "application/x-rave-track";
+function deckTrack(n) {
+  const p = lastState && lastState.players.find(x => x.number === n), s = p && p.status;
+  if (!s || !s.trackLoaded || !s.rekordboxId) return null;
+  return { src: `${s.trackSourcePlayer}:${s.trackSourceSlot}`, id: s.rekordboxId, title: (p.track && p.track.title) || `Track #${s.rekordboxId}`, from: n };
+}
+function startDrag(e, item) {
+  if (!item) { e.preventDefault(); return; }
+  dragging = item;
+  e.dataTransfer.setData(DRAG_T, JSON.stringify(item));
+  e.dataTransfer.setData("text/plain", item.title);
+  e.dataTransfer.effectAllowed = "copy";
+}
+function endDrag() {
+  dragging = null; dropTarget = null;
+  document.querySelectorAll(".droptarget").forEach(el => el.classList.remove("droptarget", "warn"));
+}
+function isPlaying(n) { const p = lastState && lastState.players.find(x => x.number === n); return !!(p && p.status.playing); }
+function overDeck(e, n, el) {
+  if (!dragging || !n || n === dragging.from) { dropTarget = null; return false; }
+  e.preventDefault();
+  e.dataTransfer.dropEffect = "copy";
+  dropTarget = { n, playing: isPlaying(n), shift: e.shiftKey, at: performance.now() };
+  if (el) { el.classList.add("droptarget"); el.classList.toggle("warn", dropTarget.playing); }
+  return true;
+}
+function dropOnDeck(e, n) {
+  if (!dragging || !n || n === dragging.from) return;
+  e.preventDefault();
+  const d = dragging, play = e.shiftKey;
+  endDrag();
+  loadTo(n, { id: d.id, title: d.title }, d.src, play);
+}
+
+$("#tbody").addEventListener("dragstart", e => {
+  const tr = e.target.closest("tr[data-i]"), t = tr && lib.view[+tr.dataset.i];
+  startDrag(e, t && { src: lib.src, id: t.id, title: t.title, from: null });
+});
+$("#libdecks").addEventListener("dragstart", e => {
+  const el = e.target.closest("[data-deck]"); startDrag(e, el && deckTrack(+el.dataset.deck));
+});
+addEventListener("dragend", endDrag);
+
+// Waveform canvas: drag a lane out, drop onto a lane.
+(() => {
+  const cv = $("#stackcv");
+  if (matchMedia("(pointer: fine)").matches) cv.draggable = true;   // leave touch for pinch zoom
+  const lane = e => laneAt(e.clientY - cv.getBoundingClientRect().top);
+  cv.addEventListener("dragstart", e => startDrag(e, deckTrack(lane(e))));
+  cv.addEventListener("dragover", e => overDeck(e, lane(e)));
+  cv.addEventListener("dragleave", () => { dropTarget = null; });
+  cv.addEventListener("drop", e => dropOnDeck(e, lane(e)));
+})();
+// Deck cards and the deck chips above the library.
+for (const root of [$("#players"), $("#libdecks")]) {
+  root.addEventListener("dragover", e => { const el = e.target.closest("[data-deck]"); overDeck(e, el && +el.dataset.deck, el); });
+  root.addEventListener("dragleave", e => { const el = e.target.closest("[data-deck]"); if (el && !el.contains(e.relatedTarget)) el.classList.remove("droptarget", "warn"); });
+  root.addEventListener("drop", e => { const el = e.target.closest("[data-deck]"); dropOnDeck(e, el && +el.dataset.deck); });
+}
+
+function libRenderDecks() {
+  const st = lastState; if (!st) return;
+  $("#libdecks").innerHTML = st.players.slice().sort((a, b) => a.number - b.number).map(p => {
+    const s = p.status, t = p.track, c = rgba(deckRgb(p.number), 1);
+    // Deck commands go through /api/deck, which only exists once Library.java is deployed.
+    const off = lib.missing ? ` disabled title="Needs the deckdash update (Library.java) on the brain"` : "";
+    return `<div class="ldeck" data-deck="${p.number}"${s.trackLoaded && s.rekordboxId ? ' draggable="true" title="Drag onto another deck to load the same track"' : ""} style="border-left:3px solid ${c}"><span class="n" style="color:${c}">${p.number}</span>
+      <span class="tt">${t ? `<b>${esc(t.title)}</b> · ${esc(t.artist || "")}` : s.trackLoaded ? "loading…" : "empty"}</span>
+      <button class="lbtn play${s.playing ? " on" : ""}" data-dk="${p.number}" data-a="${s.playing ? "stop" : "play"}" title="Fader start / stop over DJ Link"${off}>${s.playing ? "■ STOP" : "▶ PLAY"}</button>
+      <button class="lbtn${s.synced ? " on" : ""}" data-dk="${p.number}" data-a="${s.synced ? "sync_off" : "sync_on"}"${off}>SYNC</button>
+      <button class="lbtn${s.tempoMaster ? " on" : ""}" data-dk="${p.number}" data-a="master"${off}>MASTER</button></div>`;
+  }).join("") || `<span class="pmeta">Waiting for decks…</span>`;
+}
+
+// Re-render the table only when what it shows from the decks changes (not on every 10 Hz push).
+function libOnState(st) {
+  if (!view.lib || dragging) return;      // re-rendering would remove the row being dragged
+  for (const p of st.players) if (p.status.playing && p.status.trackLoaded)
+    played.add(`${p.status.trackSourcePlayer}:${p.status.trackSourceSlot}/${p.status.rekordboxId}`);
+  const mi = masterInfo();
+  const sig = JSON.stringify([st.players.map(p => [p.number, p.status.rekordboxId, p.status.playing, p.status.synced, p.status.tempoMaster, p.track && p.track.title]),
+                              lib.fBpm || lib.fKey ? [Math.round((mi.bpm || 0) * 10), mi.key] : 0, mi.key]);
+  if (sig === lib.sig) return;
+  lib.sig = sig;
+  libRenderDecks();
+  libRender();
+}
+
+function libSelect(i) {
+  if (!lib.view.length) return;
+  lib.sel = Math.max(0, Math.min(lib.view.length - 1, i));
+  document.querySelectorAll("#tbody tr.sel").forEach(r => r.classList.remove("sel"));
+  const row = $(`#tbody tr[data-i="${lib.sel}"]`);
+  if (row) { row.classList.add("sel"); row.scrollIntoView({ block: "nearest" }); }
+}
+
+$("#libsrc").onchange = e => { lib.src = e.target.value; lib.playlist = 0; libLoadSource(); };
+$("#crates").onclick = e => { const el = e.target.closest("[data-pl]"); if (!el) return; lib.playlist = +el.dataset.pl; libRenderTree(); libLoadTracks(); };
+$("#libq").oninput = e => { lib.q = e.target.value; lib.sel = -1; libRender(); };
+$("#libgenre").onchange = e => { lib.genre = e.target.value; libRender(); };
+$("#fBpm").onclick = () => { lib.fBpm = !lib.fBpm; libRender(); };
+$("#fKey").onclick = () => { lib.fKey = !lib.fKey; libRender(); };
+$("#thead").onclick = e => {
+  const k = e.target.closest("th") && e.target.closest("th").dataset.k; if (!k) return;
+  lib.sort = { k, dir: lib.sort.k === k ? -lib.sort.dir : 1 }; libRender();
+};
+$("#tbody").onclick = e => {
+  const tr = e.target.closest("tr[data-i]"); if (!tr) return;
+  const b = e.target.closest("[data-load]");
+  if (b) loadTo(+b.dataset.load, lib.view[+tr.dataset.i]); else libSelect(+tr.dataset.i);
+};
+$("#tbody").ondblclick = e => {
+  // Double-click loads to the first deck that isn't playing (like dragging onto the free deck).
+  const tr = e.target.closest("tr[data-i]"); if (!tr || e.target.closest("[data-load]")) return;
+  const free = deckNumbers().find(n => !lastState.players.find(p => p.number === n).status.playing);
+  if (free) loadTo(free, lib.view[+tr.dataset.i]); else toast("Every deck is playing", true);
+};
+$("#libdecks").onclick = e => { const b = e.target.closest("[data-dk]"); if (b) deckCmd(+b.dataset.dk, b.dataset.a); };
+addEventListener("keydown", e => {
+  if (!view.lib) return;
+  const inSearch = e.target === $("#libq");
+  if (e.key === "/" && !inSearch && e.target.tagName !== "INPUT") { e.preventDefault(); $("#libq").focus(); $("#libq").select(); return; }
+  if (e.key === "Escape" && inSearch) { lib.q = $("#libq").value = ""; libRender(); return; }
+  if (e.target.tagName === "INPUT" && !inSearch || e.target.tagName === "SELECT") return;
+  if (e.key === "ArrowDown" || e.key === "ArrowUp") {
+    if (e.shiftKey) return;
+    e.preventDefault(); libSelect(lib.sel + (e.key === "ArrowDown" ? 1 : -1));
+  } else if (e.shiftKey && (e.key === "ArrowLeft" || e.key === "ArrowRight") && lib.sel >= 0) {
+    e.preventDefault();
+    const d = deckNumbers(), n = e.key === "ArrowLeft" ? d[0] : d[1];
+    if (n) loadTo(n, lib.view[lib.sel]);
+  }
+});
+$("#vLib").onclick = () => { view.lib = !view.lib; applyView(); if (view.lib) { lib.sig = ""; libSources(); } };
+libSources();
+setInterval(libSources, 5000);   // USBs come and go
 const dbToPct = d => Math.max(0, Math.min(100, (d + 60) / 60 * 100));   // -60..0 dBFS
 function renderMixer(m) {
   $("#mixModel").textContent = m && m.connected ? `· ${m.model} via USB` : "· not connected";
@@ -618,12 +1294,35 @@ function renderShow(sh) {
 }
 $("#cmdLink").href = `http://${location.hostname}:8090/`;
 
+// Live updates come over SSE (/api/events). If the stream goes quiet (the server's push task can
+// stall while /api/state still answers), fall back to polling /api/state and keep retrying the stream.
+let es = null, lastMsg = 0, polling = false, pollBusy = false, lastRetry = 0;
+function setConn(cls, txt) { $("#conn").className = "pill " + cls; $("#conn").textContent = txt; }
 function connect() {
-  const es = new EventSource("/api/events");
-  es.onopen = () => { $("#conn").className = "pill live"; $("#conn").textContent = "LIVE"; };
-  es.onmessage = e => render(JSON.parse(e.data));
-  es.onerror = () => { $("#conn").className = "pill down"; $("#conn").textContent = "RECONNECTING"; };
+  if (es) es.close();
+  lastRetry = performance.now();
+  es = new EventSource("/api/events");
+  es.onopen = () => { if (!polling) setConn("live", "LIVE"); };
+  es.onmessage = e => { lastMsg = performance.now(); if (polling) { polling = false; setConn("live", "LIVE"); } render(JSON.parse(e.data)); };
+  es.onerror = () => { if (!polling) setConn("down", "RECONNECTING"); };
 }
+async function poll() {
+  if (pollBusy) return;
+  pollBusy = true;
+  try {
+    const r = await fetch("/api/state", { cache: "no-store" });
+    if (r.ok) { render(await r.json()); setConn("live", "LIVE · POLLING"); } else setConn("down", "RECONNECTING");
+  } catch (e) { setConn("down", "RECONNECTING"); }
+  pollBusy = false;
+}
+setInterval(() => {
+  const now = performance.now();
+  if (now - lastMsg > 2000) {
+    polling = true;
+    poll();
+    if (now - lastRetry > 15000) connect();     // try the stream again now and then
+  }
+}, 150);
 $("#vSide").onclick = () => { view.layout = "side"; applyView(); };
 $("#vStack").onclick = () => { view.layout = "stack"; applyView(); };
 $("#vWave").onclick = () => { view.waves = !view.waves; applyView(); };

@@ -84,8 +84,8 @@ Every box in the diagram is a folder in this repo.
 
 ## Running it
 
-- **Dashboard:** `http://ravecave.local:8080`. Live decks, artwork, waveforms with predicted sections and drops, and a stacked scrolling two-deck view.
-- **Commander:** `http://ravecave.local:8090`. DROP NOW, BUILD, HOLD, STROBE, BLACKOUT, skip or mark drops (saved per track), follow deck, intensity, latency.
+- **Dashboard:** `http://ravecave.local:8080`. Live decks, artwork, and XDJ-style stacked scrolling waveforms (one lane per deck, with a phase meter) showing predicted sections and drops. It also has a Serato-style **library**: crates, search, BPM and key filters, and load to deck. See [docs/show-engine.md](docs/show-engine.md#dashboard-waveforms-and-library).
+- **Commander:** `http://ravecave.local:8090`. The lighting controller. It has performance pads (beat-synced strobe, blinder, blackout, flash), latched scenes, colour lock or cycle, half- and double-time, per-fixture mute and level, a tap clock for when no deck is playing, a live fixture view, and drop control (DROP NOW, BUILD, HOLD, skip or mark drops). See [docs/show-engine.md](docs/show-engine.md#commander-control-page-on-the-pi).
 - **Projection mapping:** `http://ravecave.local:8100/` on the projector, `http://ravecave.local:8100/edit` on your phone to set it up.
 - **Generative visuals:** `http://ravecave.local:8110/` to reshape the live sketch; set a surface's content to generative to show it.
 - **Deploy changes:** `brain/deploy.sh` (both brain services), or `brain/deploy.sh showbrain | deckdash | mixer | projector | visuals | web | preview | pyramid | panel`.

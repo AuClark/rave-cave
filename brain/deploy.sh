@@ -90,17 +90,18 @@ if [[ -z ${DEPLOY_LABEL:-} ]]; then
 fi
 
 if [[ $what == all || $what == deckdash ]]; then
-  rsync -a brain/deckdash/DeckDash.java brain/deckdash/Timeline.java "$BRAIN":deckdash/
-  rsync -rlt brain/deckdash/web/ "$BRAIN":/srv/rave/deckdash-web/
-  ssh "$BRAIN" 'cd ~/deckdash && rm -rf classes && javac -cp "lib/*" -d classes DeckDash.java Timeline.java && sudo systemctl restart deckdash && echo "deckdash restarted"'
+  rsync -a brain/deckdash/DeckDash.java brain/deckdash/Timeline.java brain/deckdash/Library.java "$BRAIN":deckdash/
+  rsync -rlt --omit-dir-times brain/deckdash/web/ "$BRAIN":/srv/rave/deckdash-web/
+  # Compile to classes.new and swap only on success, so a failed build leaves the running one alone.
+  ssh "$BRAIN" 'cd ~/deckdash && rm -rf classes.new && javac -cp "lib/*" -d classes.new DeckDash.java Timeline.java Library.java && rm -rf classes && mv classes.new classes && sudo systemctl restart deckdash && echo "deckdash restarted"'
 fi
 
 if [[ $what == web ]]; then       # page only: no compile, no restart (the page is re-read on every request)
-  rsync -rlt brain/deckdash/web/ "$BRAIN":/srv/rave/deckdash-web/ && echo "dashboard page updated"
+  rsync -rlt --omit-dir-times brain/deckdash/web/ "$BRAIN":/srv/rave/deckdash-web/ && echo "dashboard page updated"
 fi
 
 if [[ $what == preview ]]; then   # work-in-progress page at http://ravecave.local:8080/preview/
-  rsync -rlt brain/deckdash/web/ "$BRAIN":/srv/rave/deckdash-preview/ && echo "preview updated: http://${RAVE_BRAIN_HOST:-ravecave.local}:8080/preview/"
+  rsync -rlt --omit-dir-times brain/deckdash/web/ "$BRAIN":/srv/rave/deckdash-preview/ && echo "preview updated: http://${RAVE_BRAIN_HOST:-ravecave.local}:8080/preview/"
 fi
 
 if [[ $what == all || $what == showbrain ]]; then

@@ -134,13 +134,30 @@ Robustness:
 
 ## Commander (control page on the Pi)
 
-A second tab on the dashboard, built for a phone:
-- Live timeline strip over the waveform: sections coloured, predicted drops marked, playhead, and a **"DROP in 12 beats"** countdown.
-- **AUTO / MANUAL**, **follow deck: auto / 1 / 2**.
-- Momentary buttons: **DROP NOW**, **BUILD** (start a build immediately, N bars), **HOLD**, **BLACKOUT**, **STROBE**.
-- **Skip this drop**, **Mark drop here** (saved as a per-track override).
-- Master intensity and palette.
-- **Smoke: ARM / DISARM**, with the burst length shown and the cooldown remaining.
+`http://ravecave.local:8090`, built for a phone or a laptop next to the decks. It works like SoundSwitch or rekordbox Lighting: the auto show runs underneath, and the Commander layers performance controls on top.
+
+- **Status and live view:** scene, live deck, "DROP in N beats", build progress, beat-in-bar, and a live colour strip of what every fixture is outputting right now.
+- **Performance pads (hold):** STROBE (locked to the beat at 1/4, 1/8 or 1/16, or FREE at 12 Hz), BLINDER (full white), BLACKOUT, and FLASH (tap: a white hit that decays over about a beat).
+- **Scenes (latch):** AUTO, AMBIENT, GROOVE, BREAK, DROP. A latched scene overrides the auto show until AUTO is pressed. DROP NOW and BUILD still take priority.
+- **Drop control:** DROP NOW, BUILD 2/4/8/16 bars, HOLD, CANCEL BUILD, SKIP NEXT DROP, MARK DROP HERE (saved as a per-track override).
+- **Colour:** AUTO (from the track key), LOCK (tap a swatch), or CYCLE (moves round the wheel every 4 bars).
+- **Motion speed:** ½× (half-time), 1×, 2× (double-time) for the beat-driven looks.
+- **Fixtures:** on/off and a level fader per fixture, plus master intensity and a latched blackout.
+- **Tap clock:** tap tempo, ±1 BPM, SYNC (downbeat now). It drives latched scenes and DROP/BUILD when no deck is playing, so the lights can still run between sets.
+- **Setup:** AUTO/MANUAL, follow deck (auto / 1 / 2), output latency, RESET ALL OVERRIDES (fixture levels are kept).
+- **Keyboard:** space flash, hold S strobe / W blinder / B blackout, T tap, 0–4 scenes, D drop now.
+- To do: **Smoke: ARM / DISARM**, with the burst length shown and the cooldown remaining.
+
+API: `POST /api/cmd {"cmd": ..., "value": ...}` with `mode`, `follow`, `intensity`, `lead_ms`, `hold`, `strobe`, `strobe_div`, `blinder`, `black_hold`, `flash`, `look`, `palette` (`{"mode", "hue"}`), `speed`, `fixture` (`{"name", "on", "level"}`), `tap`, `tap_bpm`, `tap_sync`, `drop_now`, `build`, `skip_drop`, `mark_drop`, `clear`.
+
+## Dashboard: waveforms and library
+
+`http://ravecave.local:8080`:
+- **STACKED** (the default) gives one scrolling waveform lane per deck, deck 1 on top, like the XDJ and rekordbox. A phase meter between the lanes shows each deck's beat in the bar and its phase against the master. **OVERLAY** puts every deck in one lane for close beat matching.
+- **LIBRARY** is a Serato-style browser for the rekordbox export on the USB/SD in the players (read with CrateDigger). It has crates and playlists on the left, and search, genre, "BPM ≈ master" and "key match" (Camelot) filters with sortable columns. Tracks already loaded on a deck and tracks already played are marked.
+  - **Load** with the per-row deck buttons, a double-click (loads the first deck that isn't playing), or ↑/↓ then Shift+←/→ for deck 1/2. `/` focuses search and Esc clears it. Loading onto a playing deck asks for confirmation first, and the server refuses unless it's forced.
+  - **Deck strip:** PLAY/STOP (DJ Link fader start), SYNC, MASTER.
+  - **Untested on the XDJ-700s:** load and transport are sent from virtual player 7. Pioneer players accept these from rekordbox and other players, but whether the XDJ-700 (fw 1.13) accepts them from a non-standard player number still needs checking on the rig. If it ignores them, the next thing to try is `setUseStandardPlayerNumber(true)` in `DeckDash.java`, since with only two decks, numbers 3 and 4 are free.
 
 ## Smoke safety (non-negotiable)
 

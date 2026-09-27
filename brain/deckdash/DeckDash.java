@@ -15,6 +15,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.*;
 import java.util.concurrent.*;
+import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  * Deck dashboard: joins the Pro DJ Link network as a virtual CDJ (via beat-link),
@@ -25,6 +26,7 @@ import java.util.concurrent.*;
  *   GET /api/events       Server-Sent Events, state pushed ~10x per second
  *   GET /api/art/N        album art for player N (JPEG)
  *   GET /api/waveform/N   waveform preview for player N (JSON)
+ *   /api/library..., /api/deck   library browser and deck commands (Library.java)
  */
 public class DeckDash {
     static final int PORT = Integer.getInteger("port", 8080);
@@ -33,7 +35,7 @@ public class DeckDash {
     static final Path PREVIEW = Path.of(System.getProperty("preview", "preview"));
     static final Map<Integer, Long> lastBeat = new ConcurrentHashMap<>();
     static final Map<Integer, Integer> beatCount = new ConcurrentHashMap<>();
-    static final List<OutputStream> sseClients = new CopyOnWriteArrayList<>();
+    static final List<SseClient> sseClients = new CopyOnWriteArrayList<>();
     static final long started = System.currentTimeMillis();
 
     public static void main(String[] args) throws Exception {
@@ -47,7 +49,9 @@ public class DeckDash {
             beatCount.merge(beat.getDeviceNumber(), 1, Integer::sum);
             toBrain(new Json().obj().str("t", "beat").num("player", beat.getDeviceNumber())
                     .num("bwb", beat.getBeatWithinBar()).num("bpm", round(beat.getEffectiveTempo(), 3))
-                    .num("nextBeatMs", beat.getNextBeat()).bool("master", beat.isTempoMaster()).num("ts", now).end().toString());
+                    .num("nextBeatMs", beat.getNextBeat())
+                    // isTempoMaster() needs the VirtualCdj, which isn't up for the first second or so.
+                    .bool("master", VirtualCdj.getInstance().isRunning() && beat.isTempoMaster()).num("ts", now).end().toString());
         });
 
         VirtualCdj vcdj = VirtualCdj.getInstance();
@@ -96,23 +100,23 @@ public class DeckDash {
             if (t == null) send(ex, 404, "application/json", "{}".getBytes());
             else send(ex, 200, "application/json", t.getBytes(StandardCharsets.UTF_8));
         });
+        Library.register(http);
         http.start();
         log("dashboard on http://0.0.0.0:" + PORT + "/");
 
         ScheduledExecutorService tick = Executors.newScheduledThreadPool(2);
+        // A scheduled task that throws is cancelled for good, silently, so neither may let anything escape:
+        // an early exception here used to stop every dashboard's live updates (and could stop showbrain's feed).
         tick.scheduleAtFixedRate(() -> {
-            try { toBrain(brainStatus()); } catch (Exception e) { log("brain status: " + e); }
+            try { toBrain(brainStatus()); } catch (Throwable t) { logOnce("brain status", t); }
         }, 0, 50, TimeUnit.MILLISECONDS);
         tick.scheduleAtFixedRate(() -> {
-            if (sseClients.isEmpty()) return;
-            byte[] msg = ("data: " + state() + "\n\n").getBytes(StandardCharsets.UTF_8);
-            for (OutputStream out : sseClients) {
-                try {
-                    out.write(msg);
-                    out.flush();
-                } catch (IOException e) {
-                    sseClients.remove(out);
-                }
+            try {
+                if (sseClients.isEmpty()) return;
+                byte[] msg = ("data: " + state() + "\n\n").getBytes(StandardCharsets.UTF_8);
+                for (SseClient c : sseClients) c.send(msg);
+            } catch (Throwable t) {
+                logOnce("sse push", t);
             }
         }, 0, 100, TimeUnit.MILLISECONDS);
     }
@@ -144,7 +148,50 @@ public class DeckDash {
         ex.getResponseHeaders().add("Content-Type", "text/event-stream");
         ex.getResponseHeaders().add("Cache-Control", "no-cache");
         ex.sendResponseHeaders(200, 0);
-        sseClients.add(ex.getResponseBody());
+        sseClients.add(new SseClient(ex));
+    }
+
+    /** One dashboard's event stream, written on its own thread so a stalled browser can't hold up the rest. */
+    static final class SseClient {
+        final HttpExchange ex;
+        final OutputStream out;
+        final AtomicInteger pending = new AtomicInteger();
+        final ExecutorService writer = Executors.newSingleThreadExecutor(r -> {
+            Thread t = new Thread(r, "sse-writer");
+            t.setDaemon(true);
+            return t;
+        });
+
+        SseClient(HttpExchange ex) { this.ex = ex; this.out = ex.getResponseBody(); }
+
+        void send(byte[] msg) {
+            if (pending.incrementAndGet() > 20) { close(); return; }     // ~2 s behind: gone or stalled, drop it
+            writer.execute(() -> {
+                try {
+                    out.write(msg);
+                    out.flush();
+                } catch (IOException e) {
+                    close();
+                } finally {
+                    pending.decrementAndGet();
+                }
+            });
+        }
+
+        void close() {
+            if (sseClients.remove(this)) {
+                writer.shutdownNow();
+                ex.close();
+            }
+        }
+    }
+
+    static final Map<String, String> lastErr = new ConcurrentHashMap<>();
+
+    /** Log a repeating failure once per distinct message instead of at 10-20 Hz. */
+    static void logOnce(String where, Throwable t) {
+        String m = String.valueOf(t);
+        if (!m.equals(lastErr.put(where, m))) log(where + ": " + m);
     }
 
     static int playerFrom(HttpExchange ex) {
@@ -466,6 +513,8 @@ public class DeckDash {
             return this;
         }
         Json bool(String k, boolean v) { key(k); afterKey = false; b.append(v); return this; }
+        /** A bare number inside an array. */
+        Json item(long v) { sep(); b.append(v); return this; }
         /** Write a pre-serialised JSON value (e.g. a number array) under key k. */
         Json raw(String k, String json) { key(k); afterKey = false; b.append(json); return this; }
         void quote(String s) {
