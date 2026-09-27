@@ -21,10 +21,10 @@ BOX=${BOX:-raver@${RAVE_BOX_HOST:-rave-box.local}}
 what=${1:-all}
 
 if [[ $what == all || $what == deckdash ]]; then
-  rsync -a brain/deckdash/DeckDash.java brain/deckdash/Timeline.java brain/deckdash/Library.java "$BRAIN":deckdash/
+  rsync -a brain/deckdash/DeckDash.java brain/deckdash/Timeline.java brain/deckdash/Library.java brain/deckdash/TempoMaster.java "$BRAIN":deckdash/
   rsync -rlt --omit-dir-times brain/deckdash/web/ "$BRAIN":/srv/rave/deckdash-web/
   # Compile to classes.new and swap only on success, so a failed build leaves the running one alone.
-  ssh "$BRAIN" 'cd ~/deckdash && rm -rf classes.new && javac -cp "lib/*" -d classes.new DeckDash.java Timeline.java Library.java && rm -rf classes && mv classes.new classes && sudo systemctl restart deckdash && echo "deckdash restarted"'
+  ssh "$BRAIN" 'cd ~/deckdash && rm -rf classes.new && javac -cp "lib/*" -d classes.new DeckDash.java Timeline.java Library.java TempoMaster.java && rm -rf classes && mv classes.new classes && sudo systemctl restart deckdash && echo "deckdash restarted"'
 fi
 
 if [[ $what == web ]]; then       # page only: no compile, no restart (the page is re-read on every request)

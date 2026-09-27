@@ -159,6 +159,32 @@ API: `POST /api/cmd {"cmd": ..., "value": ...}` with `mode`, `follow`, `intensit
   - **Deck strip:** PLAY/STOP (DJ Link fader start), SYNC, MASTER.
   - **Untested on the XDJ-700s:** load and transport are sent from virtual player 7. Pioneer players accept these from rekordbox and other players, but whether the XDJ-700 (fw 1.13) accepts them from a non-standard player number still needs checking on the rig. If it ignores them, the next thing to try is `setUseStandardPlayerNumber(true)` in `DeckDash.java`, since with only two decks, numbers 3 and 4 are free.
 
+## Tempo master, BPM reset and automix tempo ramps
+
+A deck that is tempo master can't be retimed remotely: nothing can move its pitch fader. So to glide the tempo, the **Pi becomes tempo master** and every deck with **SYNC** on follows it. `brain/deckdash/TempoMaster.java`, `/api/tempo`:
+
+- **Off by default.** deckdash needs `-Dtempo=on`. That makes it join as a standard player number (1–4, so 3 with two decks) and send status packets, which the decks need before they'll take the Pi as master. It appears on the decks as another player. To turn it on, the owner adds a drop-in:
+  ```bash
+  sudo systemctl edit deckdash     # then:
+  # [Service]
+  # ExecStart=
+  # ExecStart=/usr/bin/java -Dtempo=on -Djava.awt.headless=true -Xmx384m -Dweb=/srv/rave/deckdash-web -Dpreview=/srv/rave/deckdash-preview -Dorg.slf4j.simpleLogger.defaultLogLevel=warn -Dorg.slf4j.simpleLogger.log.org.deepsymmetry.beatlink.data.MetadataFinder=off -cp lib/*:classes DeckDash
+  sudo systemctl restart deckdash
+  ```
+- **Taking master doesn't jolt the playing track.** The Pi waits for the current master's next beat, starts its own beat clock on that beat at the same tempo and beat-in-bar, and only then takes master.
+- **Glides** ease in and out, and are counted in beats as they play.
+
+**Dashboard, Tempo row** (library panel):
+- **RESET BPM:** the Pi takes master if it hasn't, then glides every synced deck back to the chosen deck's **original track BPM** over 16, 32, 64 or 128 beats.
+- **MAKE MASTER:** hands master to the chosen deck, ending the Pi's.
+
+**Automix:**
+- **Drop on outro end** (default): the incoming track starts early enough that its **first drop lands on the beat after the outgoing track's outro**, and the outgoing deck stops on that beat.
+  - The Pi can load a track but can't move its playhead, so the lead-in is the distance from where the track loads to its drop.
+  - If that's more than 128 beats, or it's already too late, automix uses the fixed overlap and says why.
+- **Fixed overlap:** 16, 32 or 64 beats, starting where the outgoing track's outro begins.
+- **TEMPO RAMP** (needs `-Dtempo=on`): the Pi holds master, both decks get SYNC on, and during each mix the tempo glides to the incoming track's original BPM, arriving as the outgoing deck stops.
+
 ## Smoke safety (non-negotiable)
 
 - Relay defaults **off** at boot and when commands stop (heartbeat timeout).
