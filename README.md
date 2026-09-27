@@ -76,7 +76,8 @@ Every box in the diagram is a folder in this repo.
 
 - **Dashboard:** `http://ravecave.local:8080`. Live decks, artwork, waveforms with predicted sections and drops, and a stacked scrolling two-deck view.
 - **Commander:** `http://ravecave.local:8090`. DROP NOW, BUILD, HOLD, STROBE, BLACKOUT, skip or mark drops (saved per track), follow deck, intensity, latency.
-- **Deploy changes:** `brain/deploy.sh` (both brain services), or `brain/deploy.sh showbrain | deckdash | pyramid | panel`.
+- **Deploy changes:** `brain/deploy.sh` (both brain services), or `brain/deploy.sh showbrain | deckdash | mixer | web | preview | pyramid | panel`.
+- **Dashboard preview:** `http://ravecave.local:8080/preview/` for testing page changes against live data. See [docs/brain.md](docs/brain.md#access-for-collaborators).
 - **Add a fixture:** add it to [`brain/showbrain/config.json`](brain/showbrain/config.json) (`strip`, `panel` or `dmx_par`) and deploy.
 
 Both brain services start on boot. WLED fixtures fall back to their own idle effect whenever the stream stops.

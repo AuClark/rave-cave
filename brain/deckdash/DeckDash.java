@@ -29,6 +29,8 @@ import java.util.concurrent.*;
 public class DeckDash {
     static final int PORT = Integer.getInteger("port", 8080);
     static final Path WEB = Path.of(System.getProperty("web", "web"));
+    /** Work-in-progress copy of the page, served at /preview/ against the same live data. */
+    static final Path PREVIEW = Path.of(System.getProperty("preview", "preview"));
     static final Map<Integer, Long> lastBeat = new ConcurrentHashMap<>();
     static final Map<Integer, Integer> beatCount = new ConcurrentHashMap<>();
     static final List<OutputStream> sseClients = new CopyOnWriteArrayList<>();
@@ -38,6 +40,7 @@ public class DeckDash {
         DeviceFinder.getInstance().start();
         BeatFinder.getInstance().start();
         brainSock = new DatagramSocket();
+        startMixerListener();
         BeatFinder.getInstance().addBeatListener(beat -> {
             long now = System.currentTimeMillis();
             lastBeat.put(beat.getDeviceNumber(), now);
@@ -82,6 +85,7 @@ public class DeckDash {
         HttpServer http = HttpServer.create(new InetSocketAddress(PORT), 0);
         http.setExecutor(Executors.newCachedThreadPool());
         http.createContext("/", DeckDash::index);
+        http.createContext("/preview/", DeckDash::preview);
         http.createContext("/api/state", ex -> send(ex, 200, "application/json", state().getBytes(StandardCharsets.UTF_8)));
         http.createContext("/api/events", DeckDash::events);
         http.createContext("/api/art/", DeckDash::art);
@@ -120,7 +124,23 @@ public class DeckDash {
         send(ex, 200, "text/html; charset=utf-8", Files.readAllBytes(f));
     }
 
+    static void preview(HttpExchange ex) throws IOException {
+        Path root = PREVIEW.toAbsolutePath().normalize();
+        String rel = ex.getRequestURI().getPath().substring("/preview/".length());
+        Path f = root.resolve(rel.isEmpty() ? "index.html" : rel).normalize();
+        if (!f.startsWith(root) || !Files.isRegularFile(f)) {
+            send(ex, 404, "text/plain", "not found".getBytes());
+            return;
+        }
+        String name = f.getFileName().toString();
+        String type = name.endsWith(".html") ? "text/html; charset=utf-8" : name.endsWith(".js") ? "text/javascript"
+                : name.endsWith(".css") ? "text/css" : name.endsWith(".svg") ? "image/svg+xml"
+                : name.endsWith(".png") ? "image/png" : "application/octet-stream";
+        send(ex, 200, type, Files.readAllBytes(f));
+    }
+
     static void events(HttpExchange ex) throws IOException {
+        ex.getResponseHeaders().add("Access-Control-Allow-Origin", "*");
         ex.getResponseHeaders().add("Content-Type", "text/event-stream");
         ex.getResponseHeaders().add("Cache-Control", "no-cache");
         ex.sendResponseHeaders(200, 0);
@@ -189,6 +209,7 @@ public class DeckDash {
     }
 
     static void send(HttpExchange ex, int code, String type, byte[] body) throws IOException {
+        ex.getResponseHeaders().add("Access-Control-Allow-Origin", "*");
         ex.getResponseHeaders().add("Content-Type", type);
         ex.getResponseHeaders().add("Cache-Control", "no-cache");
         ex.sendResponseHeaders(code, body.length);
@@ -232,6 +253,11 @@ public class DeckDash {
             }
         }
         j.end();
+
+        boolean mixerFresh = mixerJson != null && now - mixerRx < 2000;
+        j.raw("mixer", mixerFresh ? mixerJson : "{\"connected\":false}");
+        String show = showState();
+        j.raw("show", show != null ? show : "null");
 
         j.key("players").arr();
         for (DeviceAnnouncement d : devs) {
@@ -314,6 +340,51 @@ public class DeckDash {
         WaveformDetail wd = WaveformFinder.getInstance().isRunning() ? WaveformFinder.getInstance().getLatestDetailFor(n) : null;
         j.str("timelineKey", wd == null || grid == null ? null : String.valueOf(wd.dataReference));
         j.end();
+    }
+
+    // ---------- mixer feed (UDP from brain/mixer on localhost:9101) ----------
+
+    static volatile String mixerJson = null;
+    static volatile long mixerRx = 0;
+
+    static void startMixerListener() {
+        Thread t = new Thread(() -> {
+            try (DatagramSocket s = new DatagramSocket(new InetSocketAddress("127.0.0.1", 9101))) {
+                byte[] buf = new byte[8192];
+                while (true) {
+                    DatagramPacket pk = new DatagramPacket(buf, buf.length);
+                    s.receive(pk);
+                    mixerJson = new String(pk.getData(), 0, pk.getLength(), StandardCharsets.UTF_8);
+                    mixerRx = System.currentTimeMillis();
+                }
+            } catch (Exception e) {
+                log("mixer listener stopped: " + e);
+            }
+        }, "mixer-listener");
+        t.setDaemon(true);
+        t.start();
+    }
+
+    /** showbrain's live state, fetched from :8090 at most every 200 ms. */
+    static volatile String showJson = null;
+    static volatile long showFetched = 0;
+
+    static String showState() {
+        long now = System.currentTimeMillis();
+        if (now - showFetched > 200) {
+            showFetched = now;
+            try {
+                java.net.HttpURLConnection c = (java.net.HttpURLConnection) new java.net.URL("http://127.0.0.1:8090/api/state").openConnection();
+                c.setConnectTimeout(150);
+                c.setReadTimeout(250);
+                try (java.io.InputStream in = c.getInputStream()) {
+                    showJson = new String(in.readAllBytes(), StandardCharsets.UTF_8);
+                }
+            } catch (Exception e) {
+                showJson = null;
+            }
+        }
+        return showJson;
     }
 
     // ---------- show brain feed (UDP to localhost:9100) ----------
