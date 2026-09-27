@@ -27,10 +27,10 @@ public class Library {
     static final Map<String, String> cache = new ConcurrentHashMap<>();
 
     static void register(HttpServer http) {
-        http.createContext("/api/library/tree", ex -> safe(ex, () -> tree(query(ex))));
-        http.createContext("/api/library/tracks", ex -> safe(ex, () -> tracks(query(ex))));
-        http.createContext("/api/library", ex -> safe(ex, Library::sources));
-        http.createContext("/api/deck", Library::deck);
+        Sim.proxied(http.createContext("/api/library/tree", ex -> safe(ex, () -> tree(query(ex)))));
+        Sim.proxied(http.createContext("/api/library/tracks", ex -> safe(ex, () -> tracks(query(ex)))));
+        Sim.proxied(http.createContext("/api/library", ex -> safe(ex, Library::sources)));
+        Sim.proxied(http.createContext("/api/deck", Library::deck));
         CrateDigger.getInstance().addDatabaseListener(new DatabaseListener() {
             public void databaseMounted(SlotReference slot, Database db) {
                 DeckDash.log("library: database ready for " + slot + " (" + db.trackIndex.size() + " tracks)");

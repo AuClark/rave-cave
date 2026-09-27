@@ -52,7 +52,7 @@ public class SystemInfo {
 
     // ---------------------------------------------------------------- sampling
 
-    static String sample() {
+    static synchronized String sample() {   // also called by Sim after a switch, so pages reload onto fresh state
         long now = System.currentTimeMillis();
         DeckDash.Json j = new DeckDash.Json().obj();
         j.bool("ready", true).num("ts", now).str("host", hostname());
@@ -161,6 +161,7 @@ public class SystemInfo {
                 ? org.deepsymmetry.beatlink.DeviceFinder.getInstance().getCurrentDevices().size() : 0);
 
         j.raw("tailscale", Tailscale.json());
+        j.raw("sim", Sim.json());
 
         Runtime rt = Runtime.getRuntime();
         j.key("deckdash_jvm").obj().num("heap_used_mb", (rt.totalMemory() - rt.freeMemory()) / (1024 * 1024))

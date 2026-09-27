@@ -41,3 +41,14 @@ Press Ctrl-C to stop everything. Each service's log is in `brain/sim/logs/`. Edi
 - Ports 8080, 8090, 8100 and 8110 must be free. The script checks and names any that are taken.
 
 **About `s5auth.js`:** on the brain, `deploy.sh` copies it next to each service. Locally, `run.sh` links it into place instead. The links are git-ignored.
+
+## On the brain
+
+The brain can run the same synthetic rig, so a Pi on the bench (or at home, with no decks) shows the whole app working, and the real lights follow the generated set.
+
+- **When no decks are found**, every page shows a strip at the bottom: **No decks found · Start simulation**. Starting it needs admin (the PIN).
+- **While it runs**, the strip says **SIMULATION** with **Back to real decks**. Everything else is real: showbrain, the lights, projection, visuals, the Stage view, the admin PIN and the System view.
+- **Nothing sticks:** stopping it, restarting deckdash or rebooting goes back to the real decks.
+- API: `GET /api/sim`, `POST /api/sim {"on": true|false, "bpm": 126}` (admin). Also in `/api/system` as `sim`.
+
+How it works: deckdash ([`Sim.java`](../brain/deckdash/Sim.java)) runs `fakerig.py` (copied to `~/sim/` by `brain/deploy.sh deckdash`) on port 8079, passes the deck data API through to it (`/api/state`, `/api/events`, timelines, waveforms, library, `/api/deck`, `/api/tempo`), and stops sending its own deck feed to showbrain while fakerig sends the synthetic one. The mixer service is paused meanwhile, because with no DJM it would keep telling showbrain the mixer is unplugged. Its log is `/tmp/fakerig.log`.

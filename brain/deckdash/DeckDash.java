@@ -59,6 +59,50 @@ public class DeckDash {
         // Stay off the real players' numbers; metadata comes from the USB export via CrateDigger.
         vcdj.setUseStandardPlayerNumber(false);
         TempoMaster.configure(vcdj);            // -Dtempo=on: a standard number, so the Pi can be master
+        HttpServer http = HttpServer.create(new InetSocketAddress(PORT), 0);
+        http.setExecutor(Executors.newCachedThreadPool());
+        http.createContext("/", DeckDash::index);
+        http.createContext("/preview/", DeckDash::preview);
+        Sim.proxied(http.createContext("/api/state", ex -> send(ex, 200, "application/json", state().getBytes(StandardCharsets.UTF_8))));
+        Sim.proxied(http.createContext("/api/events", DeckDash::events));
+        http.createContext("/api/auth", Auth::handle);
+        http.createContext("/s5auth.js", ex -> send(ex, 200, "text/javascript", Files.readAllBytes(WEB.resolve("s5auth.js"))));
+        http.createContext("/s5system.js", ex -> send(ex, 200, "text/javascript", Files.readAllBytes(WEB.resolve("s5system.js"))));
+        http.createContext("/api/system", ex -> send(ex, 200, "application/json", SystemInfo.json().getBytes(StandardCharsets.UTF_8)));
+        http.createContext("/api/system/tailscale", Tailscale::handle);
+        http.createContext("/api/sim", Sim::handle);
+        Sim.proxied(http.createContext("/api/art/", DeckDash::art));
+        Sim.proxied(http.createContext("/api/waveform/", DeckDash::waveform));
+        Sim.proxied(http.createContext("/api/wavedetail/", DeckDash::waveDetail));
+        Sim.proxied(http.createContext("/api/timeline/", ex -> {
+            String t = Timeline.forPlayer(playerFrom(ex));
+            if (t == null) send(ex, 404, "application/json", "{}".getBytes());
+            else send(ex, 200, "application/json", t.getBytes(StandardCharsets.UTF_8));
+        }));
+        Library.register(http);
+        TempoMaster.start(http);
+        http.start();
+        log("dashboard on http://0.0.0.0:" + PORT + "/");
+        SystemInfo.start();
+
+        ScheduledExecutorService tick = Executors.newScheduledThreadPool(2);
+        // A scheduled task that throws is cancelled for good, silently, so neither may let anything escape:
+        // an early exception here used to stop every dashboard's live updates (and could stop showbrain's feed).
+        tick.scheduleAtFixedRate(() -> {
+            try { toBrain(brainStatus()); } catch (Throwable t) { logOnce("brain status", t); }
+        }, 0, 50, TimeUnit.MILLISECONDS);
+        tick.scheduleAtFixedRate(() -> {
+            try {
+                if (sseClients.isEmpty()) return;
+                byte[] msg = ("data: " + state() + "\n\n").getBytes(StandardCharsets.UTF_8);
+                for (SseClient c : sseClients) c.send(msg);
+            } catch (Throwable t) {
+                logOnce("sse push", t);
+            }
+        }, 0, 100, TimeUnit.MILLISECONDS);
+
+        // Join the decks last: the dashboard, API and System view are up without them (decks off,
+        // a new brain on the bench), and the players appear whenever the DJ Link network does.
         log("waiting for DJ Link devices...");
         while (!vcdj.start()) {
             log("no DJ Link network yet, retrying in 5 s");
@@ -86,47 +130,6 @@ public class DeckDash {
                 log(name + " failed to start: " + e);
             }
         }
-
-        HttpServer http = HttpServer.create(new InetSocketAddress(PORT), 0);
-        http.setExecutor(Executors.newCachedThreadPool());
-        http.createContext("/", DeckDash::index);
-        http.createContext("/preview/", DeckDash::preview);
-        http.createContext("/api/state", ex -> send(ex, 200, "application/json", state().getBytes(StandardCharsets.UTF_8)));
-        http.createContext("/api/events", DeckDash::events);
-        http.createContext("/api/auth", Auth::handle);
-        http.createContext("/s5auth.js", ex -> send(ex, 200, "text/javascript", Files.readAllBytes(WEB.resolve("s5auth.js"))));
-        http.createContext("/s5system.js", ex -> send(ex, 200, "text/javascript", Files.readAllBytes(WEB.resolve("s5system.js"))));
-        http.createContext("/api/system", ex -> send(ex, 200, "application/json", SystemInfo.json().getBytes(StandardCharsets.UTF_8)));
-        http.createContext("/api/system/tailscale", Tailscale::handle);
-        http.createContext("/api/art/", DeckDash::art);
-        http.createContext("/api/waveform/", DeckDash::waveform);
-        http.createContext("/api/wavedetail/", DeckDash::waveDetail);
-        http.createContext("/api/timeline/", ex -> {
-            String t = Timeline.forPlayer(playerFrom(ex));
-            if (t == null) send(ex, 404, "application/json", "{}".getBytes());
-            else send(ex, 200, "application/json", t.getBytes(StandardCharsets.UTF_8));
-        });
-        Library.register(http);
-        TempoMaster.start(http);
-        http.start();
-        log("dashboard on http://0.0.0.0:" + PORT + "/");
-        SystemInfo.start();
-
-        ScheduledExecutorService tick = Executors.newScheduledThreadPool(2);
-        // A scheduled task that throws is cancelled for good, silently, so neither may let anything escape:
-        // an early exception here used to stop every dashboard's live updates (and could stop showbrain's feed).
-        tick.scheduleAtFixedRate(() -> {
-            try { toBrain(brainStatus()); } catch (Throwable t) { logOnce("brain status", t); }
-        }, 0, 50, TimeUnit.MILLISECONDS);
-        tick.scheduleAtFixedRate(() -> {
-            try {
-                if (sseClients.isEmpty()) return;
-                byte[] msg = ("data: " + state() + "\n\n").getBytes(StandardCharsets.UTF_8);
-                for (SseClient c : sseClients) c.send(msg);
-            } catch (Throwable t) {
-                logOnce("sse push", t);
-            }
-        }, 0, 100, TimeUnit.MILLISECONDS);
     }
 
     // ---------- HTTP ----------
@@ -264,8 +267,18 @@ public class DeckDash {
     }
 
     static void send(HttpExchange ex, int code, String type, byte[] body) throws IOException {
-        // Any origin can read; the rig's own pages on other ports (same host) can also send the admin
-        // cookie, e.g. the System view's Tailscale buttons on the Lighting page.
+        cors(ex);
+        ex.getResponseHeaders().add("Content-Type", type);
+        ex.getResponseHeaders().add("Cache-Control", "no-cache");
+        ex.sendResponseHeaders(code, body.length);
+        try (OutputStream out = ex.getResponseBody()) {
+            out.write(body);
+        }
+    }
+
+    /** Any origin can read; the rig's own pages on other ports (same host) can also send the admin
+     *  cookie, e.g. the System view's Tailscale buttons on the Lighting page. */
+    static void cors(HttpExchange ex) {
         String origin = ex.getRequestHeaders().getFirst("Origin"), host = ex.getRequestHeaders().getFirst("Host");
         if (origin != null && host != null && sameHost(origin, host)) {
             ex.getResponseHeaders().add("Access-Control-Allow-Origin", origin);
@@ -273,12 +286,6 @@ public class DeckDash {
             ex.getResponseHeaders().add("Vary", "Origin");
         } else {
             ex.getResponseHeaders().add("Access-Control-Allow-Origin", "*");
-        }
-        ex.getResponseHeaders().add("Content-Type", type);
-        ex.getResponseHeaders().add("Cache-Control", "no-cache");
-        ex.sendResponseHeaders(code, body.length);
-        try (OutputStream out = ex.getResponseBody()) {
-            out.write(body);
         }
     }
 
@@ -299,13 +306,15 @@ public class DeckDash {
         long now = System.currentTimeMillis();
         j.num("now", now).num("uptimeSec", (now - started) / 1000);
         VirtualCdj v = VirtualCdj.getInstance();
-        j.key("self").obj().num("deviceNumber", v.getDeviceNumber()).str("name", "Sektor5")
-                .str("address", String.valueOf(v.getLocalAddress())).end();
+        boolean up = v.isRunning();             // false until the decks' DJ Link network appears
+        j.bool("djlink", up);
+        j.key("self").obj().num("deviceNumber", up ? v.getDeviceNumber() : 0).str("name", "Sektor5")
+                .str("address", up ? String.valueOf(v.getLocalAddress()) : null).end();
 
-        DeviceUpdate master = v.getTempoMaster();
+        DeviceUpdate master = up ? v.getTempoMaster() : null;
         j.key("master").obj();
         if (master != null) j.num("player", master.getDeviceNumber()).str("name", master.getDeviceName());
-        j.num("bpm", round(v.getMasterTempo(), 2)).end();
+        j.num("bpm", up ? round(v.getMasterTempo(), 2) : 0).end();
 
         j.key("devices").arr();
         List<DeviceAnnouncement> devs = new ArrayList<>(DeviceFinder.getInstance().getCurrentDevices());
@@ -468,6 +477,7 @@ public class DeckDash {
     static final InetSocketAddress BRAIN = new InetSocketAddress("127.0.0.1", Integer.getInteger("brainPort", 9100));
 
     static void toBrain(String json) {
+        if (Sim.on()) return;                   // fakerig sends showbrain the synthetic feed
         try {
             byte[] b = json.getBytes(StandardCharsets.UTF_8);
             brainSock.send(new DatagramPacket(b, b.length, BRAIN));
@@ -480,7 +490,7 @@ public class DeckDash {
         long now = System.currentTimeMillis();
         VirtualCdj v = VirtualCdj.getInstance();
         Json j = new Json().obj().str("t", "status").num("ts", now);
-        DeviceUpdate m = v.getTempoMaster();
+        DeviceUpdate m = v.isRunning() ? v.getTempoMaster() : null;
         j.num("master", m == null ? 0 : m.getDeviceNumber()).key("players").arr();
         // Look up each announced device directly (same path as the dashboard). getLatestStatus()
         // can come back empty after the clock jumps at boot (no RTC; NTP sync moves time forward).
