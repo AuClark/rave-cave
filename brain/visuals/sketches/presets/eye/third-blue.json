@@ -1,0 +1,22 @@
+{
+ "paper": 1,
+ "lines": 0.12,
+ "size": 1.25,
+ "open": 1,
+ "build": 0,
+ "drop": 0,
+ "iris": 1.1,
+ "fibres": 60,
+ "irings": 0,
+ "pupil": 0.22,
+ "dilate": 0.6,
+ "sclera": 1,
+ "look": 0.25,
+ "lspeed": 0.3,
+ "rays": 0,
+ "glow": 0,
+ "width": 0.0015,
+ "blink": 0.15,
+ "sat": 0.55,
+ "hue": 0.55
+}

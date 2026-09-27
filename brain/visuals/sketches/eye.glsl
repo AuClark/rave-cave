@@ -1,10 +1,11 @@
 // Eye: the all-seeing eye for the capstone. An almond eye with a gold iris that looks
 // around, blinks on the last beat of some bars, dilates with energy, opens through a
-// BUILD and fully on the DROP. Optional rays and the dollar-bill triangle around it.
+// BUILD and fully on the DROP. Optional rays and the dollar-bill triangle around it,
+// a paper background and thin lines shooting out of the pupil (after Vicetto's Third).
 // Params are p_* uniforms; ranges and defaults are in eye.json.
 uniform float p_size, p_open, p_build, p_drop, p_blink, p_look, p_lspeed, p_iris, p_irings, p_fibres,
               p_pupil, p_dilate, p_sclera, p_rays, p_raylen, p_rspin, p_tri, p_width, p_glow,
-              p_hue, p_sat, p_follow, p_beat;
+              p_hue, p_sat, p_follow, p_beat, p_paper, p_lines;
 
 #define TAU 6.2831853
 #define PI 3.1415927
@@ -67,7 +68,7 @@ vec3 content(vec2 uv) {
 
   // Outside: rays, a halo round the lid, and the triangle.
   float R = length(p), A = atan(p.y, p.x);
-  vec3 col = vec3(0.0);
+  vec3 col = vec3(0.95, 0.93, 0.96) * p_paper * (1.0 - 0.3 * dot(p, p));
   if (p_rays > 0.5) {
     float ray = pow(0.5 + 0.5 * cos(A * floor(p_rays + 0.5) + t * p_rspin * TAU / 16.0), 8.0);
     col += gold * ray * exp(-max(R - 0.3, 0.0) / max(p_raylen, 0.01)) * (0.5 + 0.9 * k) * (0.3 + 0.7 * o);
@@ -79,5 +80,16 @@ vec3 content(vec2 uv) {
     col += gold * (1.0 - smoothstep(w - px, w + px, abs(dt))) * 1.2;
   }
   col = mix(col, eye, inside) + gold * outline;
+
+  // Thin lines from the pupil, each its own length, over everything.
+  if (p_lines > 0.0) {
+    float N = 240.0, fa = a / TAU * N;
+    float idx = floor(fa);
+    float len = mix(0.25, 2.5, hash(vec2(idx, 7.0))) * (0.8 + 0.4 * k);
+    float v = abs(fract(fa) - 0.5) * TAU / N * r;
+    float ln = hash(vec2(idx, 4.2)) < p_lines ? 1.0 - smoothstep(0.0, px * 1.5, v) : 0.0;
+    ln *= step(rp, r) * (1.0 - smoothstep(len * 0.7, len, r));
+    col = mix(col, p_paper > 0.5 ? vec3(0.04) : gold, ln * 0.8);
+  }
   return col * (0.85 + 0.15 * k);
 }
