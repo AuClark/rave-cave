@@ -183,6 +183,11 @@ A deck that is tempo master can't be retimed remotely: nothing can move its pitc
   - The Pi can load a track but can't move its playhead, so the lead-in is the distance from where the track loads to its drop.
   - If that's more than 128 beats, or it's already too late, automix uses the fixed overlap and says why.
 - **Fixed overlap:** 16, 32 or 64 beats, starting where the outgoing track's outro begins.
+- **KICK ALIGN** (default on): SYNC lines up the rekordbox beat grids, and a grid that sits a few ms off its kicks makes synced decks flam. So automix reads each track's grid error from its detailed waveform: the bass onset nearest each grid line in groove and drop sections, trusted only when the middle half agree within 15 ms. On the rig, the middle half of beats agreed within about 7.5 ms. Then:
+  - just before the mix it takes SYNC off the incoming deck, but only if that deck still holds the same BPM without it;
+  - it starts the incoming deck on the playing deck's actual beat (from its beat packets), shifted by the difference in grid errors, so the kicks line up rather than the grids;
+  - after about 2.5 s it measures where the two grids actually landed (beat packets, about 1 ms), learns the deck's start delay for next time (saved in the browser), and puts SYNC back on if the kicks are over 25 ms apart.
+  - It's off during TEMPO RAMP, which needs SYNC.
 - **TEMPO RAMP** (needs `-Dtempo=on`): the Pi holds master, both decks get SYNC on, and during each mix the tempo glides to the incoming track's original BPM, arriving as the outgoing deck stops.
 
 ## Mixer reactions and set recording
