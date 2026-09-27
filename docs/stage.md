@@ -20,7 +20,7 @@ The stage in 3D: a 4.8 × 3 m platform, a back wall, a lighting truss, and the D
   - Tubes and LED bars are drawn as one continuous strip blended between LEDs, like the real diffuser, inside a frosted shell with a faint halo.
   - Drive levels are linear light, so they're read as linear RGB and scaled as a whole (never clipped per channel), which keeps hues exact.
   - Strobe, blinder and the drop's white hit are drawn by the page on the same beat clock, frame-exact, so they can't fall between updates.
-  - **Match real lights** (saved with the layout): an LED display gain, a wash gain, and gamma (1.0 = as sent, WLED's realtime default; 2.8 if the fixture applies its own gamma). Set these by eye against the real rig.
+  - **Match real lights** (saved with the layout): an LED display gain, a wash gain, a **Projectors** trim, and gamma (1.0 = as sent, WLED's realtime default; 2.8 if the fixture applies its own gamma). Set these by eye against the real rig.
 - **Projectors** each show the projector output (as mapped), the Visuals page (generative), or nothing. To make the *real* projector show the visuals, set its surface content to "generative" on the Projection page.
 - **Simulated fixtures** follow the scene, beat, colour, strobe and blackout.
 - **Linking:** any fixture can be linked to a real fixture from the panel.
@@ -30,6 +30,6 @@ The stage in 3D: a 4.8 × 3 m platform, a back wall, a lighting truss, and the D
 - **Add** a tube, wash, strobe, laser, moving head, projector, LED bar or screen.
 - **Select** a fixture by clicking it in the view or the list.
 - **Move and aim:** **MOVE** (or M) drags the fixture; **AIM** (or A) drags the orange dot it points at. You can also type positions in metres. X is left/right, Y is height, Z is towards the audience, and (0, 0, 0) is the front edge of the stage floor, centre.
-- **Per-fixture settings:** beam angle or projector throw, LED or beam count, colour for simulated fixtures, and screen size.
+- **Per-fixture settings:** projector **brightness** (0–150%), beam angle or projector throw, LED or beam count, colour for simulated fixtures, and screen size.
 - **Views:** AUDIENCE, DJ, TOP and SIDE. **HAZE** controls how visible the beams are. **GLOW** is a bloom effect; turn it off on slow machines. **DESIGN** hides the panel for a full-screen show view.
 - **Saving:** the layout saves to the brain (`/api/stage`, stored in `brain/projector/layouts/stage.json`, not in git) and updates on every open copy. **EXPORT** and **IMPORT** move a layout as a JSON file. **RESET TO MY RIG** restores the table above.
