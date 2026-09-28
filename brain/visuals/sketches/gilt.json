@@ -1,0 +1,29 @@
+{
+  "title": "Gilt Mosaic",
+  "about": "A Byzantine gold mosaic wall catching candlelight, its tesserae turning over in a wave that sweeps across on a cycle of beats (after Radiant's Gilt Mosaic by Paul Bakaus). A radial flip can burst from the centre every few bars, and the gold flares on the kick.",
+  "groups": [
+    {"name": "Mosaic", "params": [
+      {"id": "tiles",   "label": "Tiles per height",          "min": 6,   "max": 60,  "step": 1,    "default": 18},
+      {"id": "lspeed",  "label": "Candlelight drift (per beat)", "min": 0, "max": 1,  "step": 0.01, "default": 0.19},
+      {"id": "shimmer", "label": "Tile shimmer",              "min": 0,   "max": 2,   "step": 0.01, "default": 0}
+    ]},
+    {"name": "Flip", "params": [
+      {"id": "mode",    "label": "Flip wave",                 "min": 0,   "max": 1,   "step": 1,    "default": 1},
+      {"id": "sweep",   "label": "Sweep (beats)",             "min": 1,   "max": 32,  "step": 1,    "default": 6},
+      {"id": "delay",   "label": "Rest (beats)",              "min": 0,   "max": 32,  "step": 1,    "default": 2},
+      {"id": "dir",     "label": "Direction (→ ← ↓ ↑)",       "min": 0,   "max": 3,   "step": 1,    "default": 0},
+      {"id": "radial",  "label": "Radial flip every (beats, 0 off)", "min": 0, "max": 64, "step": 4, "default": 0}
+    ]},
+    {"name": "Beat", "params": [
+      {"id": "punch",   "label": "Gold flares on kick",       "min": 0,   "max": 2,   "step": 0.01, "default": 0.4}
+    ]},
+    {"name": "Colour", "params": [
+      {"id": "tint",    "label": "Original gold → tint",      "min": 0,   "max": 1,   "step": 0.01, "default": 0},
+      {"id": "hue",     "label": "Tint hue",                  "min": 0,   "max": 1,   "step": 0.005,"default": 0.07},
+      {"id": "sat",     "label": "Tint saturation",           "min": 0,   "max": 1,   "step": 0.01, "default": 0.6},
+      {"id": "bright",  "label": "Brightness",                "min": 0,   "max": 2,   "step": 0.01, "default": 1},
+      {"id": "vignette","label": "Vignette",                  "min": 0,   "max": 1,   "step": 0.01, "default": 1},
+      {"id": "follow",  "label": "Follow show hue",           "min": 0,   "max": 1,   "step": 1,    "default": 0}
+    ]}
+  ]
+}

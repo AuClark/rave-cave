@@ -1,0 +1,38 @@
+{
+  "title": "Topo",
+  "about": "A topographic contour map of slowly evolving terrain, with major contours and elevation labels (after Radiant's Topographic Contour Map by Paul Bakaus). The lines punch on the kick, a peak can swell in the middle, and the levels can scroll with the beat.",
+  "groups": [
+    {"name": "Terrain", "params": [
+      {"id": "scale",    "label": "Hill size (detail)",     "min": 0.5,  "max": 8,    "step": 0.05,  "default": 2.4},
+      {"id": "contrast", "label": "Relief",                 "min": 0.3,  "max": 3,    "step": 0.01,  "default": 1.4},
+      {"id": "evolve",   "label": "Evolve (per beat)",      "min": 0,    "max": 0.3,  "step": 0.001, "default": 0.07}
+    ]},
+    {"name": "Contours", "params": [
+      {"id": "levels",   "label": "Levels",                 "min": 4,    "max": 40,   "step": 1,     "default": 14},
+      {"id": "width",    "label": "Line width",             "min": 0.3,  "max": 5,    "step": 0.05,  "default": 1.6},
+      {"id": "glow",     "label": "Glow",                   "min": 0,    "max": 3,    "step": 0.01,  "default": 1},
+      {"id": "scroll",   "label": "Scroll (levels/beat)",   "min": -1,   "max": 1,    "step": 0.01,  "default": 0}
+    ]},
+    {"name": "Beat", "params": [
+      {"id": "punch",    "label": "Beat punch",             "min": 0,    "max": 1.5,  "step": 0.01,  "default": 0.3},
+      {"id": "peak",     "label": "Peak in the middle",     "min": -1,   "max": 1,    "step": 0.01,  "default": 0},
+      {"id": "radius",   "label": "Peak radius",            "min": 0.05, "max": 1,    "step": 0.01,  "default": 0.25},
+      {"id": "pulse",    "label": "Peak swells on kick",    "min": 0,    "max": 1,    "step": 0.01,  "default": 0}
+    ]},
+    {"name": "Labels", "params": [
+      {"id": "labels",   "label": "Labels (chance)",        "min": 0,    "max": 1,    "step": 0.01,  "default": 0.35},
+      {"id": "lsize",    "label": "Label size",             "min": 0.001,"max": 0.01, "step": 0.0001,"default": 0.004},
+      {"id": "lspace",   "label": "Label spacing",          "min": 0.25, "max": 0.8,  "step": 0.01,  "default": 0.3}
+    ]},
+    {"name": "Colour", "params": [
+      {"id": "tint",     "label": "Original ramp → tint",   "min": 0,    "max": 1,    "step": 0.01,  "default": 0},
+      {"id": "hue",      "label": "Tint hue",               "min": 0,    "max": 1,    "step": 0.005, "default": 0.07},
+      {"id": "spread",   "label": "Hue spread (low → high)", "min": -0.5, "max": 0.5,  "step": 0.005, "default": 0.05},
+      {"id": "sat",      "label": "Tint saturation",        "min": 0,    "max": 1,    "step": 0.01,  "default": 0.5},
+      {"id": "bright",   "label": "Brightness",             "min": 0,    "max": 2,    "step": 0.01,  "default": 1},
+      {"id": "bg",       "label": "Background",             "min": 0,    "max": 0.2,  "step": 0.005, "default": 0.04},
+      {"id": "vignette", "label": "Vignette",               "min": 0,    "max": 1,    "step": 0.01,  "default": 0.4},
+      {"id": "follow",   "label": "Follow show hue",        "min": 0,    "max": 1,    "step": 1,     "default": 0}
+    ]}
+  ]
+}

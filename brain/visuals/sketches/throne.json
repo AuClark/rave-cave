@@ -1,0 +1,28 @@
+{
+  "title": "Golden Throne",
+  "about": "A golden sacred-geometry mandala: rings, petals, spokes, hexagons and triangles in counter-rotating layers, golden-ratio spiral arms and fractal hex lace (after Radiant's Golden Throne by Paul Bakaus). The centre flares and the lines glow on the kick.",
+  "groups": [
+    {"name": "Mandala", "params": [
+      {"id": "size",   "label": "Size",                      "min": 0.3,  "max": 2.5, "step": 0.01, "default": 1},
+      {"id": "layers", "label": "Layers (complexity)",       "min": 1,    "max": 8,   "step": 1,    "default": 5},
+      {"id": "spiral", "label": "Golden spiral arms",        "min": 0,    "max": 3,   "step": 0.01, "default": 1},
+      {"id": "lace",   "label": "Fractal hex lace",          "min": 0,    "max": 3,   "step": 0.01, "default": 1}
+    ]},
+    {"name": "Motion", "params": [
+      {"id": "speed",  "label": "Time (per beat)",           "min": 0,    "max": 2,   "step": 0.01, "default": 0.476},
+      {"id": "rot",    "label": "Layer rotation",            "min": -2,   "max": 2,   "step": 0.01, "default": 0.3},
+      {"id": "spin",   "label": "Whole spin (turns/64 beats)", "min": -2, "max": 2,   "step": 0.01, "default": 0}
+    ]},
+    {"name": "Beat", "params": [
+      {"id": "punch",  "label": "Glow and centre on kick",   "min": 0,    "max": 2,   "step": 0.01, "default": 0.4}
+    ]},
+    {"name": "Colour", "params": [
+      {"id": "glow",   "label": "Line glow",                 "min": 0,    "max": 3,   "step": 0.01, "default": 1},
+      {"id": "tint",   "label": "Original gold → tint",      "min": 0,    "max": 1,   "step": 0.01, "default": 0},
+      {"id": "hue",    "label": "Tint hue",                  "min": 0,    "max": 1,   "step": 0.005,"default": 0.07},
+      {"id": "sat",    "label": "Tint saturation",           "min": 0,    "max": 1,   "step": 0.01, "default": 0.6},
+      {"id": "bright", "label": "Brightness",                "min": 0,    "max": 2,   "step": 0.01, "default": 1},
+      {"id": "follow", "label": "Follow show hue",           "min": 0,    "max": 1,   "step": 1,    "default": 0}
+    ]}
+  ]
+}

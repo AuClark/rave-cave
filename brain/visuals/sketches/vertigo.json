@@ -1,0 +1,26 @@
+{
+  "title": "Vertigo",
+  "about": "An endless crimson tunnel of neon rings and segments, lit by waves of light that run along it (after Radiant's Vertigo by Paul Bakaus). It scrolls a set number of rings per beat, the rings flash on the kick, and Spiral twists it.",
+  "groups": [
+    {"name": "Tunnel", "params": [
+      {"id": "speed",  "label": "Speed (rings per beat)",     "min": 0,   "max": 2,   "step": 0.01, "default": 0.12},
+      {"id": "spiral", "label": "Spiral",                     "min": -3,  "max": 3,   "step": 0.01, "default": 0},
+      {"id": "spin",   "label": "Spin (turns / 64 beats)",    "min": -4,  "max": 4,   "step": 0.01, "default": 0},
+      {"id": "rings",  "label": "Ring density",               "min": 3,   "max": 30,  "step": 0.5,  "default": 10},
+      {"id": "segs",   "label": "Segments round",             "min": 3,   "max": 48,  "step": 1,    "default": 16}
+    ]},
+    {"name": "Light", "params": [
+      {"id": "waves",  "label": "Light waves (speed)",        "min": 0,   "max": 4,   "step": 0.01, "default": 1},
+      {"id": "flash",  "label": "Ring flashes",               "min": 0,   "max": 3,   "step": 0.01, "default": 1},
+      {"id": "edge",   "label": "Neon edges",                 "min": 0,   "max": 3,   "step": 0.01, "default": 1}
+    ]},
+    {"name": "Beat", "params": [
+      {"id": "punch",  "label": "Rings flash on kick",        "min": 0,   "max": 2,   "step": 0.01, "default": 0.4}
+    ]},
+    {"name": "Colour", "params": [
+      {"id": "hue",    "label": "Hue shift",                  "min": 0,   "max": 1,   "step": 0.005,"default": 0},
+      {"id": "follow", "label": "Shift by show hue",          "min": 0,   "max": 1,   "step": 1,    "default": 0},
+      {"id": "bright", "label": "Brightness",                 "min": 0,   "max": 2,   "step": 0.01, "default": 1}
+    ]}
+  ]
+}
