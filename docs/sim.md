@@ -71,4 +71,6 @@ The sim on the brain can play real tracks: put them in `/srv/rave/sim/tracks/` (
   ANLZ0000.DAT  ANLZ0000.EXT  ANLZ0000.2EX   the track's rekordbox analysis, from the USB's PIONEER/USBANLZ/…
 ```
 
-[`realtracks.py`](../brain/sim/realtracks.py) reads the analysis: the beat grid (so the decks run on the track's real grid, first downbeat included), rekordbox's phrases if it analysed them (intro / up / down / chorus / outro become intro / build / breakdown / drop / outro), otherwise breakdowns and drops from the bass in the 3-band waveform, and the colour waveform for the dashboard. Keys become Camelot. Restart the sim (or deckdash) to pick up new folders. The folder with the rekordbox analysis matters: the audio alone has no beat grid.
+[`realtracks.py`](../brain/sim/realtracks.py) reads the analysis: the beat grid (so the decks run on the track's real grid, first downbeat included), rekordbox's phrases (intro / up / down / chorus / outro become intro / build / breakdown / drop / outro) and the colour waveform for the dashboard. Keys become Camelot. Restart the sim (or deckdash) to pick up new folders.
+
+**Only tracks with full rekordbox analysis are used:** phrases (turn on **Phrase** in rekordbox's analysis settings), a key, and at least one drop in the phrases. Anything else is skipped (the reason is in `/tmp/fakerig.log`): the sim is for testing the show against tracks whose structure is known, so nothing is guessed. The current set (2026-09-29) is six tech house tracks from the DJ's USB, 123–127 BPM.
