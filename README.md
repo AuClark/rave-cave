@@ -128,7 +128,7 @@ All pages are served by the brain (`sektor5.local` on the rig's network). Changi
 
 ## Known limitations
 
-- **Drop detection** is waveform-based and tested on a limited set of tracks. It can be a bar out, and psytrance gives many candidates. Commander marks fix individual tracks and are logged for calibration.
+- **Track analysis and drop detection aren't done.** The live decks use a waveform-only analyser checked by eye on a handful of tracks; it doesn't read rekordbox's phrase analysis yet, and it has known failure modes (a drop called inside a build). Commander marks fix individual tracks. The plan, with a labelled test set from the DJ's library, is in [docs/track-analysis.md](docs/track-analysis.md).
 - **The pyramid's Wi-Fi** has dropped several times.
 - **The Pi has no RTC**, so its clock is wrong until time syncs after boot.
 
