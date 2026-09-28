@@ -235,7 +235,12 @@
   // synthetic rig runs (the page's LIVE pill hides: it isn't the decks), NO DECKS when none are found.
   // Tapping it opens a small panel: sound and volume, back to real decks / start simulation.
   const pop = root.getElementById("simpop");
-  let simState = null;
+  // Sound on/off and volume: cookies, because those are shared by every page on this host (each page
+  // has its own port on the rig's network, and localStorage is per port).
+  const pref = k => (document.cookie.match(new RegExp("(?:^|; )" + k + "=([^;]*)")) || [])[1] || null;
+  const setPref = (k, v) => { document.cookie = `${k}=${encodeURIComponent(v)}; path=/; max-age=31536000; SameSite=Lax`; };
+  let simState = null, soundTried = false;
+  addEventListener("s5sound", () => { if (simState) simRender(simState); if (pop.classList.contains("open")) popRender(); });
   const pill = document.createElement("button");
   pill.type = "button";
   pill.className = "s5sim";
@@ -248,13 +253,19 @@
     const offer = !sim.on && sim.available && !sim.djlink && sim.uptime_s > 20 && !dismissed;
     document.documentElement.classList.toggle("s5-sim", !!sim.on);
     pill.className = "s5sim" + (sim.on ? " on" : offer ? " offer" : "");
-    pill.innerHTML = sim.on ? "<i></i>Sim" : "No decks";
+    const tapForSound = sim.on && window.S5AUDIO && S5AUDIO.blocked;
+    pill.innerHTML = sim.on ? `<i></i>Sim${tapForSound ? " · tap for sound" : ""}` : "No decks";
+    // Sound is a setting, not per page: turned on once, every page picks it up while the sim runs.
+    if (sim.on && pref("s5sound") === "1" && !soundTried) {
+      soundTried = true;
+      loadAudio().then(() => { S5AUDIO.volume(+(pref("s5vol") || 0.8)); S5AUDIO.start(); }).catch(() => {});
+    }
     pill.title = sim.on ? "Simulation: a synthetic DJ set. Tap for sound or to go back to the real decks." : "No decks found. Tap to run a simulation.";
     if (!sim.on && !offer) pop.classList.remove("open");
     if (pop.classList.contains("open")) popRender();
   }
   function popRender() {
-    const sim = simState || {}, playing = window.S5AUDIO && S5AUDIO.playing, vol = +(localStorage.getItem("s5simVol") || 0.8);
+    const sim = simState || {}, playing = window.S5AUDIO && S5AUDIO.playing, vol = +(pref("s5vol") || 0.8);
     pop.className = "open" + (sim.on ? "" : " offer");
     pop.innerHTML = sim.on
       ? `<h4>Simulation</h4><p>A synthetic DJ set at ${Math.round(sim.bpm || 126)} BPM. The lights, projection and visuals follow it.</p>` +
@@ -277,7 +288,7 @@
   }
   pop.addEventListener("input", async e => {
     if (e.target.dataset.sim !== "vol") return;
-    localStorage.setItem("s5simVol", e.target.value);
+    setPref("s5vol", e.target.value);
     if (window.S5AUDIO) S5AUDIO.volume(+e.target.value);
   });
   pop.addEventListener("click", async e => {
@@ -287,8 +298,10 @@
     if (b.dataset.sim === "sound") {
       try {
         await loadAudio();
-        S5AUDIO.volume(+(localStorage.getItem("s5simVol") || 0.8));
-        if (S5AUDIO.playing) S5AUDIO.stop(); else await S5AUDIO.start();   // the tap is the gesture browsers need for sound
+        S5AUDIO.volume(+(pref("s5vol") || 0.8));
+        const on = !S5AUDIO.playing;
+        setPref("s5sound", on ? "1" : "0");            // remembered: other pages turn it on too
+        if (on) await S5AUDIO.start(); else S5AUDIO.stop();             // the tap is the gesture browsers need for sound
       } catch (e2) { alert("Couldn't start the sound."); }
       popRender();
       return;

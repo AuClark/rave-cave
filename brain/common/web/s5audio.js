@@ -19,7 +19,7 @@
   let clock = null;          // { a0: audio time, b0: beat at a0, bpm }
   let show = { scene: "GROOVE", bpm: 126, beats_to_drop: 999, energy: 0.6, section: "groove" };
   let nextStep = null;                                          // next 16th to schedule, in beats (multiples of 0.25)
-  let vol = +(localStorage.getItem("s5simVol") || 0.8);
+  let vol = +((document.cookie.match(/(?:^|; )s5vol=([^;]*)/) || [])[1] || 0.8);   // shared with every page (s5system.js)
   const LOOKAHEAD = 0.15, STEP = 0.25;
   const KEY = 55;            // A1: bassline root (A minor)
   const BASS = [0, 0, 12, 0, 7, 0, 10, 12];   // semitones, one per 8th note of the bar
@@ -212,11 +212,30 @@
     }
   }
 
+  // Both decks' players have to be started once inside a tap (phones only let media start from a gesture).
+  function unlockDecks() { for (const n of [1, 2]) { const d = deck(n); d.el.muted = true; d.el.play().catch(() => {}); d.el.pause(); d.el.muted = false; } }
+  // A new page can't make sound until it's been touched: try, and if the browser says no, carry on at
+  // the first tap or key press anywhere on the page (S5AUDIO.blocked meanwhile, for the SIM pill).
+  let blocked = false;
+  async function resumeOrWait() {
+    ctx.resume().catch(() => {});
+    for (let i = 0; i < 8 && ctx.state !== "running"; i++) await new Promise(r => setTimeout(r, 50));
+    if (ctx.state === "running") return;
+    blocked = true; dispatchEvent(new CustomEvent("s5sound"));
+    await new Promise(ok => {
+      const go = () => {
+        for (const ev of ["pointerdown", "keydown", "touchend"]) removeEventListener(ev, go, true);
+        unlockDecks(); ctx.resume().then(ok, ok);
+      };
+      for (const ev of ["pointerdown", "keydown", "touchend"]) addEventListener(ev, go, true);
+    });
+    blocked = false; dispatchEvent(new CustomEvent("s5sound"));
+  }
+
   async function start() {
     if (!ctx) build();
-    await ctx.resume();
-    // Unlock both decks' players inside this tap (phones only let media start from a user gesture).
-    for (const n of [1, 2]) { const d = deck(n); d.el.muted = true; d.el.play().catch(() => {}); d.el.pause(); d.el.muted = false; }
+    unlockDecks();
+    await resumeOrWait();
     master.gain.setTargetAtTime(vol, ctx.currentTime, 0.05);
     deckBus.gain.setTargetAtTime(vol, ctx.currentTime, 0.05);
     await poll(); await deckPoll();
@@ -238,5 +257,5 @@
   // For checking sync: each deck player's position, rate and volume.
   const decksInfo = () => Object.fromEntries(Object.entries(decks).map(([n, d]) => [n, { t: +d.el.currentTime.toFixed(3), paused: d.el.paused,
     rate: +d.el.playbackRate.toFixed(4), vol: +d.gain.gain.value.toFixed(2), ready: d.ready }]));
-  window.S5AUDIO = { start, stop, volume, get real() { return real; }, get decks() { return decksInfo(); }, get playing() { return !!(ctx && ctx.state === "running" && schedTimer); } };
+  window.S5AUDIO = { start, stop, volume, get real() { return real; }, get blocked() { return blocked; }, get decks() { return decksInfo(); }, get playing() { return !!(ctx && ctx.state === "running" && schedTimer); } };
 })();
