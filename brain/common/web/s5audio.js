@@ -187,9 +187,15 @@
       d.gain.gain.setTargetAtTime(fader, ctx.currentTime, 0.08);
       d.low.gain.setTargetAtTime(-26 * (1 - bass), ctx.currentTime, 0.15);   // the sim's bass swap
       if (!p.status.playing) { if (!d.el.paused) d.el.pause(); continue; }
+      // Drift, smoothed over a few readings (each one has network jitter in it). Within 40 ms: play at the
+      // deck's exact pitch; beyond: nudge the speed by at most 0.5% (inaudible); over 200 ms: jump back.
       const drift = d.el.currentTime - want;
-      if (d.el.paused || Math.abs(drift) > 0.15) { d.el.currentTime = Math.max(0, want); d.el.playbackRate = rate; if (d.el.paused) d.el.play().catch(() => {}); }
-      else d.el.playbackRate = rate * (1 - Math.max(-0.03, Math.min(0.03, drift * 0.5)));   // ease back into sync
+      d.drift = d.drift === undefined ? drift : d.drift * 0.7 + drift * 0.3;
+      if (d.el.paused || Math.abs(drift) > 0.2) {
+        d.el.currentTime = Math.max(0, want); d.el.playbackRate = rate; d.drift = 0;
+        if (d.el.paused) d.el.play().catch(() => {});
+      } else if (Math.abs(d.drift) > 0.04) d.el.playbackRate = rate * (1 - Math.max(-0.005, Math.min(0.005, d.drift * 0.1)));
+      else d.el.playbackRate = rate;
     }
     real = any;
     music.gain.setTargetAtTime(real ? 0 : 1, ctx.currentTime, 0.1);     // the synth steps aside for real tracks
