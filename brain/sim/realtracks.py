@@ -3,9 +3,9 @@
 Each track is a folder (see docs/sim.md): track.mp3, track.json (title, artist, bpm, key…) and the
 rekordbox analysis files from the USB export (ANLZ0000.DAT / .EXT / .2EX). From those:
   - the beat grid (PQTZ): where every beat is, so the sim's decks run on the track's real grid;
-  - phrases (PSSI, if rekordbox analysed them): intro / up / down / chorus / outro, the song's
-    real structure. Without them, breakdowns and drops come from the bass (3-band waveform, PWV7):
-    a drop is the bass coming back after a stretch without it, like the real analyser;
+  - phrases (PSSI): intro / up / down / chorus / outro, the song's real structure, as rekordbox
+    analysed it. Required: a track without phrases, a key or a drop is skipped (no guessing: the
+    sim is for testing the show against tracks whose structure is known);
   - the colour detail waveform (PWV5), for the dashboard.
 
 The folders are private (the DJ's music): they live on the brain in /srv/rave/sim/tracks, never in git.
@@ -122,33 +122,6 @@ def sections_from_phrases(ph, d0, bars):
     return out
 
 
-def sections_from_bass(bass, energy):
-    """No phrases: 8-bar phrases from the first downbeat; low bass = breakdown, the phrase before bass
-    returns = build, bass back after a breakdown = drop, the quiet start and end = intro and outro."""
-    bars = len(bass)
-    top = max(bass) or 1
-    ph = [(s, min(bars, s + 7)) for s in range(1, bars + 1, 8)]
-    lvl = [sum(bass[s - 1:e]) / max(1, e - s + 1) / top for s, e in ph]
-    typ = ["groove" if v >= 0.55 else "breakdown" for v in lvl]
-    for i in range(1, len(ph)):
-        if typ[i] == "groove" and typ[i - 1] == "breakdown":
-            typ[i] = "drop"
-            typ[i - 1] = "build" if i >= 2 and typ[i - 2] == "breakdown" else typ[i - 1]
-    i = 0
-    while i < len(typ) and typ[i] != "drop" and i < 4 and lvl[i] < 0.8:
-        typ[i] = "intro"; i += 1
-    j = len(typ) - 1
-    while j > 0 and typ[j] != "drop" and len(typ) - j <= 2:
-        typ[j] = "outro"; j -= 1
-    out = []
-    for (s, e), t in zip(ph, typ):
-        if out and out[-1][0] == t and t != "drop":
-            out[-1] = (t, out[-1][1], e)
-        else:
-            out.append((t, s, e))
-    return out
-
-
 def load(folder, tid):
     """A track folder -> a track dict shaped like the synthetic ones (plus audio, offset and real waveforms)."""
     folder = Path(folder)
@@ -164,15 +137,15 @@ def load(folder, tid):
     lo, tot = bands(two["PWV7"]) if "PWV7" in two else ([], [])
     bass = per_bar(lo, offset, bars, bar_ms) if lo else [1.0] * bars
     energy = per_bar(tot, offset, bars, bar_ms) if tot else [1.0] * bars
-    if "PSSI" in ext:
-        sections, how = sections_from_phrases(phrases(ext["PSSI"]), d0, bars), "rekordbox phrases"
-    else:
-        sections, how = sections_from_bass(bass, energy), "bass"
+    if "PSSI" not in ext:
+        raise ValueError("no rekordbox phrase analysis (turn on Phrase in rekordbox's analysis settings)")
+    if not meta.get("key"):
+        raise ValueError("no key")
+    sections, how = sections_from_phrases(phrases(ext["PSSI"]), d0, bars), "rekordbox phrases"
     drops = [(s, sections[k - 1][1] if k and sections[k - 1][0] in ("build", "breakdown") else max(1, s - 8))
              for k, (typ, s, e) in enumerate(sections) if typ == "drop"]
-    if not drops:                                                     # the show engine wants one: the loudest phrase
-        s = max(range(1, bars + 1, 8), key=lambda b: sum(energy[b - 1:b + 7]))
-        drops = [(s, max(1, s - 8))]
+    if not drops:
+        raise ValueError("rekordbox found no drop (no chorus after an up or down phrase)")
     outro = next((s for typ, s, e in sections if typ == "outro"), max(1, bars - 15))
     emax, bmax = max(energy) or 1, max(bass) or 1
     return {"id": tid, "title": meta["title"], "artist": meta["artist"], "genre": meta.get("genre", ""),
@@ -194,5 +167,5 @@ def load_all(root, first_id=1001):
         try:
             out.append(load(folder, first_id + i))
         except Exception as e:        # a bad folder shouldn't stop the rig
-            print(f"real track {folder.name}: {e}", flush=True)
+            print(f"real track {folder.name} skipped: {e}", flush=True)
     return out

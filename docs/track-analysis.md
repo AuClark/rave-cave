@@ -14,7 +14,7 @@ There are three separate pieces, and they don't share logic yet.
 |---|---|---|---|
 | `brain/deckdash/Timeline.java` | **The real decks** (live shows) | Waveform only: bass and energy per bar from the player's detailed waveform. A breakdown is 4+ bars with normalised bass under 0.30. A drop is a 4- or 8-bar phrase boundary (counted from the beat-in) where the next 4 bars carry ≥1.6× the bass of the previous 8 (2.24× off the 8-bar grid), refined to the beat where bass returns. A hot cue or memory point within a bar raises its confidence. | **No.** [show-engine.md](show-engine.md#track-timeline-computed-when-a-track-loads) describes phrases as the first source; that's the design, not the code. |
 | `brain/showbrain/showbrain.py` (Commander) | Fixing individual tracks live | **Mark drop here** / **skip drop** in the Commander, saved per track in `overrides.json` and used next time. | n/a |
-| `brain/sim/realtracks.py` | **Simulation** with the DJ's own tracks | rekordbox phrases (PSSI) when the track has them; otherwise a crude 8-bar rule on the 3-band waveform's bass. | **Yes**, when present. |
+| `brain/sim/realtracks.py` | **Simulation** with the DJ's own tracks | rekordbox phrases (PSSI) only: tracks without phrases, a key or a drop are skipped. (A crude bass fallback was tried and removed after the Dombresky failure below.) | **Yes**, required. |
 
 ## Evidence so far
 
@@ -26,8 +26,7 @@ Checked by eye only. No systematic test has been run.
 | Sonique, Matt Sassari, Hugel – It Feels So Good (Extended Mix) | Timeline.java | Drops at 57 and 113 correct |
 | Patrick Topping – Be Sharp Say Nowt | rekordbox phrases (sim) | Correct: build 5–20, drop 21, breakdown 69–84, build 85–100, drop 101 |
 | FISHER, Kita Alexander – Atmosphere | rekordbox phrases (sim) | Not checked yet |
-| **Dombresky – Simple Hit** | bass rule (sim) | **Wrong:** marked a drop while the track was still building (2026-09-29) |
-| Mark Knight, James Hurr – You Take Me Higher | bass rule (sim) | Not checked yet |
+| **Dombresky – Simple Hit** | bass rule (sim) | **Wrong:** marked a drop while the track was still building (2026-09-29). Removed from the sim with the rule. |
 
 Two correct tracks from the live analyser and one clear failure from the fallback is not evidence that either works.
 
@@ -40,7 +39,7 @@ Expected failure modes (the first is the one we've seen):
 - **Tracks whose intro has bass**: no low-bass stretch before the first drop, so no drop is found, or the beat-in is taken as the drop.
 - **Many candidates**: psytrance and minimal have bass nearly throughout; bass dips give false drops.
 - **Off-grid phrasing**: drops not on 4/8-bar boundaries from the beat-in, or a wrong beat grid, put the drop a bar or more out.
-- **The fallback in the sim** works on 8-bar blocks from the first downbeat with fixed thresholds, so it can't place a drop inside a block and misreads builds.
+- **The sim's old bass fallback** worked on 8-bar blocks with fixed thresholds, couldn't place a drop inside a block and misread builds. Removed: the sim now only takes tracks with rekordbox phrases.
 
 ## What rekordbox already gives us
 
