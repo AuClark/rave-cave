@@ -1,0 +1,12 @@
+[Unit]
+Description=Sektor5 auto-update: deploy what changed on GitHub's main (see s5_update.sh)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+User=pi
+Environment=HOME=/home/pi
+ExecStart=/usr/local/lib/sektor5/s5_update.sh
+Nice=10
+TimeoutStartSec=15min

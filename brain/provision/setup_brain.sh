@@ -26,7 +26,7 @@ step() { echo "== $*"; }
 step "packages"
 sudo DEBIAN_FRONTEND=noninteractive apt-get update -qq
 sudo DEBIAN_FRONTEND=noninteractive apt-get -y -qq install \
-  openjdk-21-jdk-headless python3-numpy python3-usb python3-smbus i2c-tools ir-keytable tcpdump alsa-utils flac avahi-utils rsync curl >/dev/null
+  openjdk-21-jdk-headless python3-numpy python3-usb python3-smbus i2c-tools ir-keytable tcpdump alsa-utils flac avahi-utils rsync curl git >/dev/null
 
 step "accounts: group rave, service user ravesvc (runs projector + visuals, no login)"
 getent group rave >/dev/null || sudo groupadd rave
@@ -61,6 +61,11 @@ sudo install -m 644 $S/argon-fan.service /etc/systemd/system/
 sudo systemctl daemon-reload
 # Not started automatically: switch it on once the fan is confirmed to respond in the case
 # (docs/brain.md#argon-one-case): sudo systemctl enable --now argon-fan
+
+step "auto-update: follow GitHub's main (s5-update.timer, every 15 minutes; waits while a deck is playing)"
+sudo install -d /usr/local/lib/sektor5 && sudo install -m 755 $S/s5_update.sh /usr/local/lib/sektor5/
+sudo install -m 644 $S/s5-update.service $S/s5-update.timer /etc/systemd/system/
+sudo systemctl daemon-reload && sudo systemctl enable -q --now s5-update.timer
 
 step "eth0: link-local only for the deck switch (never a default route); applies at the next boot"
 # Later netplan files override cloud-init's 50-cloud-init.yaml (which has eth0 on DHCP).
