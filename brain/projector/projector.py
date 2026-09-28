@@ -14,8 +14,13 @@
   /api/stage        GET / POST the 3D stage design (stage.html): fixtures, positions, links to
                     real fixtures. Saved as layouts/stage.json; broadcast as {"t":"stage"}
   /stage.html       3D stage visualiser and designer (three.js in web/vendor)
-  /api/screen       POST from the output page: {"w","h"} (its real resolution) plus stats
-                    {"fps","scale","gpu"} every few seconds, shown in the editor
+  /api/screen       POST from the output page: {"p","w","h"} (which projector, its real resolution)
+                    plus stats {"fps","scale","gpu"} every few seconds, shown in the editor
+
+Several projectors: the layout lists them ("projectors"); each surface and mask belongs to one. Each
+projector opens the output page with its id: /?p=left (no ?p = the first one).
+A generative surface ("gen") shows the live sketch, or its own: "sketch" (and "preset"), from the
+visuals service.
 
 Layouts live in layouts/ next to this file (not in git): current.json plus presets.
 
@@ -50,19 +55,23 @@ DEFAULT_LAYOUT = {
     "lead_ms": 60,          # latency compensation for this projector
     "brightness": 1.0,
     "render_scale": 0,      # 0 = auto (drop resolution to keep the frame rate up), else 0.25..1
+    "projectors": [{"id": "main", "name": "Projector 1"}],
     "surfaces": [
         {"id": "s1", "name": "Wall", "content": "show", "opacity": 1.0, "hue_shift": 0.0,
          "corners": [[0.1, 0.1], [0.9, 0.1], [0.9, 0.9], [0.1, 0.9]]},
     ],
     "masks": [],
 }
+SAFE_NAME = re.compile(r"^[A-Za-z0-9 _.-]{1,40}$")
+PROJ_ID = re.compile(r"^[a-z0-9-]{1,16}$")
 CONTENTS = {"show", "pulse", "tunnel", "bars", "title", "solid", "test", "gen"}   # gen: sketch from visuals :8110
 
 lock = threading.Lock()
 clients = []            # queue.Queue per connected page
 frame_clients = set()   # the ones that asked for output frames (/api/events?frames=1: the Stage view)
 layout = None
-screen = {"w": 1920, "h": 1080}
+screen = {"w": 1920, "h": 1080}        # the first projector's (older pages read this)
+screens = {}                           # projector id -> {"w","h","fps","scale","gpu","at"}
 last_state = b"null"
 
 
@@ -95,6 +104,15 @@ def clean_layout(d):
     out["brightness"] = float(max(0.0, min(1.0, d.get("brightness", out["brightness"]))))
     rs = float(d.get("render_scale", 0) or 0)
     out["render_scale"] = 0 if rs <= 0 else max(0.25, min(1.0, rs))
+    projs = []
+    for pj in d.get("projectors", [])[:8]:
+        pid = str(pj.get("id", ""))
+        if PROJ_ID.match(pid) and pid not in [x["id"] for x in projs]:
+            projs.append({"id": pid, "name": str(pj.get("name") or pid)[:40]})
+    out["projectors"] = projs or [{"id": "main", "name": "Projector 1"}]
+    ids = [x["id"] for x in out["projectors"]]
+    owner = lambda x: x.get("projector") if x.get("projector") in ids else ids[0]
+    name_or_none = lambda v: v if isinstance(v, str) and SAFE_NAME.match(v) else None
     surfaces = []
     for s in d.get("surfaces", [])[:32]:
         c = s.get("corners", [])
@@ -112,6 +130,9 @@ def clean_layout(d):
             "border_sat": float(max(0.0, min(1.0, s.get("border_sat", 0.0)))),      # 0 white .. 1 show colour
             "border_pulse": float(max(0.0, min(1.0, s.get("border_pulse", 0.0)))),  # beat flash on the border
             "corners": [[coord(x), coord(y)] for x, y in c],
+            "projector": owner(s),
+            "sketch": name_or_none(s.get("sketch")),     # gen: its own sketch (None = the live one)
+            "preset": name_or_none(s.get("preset")),     # gen: a preset of that sketch
         })
     out["surfaces"] = surfaces
     masks = []
@@ -119,7 +140,7 @@ def clean_layout(d):
         pts = m.get("points", [])
         if len(pts) >= 3:
             masks.append({"id": str(m.get("id") or f"m{len(masks) + 1}")[:24],
-                          "points": [[coord(x), coord(y)] for x, y in pts[:64]]})
+                          "points": [[coord(x), coord(y)] for x, y in pts[:64]], "projector": owner(m)})
     out["masks"] = masks
     return out
 
@@ -178,9 +199,6 @@ def state_pump():
         time.sleep(max(0.0, 1 / STATE_HZ - (time.time() - t0)))
 
 
-SAFE_NAME = re.compile(r"^[A-Za-z0-9 _.-]{1,40}$")
-
-
 class H(SimpleHTTPRequestHandler):
     def __init__(self, *a, **kw):
         super().__init__(*a, directory=str(WEB), **kw)
@@ -220,7 +238,7 @@ class H(SimpleHTTPRequestHandler):
             return
         if path == "/api/layout":
             with lock:
-                return self._json(200, dict(layout, screen=screen))
+                return self._json(200, dict(layout, screen=screen, screens=screens))
         if path == "/api/layouts":
             names = sorted(p.stem for p in LAYOUTS.glob("*.json") if p.stem != "current")
             return self._json(200, {"presets": names})
@@ -241,7 +259,7 @@ class H(SimpleHTTPRequestHandler):
         return super().do_GET()
 
     def do_POST(self):
-        global layout, screen
+        global layout, screen, screens
         if s5auth.handle(self) or not s5auth.guard(self, allow=("/api/screen",)):
             return
         path = self.path.split("?", 1)[0]
@@ -267,13 +285,20 @@ class H(SimpleHTTPRequestHandler):
                 return self._json(200, {"ok": True})
             if path == "/api/screen":
                 d = self._body()
-                screen = {"w": int(d.get("w", 1920)), "h": int(d.get("h", 1080))}
+                sc = {"w": int(d.get("w", 1920)), "h": int(d.get("h", 1080)), "at": int(time.time())}
                 for k in ("fps", "scale"):
                     if k in d:
-                        screen[k] = round(float(d[k]), 2)
+                        sc[k] = round(float(d[k]), 2)
                 if "gpu" in d:
-                    screen["gpu"] = str(d["gpu"])[:80]
+                    sc["gpu"] = str(d["gpu"])[:80]
+                with lock:
+                    ids = [x["id"] for x in layout["projectors"]]
+                    pid = d.get("p") if d.get("p") in ids else ids[0]
+                    screens[pid] = sc
+                    if pid == ids[0]:
+                        screen = sc
                 broadcast({"t": "screen", "screen": screen})
+                broadcast({"t": "screens", "screens": screens})
                 return self._json(200, {"ok": True})
             m = re.match(r"^/api/layouts/([^/]+?)(/load)?$", path)
             if m:
@@ -309,7 +334,8 @@ class H(SimpleHTTPRequestHandler):
                 frame_clients.add(q)
             first = ("data: " + json.dumps({"t": "hello", "version": code_version()}) + "\n\n"
                      "data: " + json.dumps({"t": "layout", "layout": layout}) + "\n\n"
-                     "data: " + json.dumps({"t": "screen", "screen": screen}) + "\n\n").encode()
+                     "data: " + json.dumps({"t": "screen", "screen": screen}) + "\n\n"
+                     "data: " + json.dumps({"t": "screens", "screens": screens}) + "\n\n").encode()
         try:
             self.wfile.write(first)
             self.wfile.flush()

@@ -116,6 +116,10 @@
   .panel.tabbed .card > h3 { display: none; }   /* the tab says which section this is */
   .panel.tabbed > .card, .panel.tabbed > #groups > .card { border-right: 0; }
   @media (max-width: 760px) { .hero > .s5sect { margin: 0; } }
+  .projsel { display: inline-flex; gap: 2px; align-items: center; }
+  .projsel select { min-width: 120px; }
+  .projsel button { padding: 6px 10px; }
+  #projUrl { font-family: ui-monospace, monospace; }
 </style>
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;500;600&display=swap" rel="stylesheet">
@@ -130,6 +134,7 @@
   <section class="hero">
     <div id="stage"><canvas id="gl"></canvas><canvas id="ov"></canvas></div>
     <div class="herobar">
+      <span class="projsel"><select id="pProj" title="Which projector you're mapping"></select><button id="bProjAdd" title="Add a projector">+</button><button id="bProjRen" title="Rename this projector">Rename</button><button id="bProjDel" title="Remove this projector (only when it has no surfaces)">×</button></span>
       <span id="conn" class="pill">connecting</span><span id="scr" class="pill"></span><span id="show" class="pill"></span>
       <span class="hint">Drag corner dots to pin a surface to its real-world shape; drag inside a surface to move it. Arrow keys nudge the selected corner (Shift = 10×). The projector updates live.</span>
       <span class="sp"></span>
@@ -154,8 +159,10 @@
           <option value="title">title — track name</option>
           <option value="solid">solid colour</option>
           <option value="test">test grid</option>
-          <option value="gen">generative — live sketch from :8110</option>
+          <option value="gen">generative sketch</option>
         </select></div>
+      <div class="row" id="genSketchRow"><label>Sketch</label><select id="pSketch" class="grow" title="Live follows the Visuals page; or pick one for this surface"></select></div>
+      <div class="row" id="genPresetRow"><label>Preset</label><select id="pPreset" class="grow"></select></div>
       <label>Opacity <span id="vOp"></span></label><input id="pOp" type="range" min="0" max="1" step="0.05">
       <label>Hue shift <span id="vHue"></span></label><input id="pHue" type="range" min="-0.5" max="0.5" step="0.01">
       <label>Corner radius <span id="vRad"></span></label><input id="pRad" type="range" min="0" max="0.5" step="0.005">
@@ -193,12 +200,17 @@
 const $ = id => document.getElementById(id);
 const stage = $("stage");
 const R = new MapRenderer($("gl"), $("ov"));
-let L = null, screen = { w: 1920, h: 1080 }, dragging = null, draft = null, selCorner = 0, pushTimer = null, lastPush = 0;
+let L = null, screen = { w: 1920, h: 1080 }, screens = {}, dragging = null, draft = null, selCorner = 0, pushTimer = null, lastPush = 0;
+// Which projector is being mapped (remembered here). Its output page is /?p=ID.
+let cur = localStorage.getItem("s5proj") || "";
+const curId = () => R.projectorId(cur), mine = x => (x.projector || "main") === curId();
+const curScreen = () => screens[curId()] || (curId() === R.projectorId("") ? screen : { w: 1920, h: 1080 });
 
 // ---------- sync with the projector host
 connectEvents(R, {
   onLayout: l => { if (!dragging) { L = l; R.layout = L; ui(); } },
   onScreen: s => { screen = s; sizeStage(); },
+  onScreens: s => { screens = s || {}; sizeStage(); },
   onStatus: ok => { $("conn").textContent = ok ? "live" : "reconnecting"; $("conn").className = "pill" + (ok ? " ok" : ""); },
 });
 connectVisuals(R);   // generative sketch + live params for "gen" surfaces
@@ -211,12 +223,13 @@ function push(immediate) {
 
 // ---------- stage sizing: same aspect as the projector
 function sizeStage() {
+  const screen = curScreen();
   stage.style.setProperty("--ar", screen.w / screen.h);   // the hero fits the screen height, same aspect as the projector
   const w = stage.clientWidth, h = Math.round(w * screen.h / screen.w);
   stage.style.height = h + "px";
   const d = devicePixelRatio || 1;
   R.resize(Math.round(w * d), Math.round(h * d));
-  $("scr").textContent = `projector ${screen.w}×${screen.h}` + (screen.fps != null
+  $("scr").textContent = `${screen.w}×${screen.h}` + (screen.fps != null
     ? ` · ${Math.round(screen.fps)} fps · ${Math.round((screen.scale ?? 1) * 100)}% res` : "");
   $("scr").title = screen.gpu || "";
   $("scr").style.color = screen.fps != null && screen.fps < 40 ? "#ff8080" : "";
@@ -252,11 +265,11 @@ stage.addEventListener("pointerdown", e => {
     const d = (pt[0] - p[0]) ** 2 + ((pt[1] - p[1]) * r.height / r.width) ** 2;
     if (d < bd) { bd = d; best = { kind, obj, i }; }
   };
-  L.surfaces.forEach(s => s.corners.forEach((c, i) => consider("corner", s, i, c)));
-  L.masks.forEach(m => m.points.forEach((c, i) => consider("mpoint", m, i, c)));
+  L.surfaces.filter(mine).forEach(s => s.corners.forEach((c, i) => consider("corner", s, i, c)));
+  L.masks.filter(mine).forEach(m => m.points.forEach((c, i) => consider("mpoint", m, i, c)));
   if (!best) {
-    const s = [...L.surfaces].reverse().find(s => inQuad(p, s.corners));
-    const m = [...L.masks].reverse().find(m => inQuad(p, m.points));
+    const s = L.surfaces.filter(mine).reverse().find(s => inQuad(p, s.corners));
+    const m = L.masks.filter(mine).reverse().find(m => inQuad(p, m.points));
     if (m && (!s || L.selected === m.id)) best = { kind: "mmove", obj: m, start: p, orig: m.points.map(c => [...c]) };
     else if (s) best = { kind: "move", obj: s, start: p, orig: s.corners.map(c => [...c]) };
   }
@@ -287,7 +300,7 @@ addEventListener("keydown", e => {
   const s = sel();
   if (!s || document.activeElement.tagName === "INPUT") return;
   const step = (e.shiftKey ? 10 : 1);
-  const d = { ArrowLeft: [-step / screen.w, 0], ArrowRight: [step / screen.w, 0], ArrowUp: [0, -step / screen.h], ArrowDown: [0, step / screen.h] }[e.key];
+  const sc = curScreen(), d = { ArrowLeft: [-step / sc.w, 0], ArrowRight: [step / sc.w, 0], ArrowUp: [0, -step / sc.h], ArrowDown: [0, step / sc.h] }[e.key];
   if (!d) return;
   e.preventDefault();
   s.corners[selCorner] = [s.corners[selCorner][0] + d[0], s.corners[selCorner][1] + d[1]];
@@ -299,7 +312,7 @@ $("bEdit").onclick = () => { L.edit = !L.edit; push(true); ui(); };
 $("bTest").onclick = () => { L.test = !L.test; push(true); ui(); };
 $("bAdd").onclick = () => {
   const id = newId("s", L.surfaces), o = 0.04 * (L.surfaces.length % 5);
-  L.surfaces.push({ id, name: `Surface ${L.surfaces.length + 1}`, content: "show", opacity: 1, hue_shift: 0,
+  L.surfaces.push({ id, name: `Surface ${L.surfaces.length + 1}`, content: "show", opacity: 1, hue_shift: 0, projector: curId(),
                     corners: [[0.3 + o, 0.3 + o], [0.7 + o, 0.3 + o], [0.7 + o, 0.7 + o], [0.3 + o, 0.7 + o]] });
   L.selected = id; push(true); ui();
 };
@@ -314,7 +327,46 @@ $("bFill").onclick = () => { const s = sel(); if (s) { s.corners = [[0, 0], [1, 
 $("bReset").onclick = () => { const s = sel(); if (s) { s.corners = [[0.25, 0.25], [0.75, 0.25], [0.75, 0.75], [0.25, 0.75]]; push(true); } };
 $("bSel").onclick = () => { selCorner = (selCorner + 1) % 4; };
 $("pName").oninput = e => { const s = sel(); if (s) { s.name = e.target.value; push(); renderLists(); } };
-$("pContent").onchange = e => { const s = sel(); if (s) { s.content = e.target.value; push(true); renderLists(); } };
+$("pContent").onchange = e => { const s = sel(); if (s) { s.content = e.target.value; push(true); renderLists(); ui(); } };
+// Generative surfaces: the live sketch (the Visuals page's) or one of their own, and a preset of it.
+const VIS = window.S5AUTH && S5AUTH.url ? S5AUTH.url(8110, "") : `${location.protocol}//${location.hostname}:8110`;
+let sketchNames = [], presetsFor = {};
+async function loadSketchNames() {
+  try { sketchNames = (await (await fetch(VIS + "/api/sketches")).json()).sketches; } catch (e) { sketchNames = []; }
+  ui();
+}
+async function loadPresets(name) {
+  if (!name || presetsFor[name]) return;
+  presetsFor[name] = [];
+  try { presetsFor[name] = (await (await fetch(`${VIS}/api/presets?sketch=${encodeURIComponent(name)}`)).json()).presets; } catch (e) { /* none */ }
+  ui();
+}
+loadSketchNames();
+$("pSketch").onchange = e => { const s = sel(); if (s) { s.sketch = e.target.value || null; s.preset = null; push(true); renderLists(); ui(); } };
+$("pPreset").onchange = e => { const s = sel(); if (s) { s.preset = e.target.value || null; push(true); renderLists(); } };
+// Projectors
+function projName(id) { const p = (L.projectors || []).find(p => p.id === id); return p ? p.name : id; }
+$("pProj").onchange = e => { cur = e.target.value; localStorage.setItem("s5proj", cur); L.selected = null; sizeStage(); ui(); };
+$("bProjAdd").onclick = () => {
+  const name = prompt("Name for the new projector (e.g. Left, Right, Back wall):", `Projector ${(L.projectors || []).length + 1}`);
+  if (!name) return;
+  let id = name.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "").slice(0, 16) || "p";
+  while ((L.projectors || []).some(p => p.id === id)) id = (id.slice(0, 14) + "-" + Math.floor(Math.random() * 90 + 10));
+  L.projectors = [...(L.projectors || [{ id: "main", name: "Projector 1" }]), { id, name: name.slice(0, 40) }];
+  cur = id; localStorage.setItem("s5proj", cur); L.selected = null; push(true); sizeStage(); ui();
+};
+$("bProjRen").onclick = () => {
+  const p = (L.projectors || []).find(p => p.id === curId()); if (!p) return;
+  const name = prompt("Rename projector:", p.name); if (!name) return;
+  p.name = name.slice(0, 40); push(true); ui();
+};
+$("bProjDel").onclick = () => {
+  const id = curId();
+  if ((L.projectors || []).length < 2) return alert("That's the only projector.");
+  if (L.surfaces.some(s => (s.projector || "main") === id) || L.masks.some(m => (m.projector || "main") === id))
+    return alert("Move or delete this projector's surfaces and masks first.");
+  L.projectors = L.projectors.filter(p => p.id !== id); cur = ""; localStorage.removeItem("s5proj"); push(true); sizeStage(); ui();
+};
 $("pOp").oninput = e => { const s = sel(); if (s) { s.opacity = +e.target.value; $("vOp").textContent = Math.round(s.opacity * 100) + "%"; push(); } };
 $("pHue").oninput = e => { const s = sel(); if (s) { s.hue_shift = +e.target.value; $("vHue").textContent = s.hue_shift.toFixed(2); push(); } };
 // Corner radius and border: [slider, surface key, default, label]
@@ -331,7 +383,7 @@ $("pBr").oninput = e => { L.brightness = +e.target.value; $("vBr").textContent =
 
 $("bMask").onclick = () => { draft = []; $("bMask").style.display = "none"; $("bMaskDone").style.display = ""; $("maskHint").style.display = ""; };
 $("bMaskDone").onclick = () => {
-  if (draft && draft.length >= 3) { const id = newId("m", L.masks); L.masks.push({ id, points: draft }); L.selected = id; push(true); }
+  if (draft && draft.length >= 3) { const id = newId("m", L.masks); L.masks.push({ id, points: draft, projector: curId() }); L.selected = id; push(true); }
   draft = null; $("bMask").style.display = ""; $("bMaskDone").style.display = "none"; $("maskHint").style.display = "none"; ui();
 };
 $("bMaskDel").onclick = () => { const m = selMask(); if (!m) return; L.masks = L.masks.filter(x => x !== m); L.selected = null; push(true); ui(); };
@@ -353,12 +405,16 @@ refreshPresets();
 
 // ---------- UI refresh
 function renderLists() {
-  $("surfaces").innerHTML = L.surfaces.map(s => `<div data-id="${s.id}" class="${s.id === L.selected ? "sel" : ""}"><span>${s.name || s.id}</span><span class="hint">${s.content}</span></div>`).join("") || "<p class='hint'>No surfaces yet.</p>";
-  $("masks").innerHTML = L.masks.map(m => `<div data-id="${m.id}" class="${m.id === L.selected ? "selm" : ""}"><span>${m.id}</span><span class="hint">${m.points.length} points</span></div>`).join("") || "<p class='hint'>No masks.</p>";
+  $("surfaces").innerHTML = L.surfaces.filter(mine).map(s => `<div data-id="${s.id}" class="${s.id === L.selected ? "sel" : ""}"><span>${s.name || s.id}</span><span class="hint">${s.content === "gen" ? (s.sketch ? s.sketch + (s.preset ? " · " + s.preset : "") : "gen · live") : s.content}</span></div>`).join("") || "<p class='hint'>No surfaces on this projector yet.</p>";
+  $("masks").innerHTML = L.masks.filter(mine).map(m => `<div data-id="${m.id}" class="${m.id === L.selected ? "selm" : ""}"><span>${m.id}</span><span class="hint">${m.points.length} points</span></div>`).join("") || "<p class='hint'>No masks.</p>";
   document.querySelectorAll(".list div[data-id]").forEach(el => el.onclick = () => { L.selected = el.dataset.id; push(true); ui(); });
 }
 function ui() {
   if (!L) return;
+  const projs = L.projectors || [{ id: "main", name: "Projector 1" }];
+  $("pProj").innerHTML = projs.map(p => `<option value="${p.id}"${p.id === curId() ? " selected" : ""}>${p.name.replace(/</g, "&lt;")}</option>`).join("");
+  $("bProjDel").style.display = projs.length > 1 ? "" : "none";
+  $("pProj").title = `Its output page: ${location.origin}${location.pathname.replace(/edit(\.html)?$/, "")}${curId() === projs[0].id ? "" : "?p=" + curId()}`;
   $("bEdit").classList.toggle("on", !!L.edit);
   $("bTest").classList.toggle("on", !!L.test);
   renderLists();
@@ -367,6 +423,17 @@ function ui() {
   if (s) {
     if (document.activeElement !== $("pName")) $("pName").value = s.name || "";
     $("pContent").value = s.content; $("pOp").value = s.opacity; $("pHue").value = s.hue_shift || 0;
+    const gen = s.content === "gen";
+    $("genSketchRow").style.display = gen ? "" : "none";
+    $("genPresetRow").style.display = gen && s.sketch ? "" : "none";
+    if (gen) {
+      const names = sketchNames.includes(s.sketch) || !s.sketch ? sketchNames : [s.sketch, ...sketchNames];
+      $("pSketch").innerHTML = `<option value="">Live (follows the Visuals page)</option>` + names.map(n => `<option${n === s.sketch ? " selected" : ""}>${n}</option>`).join("");
+      if (s.sketch) {
+        loadPresets(s.sketch);
+        $("pPreset").innerHTML = `<option value="">As last set on the Visuals page</option>` + (presetsFor[s.sketch] || []).map(n => `<option${n === s.preset ? " selected" : ""}>${n}</option>`).join("");
+      }
+    }
     $("vOp").textContent = Math.round(s.opacity * 100) + "%"; $("vHue").textContent = (s.hue_shift || 0).toFixed(2);
     for (const [sl, key, dflt] of SHAPE) { const v = s[key] ?? dflt; $(sl).value = v; shapeLabel(sl, v); }
   }
@@ -376,7 +443,7 @@ function ui() {
 }
 
 function frame(now) {
-  R.draw(now, { handles: true, draft });
+  R.draw(now, { handles: true, draft, projector: curId() });
   const st = R.clock.s;
   $("show").textContent = st ? `${st.scene} · deck ${st.live ?? "-"} · ${st.bpm ? st.bpm.toFixed(1) : "-"} BPM` : "show engine offline";
   requestAnimationFrame(frame);

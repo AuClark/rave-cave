@@ -58,3 +58,9 @@ Every surface has its own opacity and hue shift, so neighbouring surfaces can us
 - **Camera auto-calibration:** project Gray-code patterns, film them on a phone at `/calibrate`, decode the projector-to-camera mapping, and snap surfaces to detected edges.
 - **Mesh warp** for curved surfaces (a grid of control points per surface).
 - More content, and a per-surface "follow deck" option.
+
+## Several projectors, and a sketch per surface
+
+- **Projectors:** the editor's projector picker (on the strip under the preview) adds, renames and removes projectors. Each surface and mask belongs to the projector that was picked when it was made. Open each projector's output page with its id: `http://sektor5.local:8100/?p=right` (hover the picker for the exact address; the first projector needs no `?p`). The preview takes each projector's own screen size, and each reports its own frame rate.
+- **A sketch per surface:** a surface with content **generative sketch** shows **Live** (whatever the Visuals page is showing) or a sketch of its own, optionally with one of that sketch's **presets**. A sketch of its own runs with the values it was last left at on the Visuals page (or the preset's). Tweaks on the Visuals page show straight away on every surface using the sketch that's live there.
+- **Cost:** the projector's GPU pays for each surface's pixels times how heavy its sketch is, not for how many different sketches there are. Five sketches on five surfaces cost about the same as one sketch over the same area. Overlapping surfaces pay twice, and ray-marched sketches (diamond, horizon…) are the heavy ones. Loading a sketch compiles it once (a brief hitch). Render resolution *auto* covers slowdowns.

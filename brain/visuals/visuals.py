@@ -13,9 +13,11 @@ change to the projector and to the control page.
   /api/wave         GET the current waveform message
   /api/sketch       GET the active sketch (name, schema, glsl)
   /api/sketches     GET sketch names
+  /api/sketches/NAME  GET any sketch (schema, glsl) with its values, for a projection surface that
+                    shows it: live if it's active, else as last left; ?preset=P applies a preset
   /api/params       GET current values; POST {"id": value, ...} to change some
   /api/select       POST {"sketch": NAME} to switch sketch
-  /api/presets      GET preset names for the active sketch
+  /api/presets      GET preset names for the active sketch (?sketch=NAME for another one)
   /api/presets/NAME GET a preset; POST saves current values as NAME; POST .../NAME/load
 
 Live values and presets live in state/ next to this file (not in git). Presets can also ship
@@ -162,22 +164,41 @@ def state_pump():
         time.sleep(max(0.0, 1 / STATE_HZ - (time.time() - t0)))
 
 
-def preset_dir():
-    d = STATE / "presets" / sketch["name"]
+def preset_dir(sk_name=None):
+    d = STATE / "presets" / (sk_name or sketch["name"])
     d.mkdir(parents=True, exist_ok=True)
     return d
 
 
-def preset_names():
+def preset_names(sk_name=None):
     """Saved presets plus the ones shipped with the sketch in git (sketches/presets/NAME/)."""
-    shipped = SKETCHES / "presets" / sketch["name"]
-    return sorted({p.stem for d in (preset_dir(), shipped) for p in d.glob("*.json")})
+    shipped = SKETCHES / "presets" / (sk_name or sketch["name"])
+    return sorted({p.stem for d in (preset_dir(sk_name), shipped) for p in d.glob("*.json")})
 
 
-def preset_file(name):
+def preset_file(name, sk_name=None):
     """A preset saved on the brain wins over a shipped one of the same name."""
-    f = preset_dir() / f"{name}.json"
-    return f if f.is_file() else SKETCHES / "presets" / sketch["name"] / f"{name}.json"
+    f = preset_dir(sk_name) / f"{name}.json"
+    return f if f.is_file() else SKETCHES / "presets" / (sk_name or sketch["name"]) / f"{name}.json"
+
+
+def values_for(name, preset=None):
+    """A sketch's values for a projection surface that shows it (not necessarily the active one):
+    the live values if it's active, else as it was last left on the control page, or its defaults;
+    then a preset on top, if one is given."""
+    sk = sketch if name == sketch["name"] else load_sketch(name)
+    if name == sketch["name"]:
+        vals = dict(values)
+    else:
+        try:
+            vals = clamp_values(sk, json.loads((STATE / f"{name}.current.json").read_text()), defaults(sk))
+        except (OSError, ValueError):
+            vals = defaults(sk)
+    if preset and SAFE_NAME.match(preset):
+        f = preset_file(preset, name)
+        if f.is_file():
+            vals = clamp_values(sk, json.loads(f.read_text()), vals)
+    return sk, vals
 
 
 class H(SimpleHTTPRequestHandler):
@@ -228,7 +249,20 @@ class H(SimpleHTTPRequestHandler):
             if path == "/api/params":
                 return self._json(200, values)
             if path == "/api/presets":
-                return self._json(200, {"presets": preset_names()})
+                q = urllib.parse.parse_qs(urllib.parse.urlparse(self.path).query)
+                name = (q.get("sketch") or [None])[0]
+                if name and name not in sketch_names():
+                    return self._json(404, {"error": "no such sketch"})
+                return self._json(200, {"presets": preset_names(name)})
+            # Any sketch, for a projection surface that shows it: definition + values (?preset=NAME)
+            m = re.match(r"^/api/sketches/([^/]+)$", path)
+            if m:
+                name = urllib.parse.unquote(m.group(1))
+                if name not in sketch_names():
+                    return self._json(404, {"error": "no such sketch"})
+                preset = (urllib.parse.parse_qs(urllib.parse.urlparse(self.path).query).get("preset") or [None])[0]
+                sk, vals = values_for(name, preset)
+                return self._json(200, {"sketch": sk, "values": vals})
             m = re.match(r"^/api/presets/([^/]+)$", path)
             if m:
                 name = urllib.parse.unquote(m.group(1))
