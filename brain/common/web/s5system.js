@@ -74,12 +74,14 @@
   .s5bar > .s5sim { flex: none; display: none; align-items: center; gap: 7px; height: 28px; padding: 0 10px; margin-left: auto; cursor: pointer;
     position: sticky; right: 48px; background: #242424; color: #9a9a9a; border: 1px solid #555;
     font: 600 11px/1 "Montserrat", ui-sans-serif, system-ui, sans-serif; letter-spacing: .14em; text-transform: uppercase; }
-  .s5bar > .s5sim.on, .s5bar > .s5sim.offer { display: flex; }
+  .s5bar > .s5sim.on, .s5bar > .s5sim.live, .s5bar > .s5sim.none, .s5bar > .s5sim.offline { display: flex; }
   .s5bar > .s5sim.on { color: #f2b84b; border-color: #f2b84b; }
+  .s5bar > .s5sim.live { color: #7ccf8a; border-color: #7ccf8a; }
+  .s5bar > .s5sim.offline { color: #ef5b5b; border-color: #ef5b5b; }
   .s5bar > .s5sim i { width: 7px; height: 7px; border-radius: 50%; background: currentColor; }
   .s5bar > .s5sim.on i { animation: s5pulse 1.2s ease-in-out infinite; }
-  .s5bar > .s5sim.on + .s5who, .s5bar > .s5sim.offer + .s5who { margin-left: 0; }
-  html.s5-sim .s5bar #conn, html.s5-sim .herobar #conn { display: none !important; }   /* the page's LIVE pill: it's the simulator, not the decks */
+  .s5bar > .s5sim.on + .s5who, .s5bar > .s5sim.live + .s5who, .s5bar > .s5sim.none + .s5who, .s5bar > .s5sim.offline + .s5who { margin-left: 0; }
+  .s5bar #conn, .herobar #conn { display: none !important; }   /* the status pill (right) says it all */   /* the page's LIVE pill: it's the simulator, not the decks */
   @keyframes s5pulse { 50% { opacity: .35; } }
   .s5home .hdot { position: absolute; left: 88px; top: 50%; width: 7px; height: 7px; margin-top: -3.5px; border-radius: 50%; background: #555;
     opacity: 0; transition: opacity .4s, background .4s; }
@@ -223,7 +225,10 @@
       if (dot) dot.className = "hdot " + h;
       if (dot) dot.title = h === "ok" ? "System healthy" : h === "warn" ? "System: needs a look" : "System: problem";
       if (sysEl.classList.contains("open")) { sysRender(d); root.getElementById("sysAge").textContent = "updated " + new Date(d.ts).toLocaleTimeString(); }
-    } catch (e) { if (dot) { dot.className = "hdot bad"; dot.title = "Can't reach the dashboard"; } }
+    } catch (e) {
+      if (dot) { dot.className = "hdot bad"; dot.title = "Can't reach the dashboard"; }
+      pill.className = "s5sim offline"; pill.innerHTML = "Offline"; pill.title = "Can't reach the brain";
+    }
   }
   function sysOpen(on) {
     sysEl.classList.toggle("open", on); sysEl.setAttribute("aria-hidden", on ? "false" : "true");
@@ -249,31 +254,36 @@
   function simRender(sim) {
     if (!sim) return;
     simState = sim;
-    const dismissed = sessionStorage.getItem("s5simDismissed") === "1";
-    const offer = !sim.on && sim.available && !sim.djlink && sim.uptime_s > 20 && !dismissed;
+    // One status pill: SIM, LIVE (decks on DJ Link) or NO DECKS. Tap it to switch.
+    const mode = sim.on ? "on" : sim.djlink && sim.decks > 0 ? "live" : "none";
     document.documentElement.classList.toggle("s5-sim", !!sim.on);
-    pill.className = "s5sim" + (sim.on ? " on" : offer ? " offer" : "");
+    pill.className = "s5sim " + mode;
     const tapForSound = sim.on && window.S5AUDIO && S5AUDIO.blocked;
-    pill.innerHTML = sim.on ? `<i></i>Sim${tapForSound ? " · tap for sound" : ""}` : "No decks";
+    pill.innerHTML = { on: `<i></i>Sim${tapForSound ? " · tap for sound" : ""}`, live: "<i></i>Live", none: "No decks" }[mode];
     // Sound is a setting, not per page: turned on once, every page picks it up while the sim runs.
     if (sim.on && pref("s5sound") === "1" && !soundTried) {
       soundTried = true;
       loadAudio().then(() => { S5AUDIO.volume(+(pref("s5vol") || 0.8)); S5AUDIO.start(); }).catch(() => {});
     }
-    pill.title = sim.on ? "Simulation: a synthetic DJ set. Tap for sound or to go back to the real decks." : "No decks found. Tap to run a simulation.";
-    if (!sim.on && !offer) pop.classList.remove("open");
+    pill.title = { on: "Simulation: a synthetic DJ set. Tap for sound or to go back to the real decks.",
+                   live: `Live: ${sim.decks} deck${sim.decks === 1 ? "" : "s"} on DJ Link. Tap to switch to the simulation.`,
+                   none: "No decks found. Tap to run a simulation." }[mode];
     if (pop.classList.contains("open")) popRender();
   }
   function popRender() {
     const sim = simState || {}, playing = window.S5AUDIO && S5AUDIO.playing, vol = +(pref("s5vol") || 0.8);
+    const live = !sim.on && sim.djlink && sim.decks > 0, canSim = sim.available;
     pop.className = "open" + (sim.on ? "" : " offer");
-    pop.innerHTML = sim.on
+    pop.innerHTML = live
+      ? `<h4 style="color:#7ccf8a">Live</h4><p>${sim.decks} deck${sim.decks === 1 ? "" : "s"} on DJ Link: the lights follow the real set.</p>` +
+        (canSim ? `<div class="row"><button data-sim="on" class="wide" data-confirm="1">Switch to simulation</button></div>` : "")
+      : sim.on
       ? `<h4>Simulation</h4><p>A synthetic DJ set at ${Math.round(sim.bpm || 126)} BPM. The lights, projection and visuals follow it.</p>` +
         `<div class="row"><button data-sim="sound" class="${playing ? "go" : ""}">${playing ? "Sound on" : "Sound off"}</button>` +
         `<input type="range" min="0" max="1" step="0.05" value="${vol}" data-sim="vol" aria-label="Volume"></div>` +
         `<div class="row"><button data-sim="off" class="wide">Back to real decks</button></div>`
       : `<h4>No decks found</h4><p>Run a synthetic DJ set to try the rig. Everything else is real, including the lights.</p>` +
-        `<div class="row"><button data-sim="on" class="go wide">Start simulation</button><button data-sim="x">Not now</button></div>`;
+        (canSim ? `<div class="row"><button data-sim="on" class="go wide">Start simulation</button><button data-sim="x">Close</button></div>` : "");
   }
   pill.addEventListener("click", e => {
     e.stopPropagation();
@@ -294,7 +304,8 @@
   pop.addEventListener("click", async e => {
     const b = e.target.closest("button[data-sim]");
     if (!b) return;
-    if (b.dataset.sim === "x") { sessionStorage.setItem("s5simDismissed", "1"); pop.classList.remove("open"); simRender(simState); return; }
+    if (b.dataset.sim === "x") { pop.classList.remove("open"); return; }
+    if (b.dataset.confirm && !confirm("Switch to the simulation? The lights, projection and visuals follow it instead of the decks, until you go back.")) return;
     if (b.dataset.sim === "sound") {
       try {
         await loadAudio();
