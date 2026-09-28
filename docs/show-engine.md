@@ -157,7 +157,8 @@ API: `POST /api/cmd {"cmd": ..., "value": ...}` with `mode`, `follow`, `intensit
 - **Library** (tab) is a Serato-style browser for the rekordbox export on the USB/SD in the players (read with CrateDigger). It has crates and playlists on the left, and search, genre, "BPM ≈ master" and "key match" (Camelot) filters with sortable columns. Tracks already loaded on a deck and tracks already played are marked.
   - **Drag and drop:** drag a row (or a deck) onto a deck's waveform to load it there; Shift while dropping loads and plays. **On a phone,** press and hold the row for a moment, then drag it up onto the deck's waveform and let go.
   - **Load** with the per-row deck buttons, a double-click (loads the first deck that isn't playing), or ↑/↓ then Shift+←/→ for deck 1/2. `/` focuses search and Esc clears it. Loading onto a playing deck asks for confirmation first, and the server refuses unless it's forced.
-  - **Deck strip:** PLAY/STOP (DJ Link fader start), SYNC, MASTER.
+  - **Deck buttons** are on each deck's waveform lane, right of its BPM: play/stop (DJ Link fader start), sync, tempo master.
+  - **Columns:** load buttons first, then the track (artist under the title on phones), BPM, key, length, genre; album and date added on wide screens. Played tracks get a tick. On phones the crates are a row of chips above the list.
   - **Untested on the XDJ-700s:** load and transport are sent from virtual player 7. Pioneer players accept these from rekordbox and other players, but whether the XDJ-700 (fw 1.13) accepts them from a non-standard player number still needs checking on the rig. If it ignores them, the next thing to try is `setUseStandardPlayerNumber(true)` in `DeckDash.java`, since with only two decks, numbers 3 and 4 are free.
 
 ## Tempo master, BPM reset and automix tempo ramps

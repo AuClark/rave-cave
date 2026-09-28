@@ -55,4 +55,20 @@ How it works: deckdash ([`Sim.java`](../brain/deckdash/Sim.java)) runs `fakerig.
 
 ### Sound
 
-**Sound** in the SIM panel plays music in that browser, in time with the show. The synthetic tracks have structure but no audio, so [`s5audio.js`](../brain/common/web/s5audio.js) synthesises house music that follows showbrain's beat clock (`/api/state`): kick, open hats, clap and an offbeat bassline in grooves and drops; no kick, a pad and a dark filter in breakdowns; a filter sweep, a snare roll that speeds up and a riser through builds; a beat of silence before the drop. It's all generated in the browser, so there's nothing to license. Browsers only start sound after a click, which is why it's a button. Each browser plays its own copy: turn it on in one.
+Tap the **SIM** pill, then **Sound**: music plays in that browser, in time with the show. It's a setting, not per page: once it's on, every page you open picks it up while the simulation runs. Browsers won't start sound on a newly opened page until it's touched, so after switching pages the pill may say **Sim · tap for sound**: the first tap anywhere brings it back, at the right point in the track.
+
+- **Real tracks** (below) play their actual audio, one player per deck, following the deck's position, pitch, fader and bass EQ as the sim mixes (the bass swap is a real low cut). It stays within a few tens of milliseconds of the deck, at the deck's exact pitch.
+- **Synthetic tracks** have no audio, so [`s5audio.js`](../brain/common/web/s5audio.js) synthesises house music that follows showbrain's beat clock: kick, hats, clap and bassline in grooves and drops; a pad and a dark filter in breakdowns; a filter sweep, snare roll and riser in builds; a beat of silence before the drop.
+
+### Your own tracks
+
+The sim on the brain can play real tracks: put them in `/srv/rave/sim/tracks/` (never in git: they're the DJ's music). They come first in the library (**My tracks**), and the auto set plays only them when there are any. One folder per track:
+
+```
+/srv/rave/sim/tracks/01-artist-title/
+  track.mp3                          the audio
+  track.json                         {"title", "artist", "genre", "bpm", "key", "duration"}
+  ANLZ0000.DAT  ANLZ0000.EXT  ANLZ0000.2EX   the track's rekordbox analysis, from the USB's PIONEER/USBANLZ/…
+```
+
+[`realtracks.py`](../brain/sim/realtracks.py) reads the analysis: the beat grid (so the decks run on the track's real grid, first downbeat included), rekordbox's phrases if it analysed them (intro / up / down / chorus / outro become intro / build / breakdown / drop / outro), otherwise breakdowns and drops from the bass in the 3-band waveform, and the colour waveform for the dashboard. Keys become Camelot. Restart the sim (or deckdash) to pick up new folders. The folder with the rekordbox analysis matters: the audio alone has no beat grid.
