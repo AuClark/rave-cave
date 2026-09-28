@@ -282,6 +282,7 @@
   addEventListener("message", e => { if (e.data && e.data.s5 === "sound") { sound = e.data; spkRender(); if (pop.classList.contains("open")) popRender(); } });
   right.insertBefore(spk, pill);
   spkRender();
+  if (inShell) parent.postMessage({ s5: "sound?" }, "*");        // this page loaded after the player's last word
   function simRender(sim) {
     if (!sim) return;
     simState = sim;

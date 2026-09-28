@@ -60,6 +60,7 @@ addEventListener("message", e => {
   else if (m.s5 === "vol") { setCookie("s5vol", m.v); S5AUDIO.volume(+m.v); }
   else if (m.s5 === "gesture") { if (cookie("s5sound") === "1" && !S5AUDIO.playing) soundOn(); }   // a tap in the page counts here too
   else if (m.s5 === "leave") leave(m.url);
+  else if (m.s5 === "sound?") tell();                                        // a page's speaker asking
 });
 
 // Sound was on: carry on (the browser may want a tap first: the page's speaker says so).
