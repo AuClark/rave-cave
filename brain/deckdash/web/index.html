@@ -215,6 +215,35 @@
   .zoom .zlbl { min-width: 48px; text-align: center; font-size: 12px; font-weight: 600; font-variant-numeric: tabular-nums; }
   main.tabbed > section[data-title] > h2:first-child { display: none; }   /* the tab says which section this is */
   main.tabbed > section[data-title] { max-width: 1680px; }
+  /* Library: load buttons first, title with artist under it on phones, fewer columns on narrow screens. */
+  table.tt td.load { white-space: nowrap; } table.tt td.load .lbtn { min-width: 30px; margin-right: 3px; font-weight: 700; }
+  table.tt td.load .lbtn.busy { opacity: .45; }
+  table.tt td.trk { max-width: 420px; } table.tt td.trk b { font-weight: 500; }
+  table.tt .sub { display: none; color: var(--dim); font-size: 11px; overflow: hidden; text-overflow: ellipsis; }
+  table.tt tbody tr.played td:not(.ld) { color: inherit !important; }             /* played: a tick, not greyed out */
+  table.tt tbody tr.played td.idx::after { content: " ✓"; color: var(--good); }
+  @media (max-width: 1100px) { table.tt .w2 { display: none; } }
+  @media (max-width: 760px) {
+    table.tt .w { display: none; } table.tt .sub { display: block; } table.tt td.trk { max-width: 52vw; }
+    table.tt td.idx, table.tt th[data-k="n"] { display: none; }
+    /* crates: a row of chips above the list */
+    .crates { display: flex; gap: 6px; align-items: center; overflow-x: auto; max-height: none; border-right: 0; border-bottom: 1px solid var(--line); padding: 8px 12px; }
+    .crates select { flex: none; width: auto; max-width: 42vw; margin: 0; }
+    .crates ul, .crates > ul { display: flex; gap: 4px; padding: 0 !important; margin: 0; }
+    .crates li { flex: none; } .crates li > span { padding: 7px 10px; border: 1px solid var(--line2); }
+    .crates details { display: flex; gap: 4px; align-items: center; } .crates summary { padding: 7px 10px; }
+  }
+  @media (pointer: coarse) { table.tt td { padding: 10px 8px; } table.tt td.load .lbtn { min-width: 36px; min-height: 32px; } }
+  /* Deck buttons on the waveform lanes (laneCtlRender): right of each lane's BPM. */
+  section.stack { position: relative; }
+  .lanectl .lc { position: absolute; right: 10px; display: flex; gap: 4px; }
+  .lanectl button { width: 32px; height: 28px; padding: 0; display: grid; place-items: center; cursor: pointer; border-radius: 0;
+    background: rgba(20,20,20,.6); color: var(--text); border: 1px solid var(--line2); }
+  .lanectl button:hover { border-color: var(--accent); }
+  .lanectl button.on { background: var(--accent); border-color: var(--accent); color: #111; }
+  .lanectl svg { width: 15px; height: 15px; }
+  @media (max-width: 760px) { .lanectl .lc { right: 6px; gap: 3px; } .lanectl button { width: 27px; height: 24px; } .lanectl svg { width: 13px; height: 13px; } }
+  .libdecks { display: none !important; }   /* deck controls live on the waveform lanes now */
   /* Touch drag (library row or deck chip onto a deck's waveform): the tag that follows the finger. */
   .dragghost { position: fixed; left: 0; top: 0; z-index: 9995; pointer-events: none; margin: -46px 0 0 -12px; padding: 8px 12px;
     max-width: 70vw; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; background: var(--accent); color: #111;
@@ -329,7 +358,7 @@
       <div class="zoom"><button id="zOut" title="Zoom out (or scroll / pinch the waveforms)">−</button><span id="zLbl" class="zlbl">8 s</span><button id="zIn" title="Zoom in">+</button></div>
       <div class="masterbox"><span class="lbl">Master</span><span id="masterName" class="lbl">—</span><span id="masterBpm" class="big">—</span></div>
     </div>
-    <section id="stack" class="panel stack"><canvas id="stackcv"></canvas></section>
+    <section id="stack" class="panel stack"><canvas id="stackcv"></canvas><div class="lanectl" id="lanectl"></div></section>
   </div>
   <section id="lib" class="panel lib" data-title="Library">
     <div class="libdecks" id="libdecks"></div>
@@ -675,6 +704,7 @@ function drawStack() {
   const loaded = players.filter(p => p.status.trackLoaded);
   // Narrow screens (phones): slimmer lanes, so the pinned display leaves room for the controls.
   const slim = cv.clientWidth < 560;
+  const CTLW = slim ? 90 : 108;                 // the deck buttons' width (CSS px), see .lanectl
   const HEADc = slim ? 44 : 52, WAVEc = slim ? 62 : 104, OVc = slim ? 24 : 30, laneCss = HEADc + WAVEc + OVc + 6;
   const meterCss = Math.max(34, 16 * loaded.length + 6);
   const Wc = cv.clientWidth, Hc = Math.max(1, players.length) * laneCss + meterCss;
@@ -729,7 +759,7 @@ function drawStack() {
     else { g.fillStyle = "#1f1f1f"; g.fillRect(ax, ay, as, as); g.fillStyle = "#555"; g.font = `${18 * dpr}px ${CANVAS_FONT}`; g.fillText("♪", ax + 15 * dpr, ay + 29 * dpr); }
     // Right: big BPM, then tags (line 1) and key / drop / track tempo (line 2).
     const pc = s.pitchPct || 0;
-    let rx = W - 12 * dpr;
+    let rx = W - (12 + CTLW) * dpr;              // room for the deck buttons (#lanectl) at the far right
     g.font = `300 ${30 * dpr}px ${CANVAS_FONT}`; g.fillStyle = "#f2f2f2";
     const bpmTxt = s.effectiveBpm ? s.effectiveBpm.toFixed(2) : "—", bw = g.measureText(bpmTxt).width;
     g.fillText(bpmTxt, rx - bw, y0 + 38 * dpr); rx -= bw + 18 * dpr;
@@ -865,6 +895,7 @@ const SECTION_COLOURS = { intro: "#555555", groove: "#bdbdbd", breakdown: "#7a7a
 
 function render(st) {
   lastState = st;
+  laneCtlRender();
   const rxNow = performance.now();
   if (st.now) updatePosModel(st, rxNow);
   else for (const p of st.players)
@@ -901,8 +932,9 @@ const lib = { sources: [], src: null, tree: [], playlist: 0, tracks: [], view: [
               sort: { k: "n", dir: 1 }, q: "", genre: "", fBpm: false, fKey: false, sig: "" };
 let played = new Set();
 try { played = new Set(JSON.parse(localStorage.getItem("deckdashPlayed") || "[]")); } catch (e) {}
-const COLS = [["n", "#", "num"], ["title", "Title"], ["artist", "Artist"], ["bpm", "BPM", "num"], ["key", "Key"],
-              ["dur", "Time", "num"], ["genre", "Genre"], ["album", "Album"], ["rating", "★", "num"], ["added", "Added"]];
+// Library columns [sort key, header, class]: "w" hides on phones (artist goes under the title), "w2" below 1100 px.
+const COLS = [["n", "#", "num"], ["title", "Track"], ["artist", "Artist", "w"], ["bpm", "BPM", "num"], ["key", "Key"],
+              ["dur", "Time", "num"], ["genre", "Genre", "w"], ["album", "Album", "w2"], ["added", "Added", "w2"]];
 const RB_COLOURS = { Pink: "#ff5fd2", Red: "#ff4d5e", Orange: "#ff9a2e", Yellow: "#ffe14d", Green: "#3dff8b", Aqua: "#2fe6ff", Blue: "#4d7cff", Purple: "#9b8cff" };
 
 function toast(msg, err) {
@@ -1018,20 +1050,20 @@ function libFilter() {
 }
 
 function libRender() {
-  $("#thead").innerHTML = "<tr><th></th>" + COLS.map(([k, l]) => `<th data-k="${k}" class="${lib.sort.k === k ? "sorted" : ""}">${l}${lib.sort.k === k ? (lib.sort.dir > 0 ? " ▴" : " ▾") : ""}</th>`).join("") + "<th>Load</th></tr>";
+  $("#thead").innerHTML = "<tr><th class='ldh'>Load</th><th></th>" + COLS.map(([k, l, c]) => `<th data-k="${k}" class="${[lib.sort.k === k ? "sorted" : "", c === "num" ? "" : c || ""].join(" ")}">${l}${lib.sort.k === k ? (lib.sort.dir > 0 ? " ▴" : " ▾") : ""}</th>`).join("") + "</tr>";
   lib.view = libFilter();
   const decks = deckNumbers(), od = onDecks(), mi = masterInfo(), LIMIT = 1500;
   const playing = new Set((lastState ? lastState.players : []).filter(p => p.status.playing).map(p => p.number));
   $("#tbody").innerHTML = lib.view.slice(0, LIMIT).map((t, i) => {
     const on = od[t.id] || [];
     const cls = [i === lib.sel ? "sel" : "", played.has(lib.src + "/" + t.id) ? "played" : "", mi.key && keyCompatible(t.key, mi.key) ? "compat" : ""].join(" ");
-    return `<tr data-i="${i}" class="${cls}" draggable="true"><td class="ld">${on.map(n => `<span class="onDeck" style="background:${rgba(deckRgb(n), 1)}">${n}</span>`).join("")}</td>
-      <td class="num">${t.n}</td>
-      <td title="${esc(t.title)}">${t.color && RB_COLOURS[t.color] ? `<span class="ctag" style="background:${RB_COLOURS[t.color]}"></span>` : ""}${esc(t.title)}</td>
-      <td title="${esc(t.artist)}">${esc(t.artist)}</td><td class="num">${t.bpm ? t.bpm.toFixed(2) : ""}</td><td class="key">${esc(t.key)}</td>
-      <td class="num">${fmt(t.dur * 1000)}</td><td>${esc(t.genre)}</td><td title="${esc(t.album)}">${esc(t.album)}</td>
-      <td class="num">${t.rating ? "★".repeat(t.rating) : ""}</td><td>${esc(t.added)}</td>
-      <td class="ld">${decks.map(n => `<button class="lbtn" data-load="${n}" title="${playing.has(n) ? "Deck " + n + " is playing" : "Load to deck " + n}"${playing.has(n) ? " style='opacity:.5'" : ""}>${n}</button>`).join(" ")}</td></tr>`;
+    return `<tr data-i="${i}" class="${cls}" draggable="true">
+      <td class="ld load">${decks.map(n => `<button class="lbtn${playing.has(n) ? " busy" : ""}" data-load="${n}" title="${playing.has(n) ? "Deck " + n + " is playing" : "Load to deck " + n}">${n}</button>`).join("")}</td>
+      <td class="ld">${on.map(n => `<span class="onDeck" style="background:${rgba(deckRgb(n), 1)}">${n}</span>`).join("")}</td>
+      <td class="num idx">${t.n}</td>
+      <td class="trk" title="${esc(t.title)}${t.artist ? " — " + esc(t.artist) : ""}">${t.color && RB_COLOURS[t.color] ? `<span class="ctag" style="background:${RB_COLOURS[t.color]}"></span>` : ""}<b>${esc(t.title)}</b><span class="sub">${esc(t.artist)}</span></td>
+      <td class="w" title="${esc(t.artist)}">${esc(t.artist)}</td><td class="num">${t.bpm ? t.bpm.toFixed(2) : ""}</td><td class="key">${esc(t.key)}</td>
+      <td class="num">${fmt(t.dur * 1000)}</td><td class="w">${esc(t.genre)}</td><td class="w2" title="${esc(t.album)}">${esc(t.album)}</td><td class="w2">${esc(t.added)}</td></tr>`;
   }).join("") || `<tr><td colspan="13" class="pmeta" style="padding:24px">${lib.missing ? "Browsing and loading tracks, and PLAY / SYNC / MASTER, need the deckdash update (Library.java) on the brain. The repo owner deploys that; until then this panel can't reach the decks." : lib.src ? (lib.tracks.length ? "No tracks match." : "Empty playlist.") : "Insert a rekordbox USB into a player to browse its library."}</td></tr>`;
   $("#libcount").textContent = lib.tracks.length ? `${lib.view.length} of ${lib.tracks.length}${lib.view.length > LIMIT ? ` (showing ${LIMIT})` : ""}` : "";
   $("#fBpm").classList.toggle("on", lib.fBpm); $("#fKey").classList.toggle("on", lib.fKey);
@@ -1548,8 +1580,32 @@ for (const root of [$("#libdecks")]) {
   root.addEventListener("drop", e => { const el = e.target.closest("[data-deck]"); dropOnDeck(e, el && +el.dataset.deck); });
 }
 
+// Deck buttons on each waveform lane, right of its BPM: play/stop, sync, master (icons).
+const ICO = {
+  play: '<svg viewBox="0 0 24 24"><path d="M8 5l11 7-11 7z" fill="currentColor"/></svg>',
+  stop: '<svg viewBox="0 0 24 24"><rect x="7" y="7" width="10" height="10" fill="currentColor"/></svg>',
+  sync: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 12a8 8 0 0 1 13.7-5.7L20 8M20 4v4h-4M20 12a8 8 0 0 1-13.7 5.7L4 16M4 20v-4h4"/></svg>',
+  master: '<svg viewBox="0 0 24 24"><path d="M3 18h18l-1.5-9-4.5 4-3-7-3 7-4.5-4z" fill="currentColor"/></svg>',
+};
+function laneCtlRender() {
+  const st = lastState, box = $("#lanectl"), cv = $("#stackcv");
+  if (!st || !box) return;
+  const top = cv.offsetTop;
+  const html = st.players.slice().sort((a, b) => a.number - b.number).map(p => {
+    const s = p.status, h = laneHits.find(l => l.n === p.number); if (!h) return "";
+    const b = (a, on, ico, title) => `<button class="${on ? "on" : ""}" data-dk="${p.number}" data-a="${a}" title="${title}" aria-label="${title}">${ICO[ico]}</button>`;
+    return `<div class="lc" style="top:${top + h.y0 + 8}px">` +
+      b(s.playing ? "stop" : "play", s.playing, s.playing ? "stop" : "play", s.playing ? `Stop deck ${p.number}` : `Play deck ${p.number}`) +
+      b(s.synced ? "sync_off" : "sync_on", s.synced, "sync", `Sync deck ${p.number}`) +
+      b("master", s.tempoMaster, "master", `Make deck ${p.number} tempo master`) + `</div>`;
+  }).join("");
+  if (html !== box.dataset.html) { box.innerHTML = html; box.dataset.html = html; }   // only when something changed
+}
+$("#lanectl").onclick = e => { const b = e.target.closest("[data-dk]"); if (b) deckCmd(+b.dataset.dk, b.dataset.a); };
+
 function libRenderDecks() {
   const st = lastState; if (!st) return;
+  laneCtlRender();
   $("#libdecks").innerHTML = st.players.slice().sort((a, b) => a.number - b.number).map(p => {
     const s = p.status, t = p.track, c = rgba(deckRgb(p.number), 1);
     // Deck commands go through /api/deck, which only exists once Library.java is deployed.

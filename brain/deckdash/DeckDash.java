@@ -72,6 +72,8 @@ public class DeckDash {
         http.createContext("/api/system", ex -> send(ex, 200, "application/json", SystemInfo.json().getBytes(StandardCharsets.UTF_8)));
         http.createContext("/api/system/tailscale", Tailscale::handle);
         http.createContext("/api/sim", Sim::handle);
+        // Real tracks' audio in simulation (fakerig /api/audio/ID, for s5audio.js); nothing without the sim.
+        Sim.proxied(http.createContext("/api/audio/", ex -> send(ex, 404, "application/json", "{\"error\":\"only in simulation\"}".getBytes(StandardCharsets.UTF_8))));
         Sim.proxied(http.createContext("/api/art/", DeckDash::art));
         Sim.proxied(http.createContext("/api/waveform/", DeckDash::waveform));
         Sim.proxied(http.createContext("/api/wavedetail/", DeckDash::waveDetail));

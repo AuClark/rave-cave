@@ -18,7 +18,7 @@ exec 9>/tmp/s5-update.lock; flock -n 9 || { echo "already running"; exit 0; }   
 
 # What each target is built from (brain/deploy.sh copies these).
 declare -A FILES=(
-  [deckdash]="brain/deckdash/*.java brain/deckdash/fetch_libs.sh brain/sim/fakerig.py"
+  [deckdash]="brain/deckdash/*.java brain/deckdash/fetch_libs.sh brain/sim/fakerig.py brain/sim/realtracks.py"
   [web]="brain/deckdash/web brain/common/web"
   [showbrain]="brain/showbrain brain/common/s5auth.py brain/common/web/s5auth.js"
   [mixer]="brain/mixer"

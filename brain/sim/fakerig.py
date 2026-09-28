@@ -24,6 +24,8 @@ import socket
 import threading
 import time
 import urllib.request
+
+import realtracks
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 
@@ -36,6 +38,7 @@ ap.add_argument("--no-auto", action="store_true", help="don't mix tracks automat
 ap.add_argument("--bpm", type=float, default=126.0, help="tempo of the set")
 ap.add_argument("--port", type=int, default=8080)
 ap.add_argument("--feed", type=int, default=9100, help="showbrain's UDP feed port")
+ap.add_argument("--tracks", default="/srv/rave/sim/tracks", help="the DJ's own tracks with rekordbox analysis (realtracks.py); used if there")
 ARGS = ap.parse_args()
 
 # ---------------------------------------------------------------- tracks
@@ -77,6 +80,17 @@ for t in TRACKS:
     t["outro_bar"] = next(s for typ, s, e in sections if typ == "outro")
 
 
+REAL = realtracks.load_all(ARGS.tracks)
+if REAL:
+    print(f"{len(REAL)} real tracks from {ARGS.tracks}: " + ", ".join(f"{t['artist']} - {t['title']} ({t['structure']})" for t in REAL), flush=True)
+TRACKS = REAL + TRACKS
+
+
+def bar_ms(t, bar):
+    """Where a bar starts in the track (real tracks' first downbeat isn't at 0 ms)."""
+    return t.get("offset_ms", 0) + (bar - 1) * 4 * t["beat_ms"]
+
+
 def section_at(t, bar):
     for typ, s, e in t["sections"]:
         if s <= bar <= e:
@@ -94,16 +108,17 @@ def bar_energy(t, bar):
 
 def timeline(t, ref):
     fb = [1 + 4 * b for b in range(t["bars"])]
+    off = t.get("offset_ms", 0)
     return {"ref": ref, "title": t["title"], "bars": t["bars"], "beats": t["beats"], "beatInBar": 1, "beatInBeat": 1,
             "outroBar": t["outro_bar"],
-            "drops": [{"bar": b, "gridBar": b, "beat": fb[b - 1], "ms": int(fb[b - 1] * t["beat_ms"] - t["beat_ms"]),
+            "drops": [{"bar": b, "gridBar": b, "beat": fb[b - 1], "ms": int(off + fb[b - 1] * t["beat_ms"] - t["beat_ms"]),
                        "lift": 3.2, "confidence": 0.9, "cue": True, "buildStartBar": bs, "buildStartBeat": fb[bs - 1]}
                       for b, bs in t["drops"]],
             "sections": [{"type": typ, "startBar": s, "endBar": e, "startBeat": fb[s - 1],
                           "endBeat": fb[e] - 1 if e < t["bars"] else t["beats"]} for typ, s, e in t["sections"]],
-            "energy": [round(bar_energy(t, b) * 100) for b in range(1, t["bars"] + 1)],
-            "bass": [round(SECTION_BASS[section_at(t, b)[0]] * 100) for b in range(1, t["bars"] + 1)],
-            "barFirstBeat": fb, "beatMs": [int(i * t["beat_ms"]) for i in range(t["beats"])]}
+            "energy": t.get("energy_bars") or [round(bar_energy(t, b) * 100) for b in range(1, t["bars"] + 1)],
+            "bass": t.get("bass_bars") or [round(SECTION_BASS[section_at(t, b)[0]] * 100) for b in range(1, t["bars"] + 1)],
+            "barFirstBeat": fb, "beatMs": [int(off + i * t["beat_ms"]) for i in range(t["beats"])]}
 
 
 def wave_detail(t):
@@ -125,6 +140,16 @@ def wave_detail(t):
 
 
 def wave_overview(t, seg=400):
+    if t.get("detail_bytes"):                     # a real track: from its rekordbox colour waveform
+        d, hs, cs = t["detail_bytes"], [], []
+        n = len(d) // 4
+        for i in range(seg):
+            a, z = i * n // seg, max(i * n // seg + 1, (i + 1) * n // seg)
+            fr = [d[k * 4:k * 4 + 4] for k in range(a, z)]
+            hs.append(max(f[0] for f in fr))
+            r, g, b = (sum(f[j] for f in fr) // len(fr) for j in (1, 2, 3))
+            cs.append(f"#{r:02x}{g:02x}{b:02x}")
+        return {"segments": seg, "maxHeight": 31, "color": True, "heights": hs, "colors": cs}
     hs, cs = [], []
     for i in range(seg):
         bar = 1 + int(i / seg * t["bars"])
@@ -165,14 +190,14 @@ class Deck:
         return self.track["bpm"] * self.rate() if self.track else 0.0
 
     def beat(self, t=None):
-        return int(self.pos(t) // self.track["beat_ms"]) + 1 if self.track else 0
+        return int((self.pos(t) - self.track.get("offset_ms", 0)) // self.track["beat_ms"]) + 1 if self.track else 0
 
     def load(self, track):
         self.track = track
         self.load_count += 1
         self.ref = f"{self.n}{track['id']:03d}{self.load_count}"
         self.playing, self.paused_at, self.on_air, self.fader = False, 0.0, False, 0.0
-        self.detail = wave_detail(track)
+        self.detail = track.get("detail_bytes") or wave_detail(track)
 
     def play_at(self, t_start, pos_ms=0.0):
         self.start = t_start - pos_ms / 1000 / self.rate()
@@ -191,7 +216,8 @@ queue_i = [0]
 
 
 def next_track():
-    t = TRACKS[queue_i[0] % len(TRACKS)]
+    pool = REAL or TRACKS                         # the DJ's own tracks, when there are some
+    t = pool[queue_i[0] % len(pool)]
     queue_i[0] += 1
     return t
 
@@ -214,7 +240,7 @@ def start_set():
     set_master(1)
     # Start a few bars before the first build, so the show gets to a drop quickly.
     bar = max(1, d1.track["drops"][0][1] - 4)
-    d1.play_at(time.time(), (bar - 1) * 4 * d1.track["beat_ms"])
+    d1.play_at(time.time(), bar_ms(d1.track, bar))
     d1.fader, d1.on_air = 1.0, True
 
 
@@ -235,7 +261,7 @@ class AutoDJ:
             if other.track is None or other.playing:
                 return
             t, bar_s = live.track, 4 * live.track["beat_ms"] / 1000 / live.rate()
-            outro_ms = (t["outro_bar"] - 1) * 4 * t["beat_ms"]
+            outro_ms = bar_ms(t, t["outro_bar"])
             t_start = live.start + outro_ms / 1000 / live.rate()
             if now > t_start - 0.2 or now < t_start - 30:
                 return
@@ -245,7 +271,7 @@ class AutoDJ:
             return
         out, inn, t0, bar_s = self.mix
         if now >= t0 and not inn.playing:
-            inn.play_at(t0)
+            inn.play_at(t0, inn.track.get("offset_ms", 0))   # its first downbeat on the outro's
             inn.on_air = True
         k = (now - t0) / bar_s                      # bars into the 16-bar mix
         if k < 0:
@@ -379,12 +405,14 @@ def player_json(d, now):
          "hasArt": False}
     if t:
         p["position"] = {"ms": int(d.pos(now)), "definitive": True, "precise": True}
-        cues = [{"hotCue": i + 1, "loop": False, "ms": int((b - 1) * 4 * t["beat_ms"]), "loopMs": 0, "comment": "drop", "color": "#ff5a1f"}
+        cues = [{"hotCue": i + 1, "loop": False, "ms": int(bar_ms(t, b)), "loopMs": 0, "comment": "drop", "color": "#ff5a1f"}
                  for i, (b, bs) in enumerate(t["drops"])]
-        p["track"] = {"title": t["title"], "artist": t["artist"], "album": "Synthetic Set", "genre": t["genre"], "key": t["key"],
+        p["track"] = {"title": t["title"], "artist": t["artist"], "album": "My tracks" if t.get("real") else "Synthetic Set", "genre": t["genre"], "key": t["key"],
                       "label": t["label"], "remixer": None, "originalArtist": None, "comment": "synthetic track (no hardware)",
                       "durationSec": t["dur"], "bpm": t["bpm"], "rating": t["rating"], "year": t["year"], "bitRate": 320,
-                      "dateAdded": "2026-09-01", "artworkId": 0, "color": t["color"], "colorHex": None, "ref": d.ref, "cues": cues}
+                      "dateAdded": "2026-09-01", "artworkId": 0, "color": t["color"], "colorHex": None, "ref": d.ref, "cues": cues,
+                      "audio": f"/api/audio/{t['id']}" if t.get("real") else None}
+        p["sim"] = {"fader": round(d.fader, 3), "bass": round(d.bass, 3)}   # for the browser's audio (s5audio.js)
         p["grid"] = {"beats": t["beats"], "bar": (b - 1) // 4 + 1 if b else 0, "bars": t["bars"]}
         p["waveformKey"] = d.ref
         p["timelineKey"] = d.ref
@@ -409,13 +437,15 @@ def state_json():
 
 
 def lib_track(t, n):
-    return {"n": n, "id": t["id"], "title": t["title"], "artist": t["artist"], "album": "Synthetic Set", "genre": t["genre"],
+    return {"n": n, "id": t["id"], "title": t["title"], "artist": t["artist"], "album": "My tracks" if t.get("real") else "Synthetic Set", "genre": t["genre"],
             "label": t["label"], "key": t["key"], "color": t["color"], "bpm": t["bpm"], "dur": t["dur"], "rating": t["rating"],
             "year": t["year"], "bitrate": 320, "plays": 0, "added": "2026-09-01", "comment": "synthetic"}
 
 
 PLAYLISTS = {1: ("Warm up", [t for t in TRACKS if t["bpm"] < 126]), 2: ("Peak time", [t for t in TRACKS if t["bpm"] >= 126]),
              3: ("Trance", [t for t in TRACKS if t["genre"] == "Trance"])}
+if REAL:
+    PLAYLISTS = {4: ("My tracks", REAL), **PLAYLISTS}
 
 
 class H(BaseHTTPRequestHandler):
@@ -478,6 +508,9 @@ class H(BaseHTTPRequestHandler):
                     time.sleep(0.1)
             except Exception:
                 return
+        if p.startswith("/api/audio/"):                # a real track's audio, for the browser (s5audio.js)
+            t = next((t for t in REAL if str(t["id"]) == p.rsplit("/", 1)[1]), None)
+            return self.send(200, t["audio"].read_bytes(), "audio/mpeg") if t else self.send(404, "{}")
         if p.startswith("/api/timeline/"):
             d = self.deck_from_path()
             return self.send(200, json.dumps(timeline(d.track, d.ref))) if d and d.track else self.send(404, "{}")
@@ -535,10 +568,10 @@ class H(BaseHTTPRequestHandler):
                 now = time.time()
                 if other.playing and other.track:
                     bl = other.track["beat_ms"] / 1000 / other.rate()
-                    t_start = now + (bl - ((now - other.start) % bl))
+                    t_start = now + (bl - ((now - other.start - other.track.get("offset_ms", 0) / 1000 / other.rate()) % bl))
                 else:
                     t_start = now
-                d.play_at(t_start, d.paused_at)
+                d.play_at(t_start, d.paused_at or d.track.get("offset_ms", 0))
                 d.on_air, d.fader = True, max(d.fader, 1.0 if not other.playing else d.fader)
                 if not any(x.master for x in DECKS.values() if x.playing) or not other.playing:
                     set_master(d.n)
