@@ -6,7 +6,11 @@
 // drops; the kick drops out and a pad plays in breakdowns; a filter sweep, riser and snare roll in
 // builds; a beat of silence before the drop. Nothing is recorded or licensed: it's all synthesised.
 //
-// Loaded on demand by s5system.js (the Sound button on the SIMULATION strip). window.S5AUDIO.
+// Real tracks: when the simulated decks play the DJ's own tracks (brain/sim/realtracks.py), their
+// actual audio plays instead of the synth, one player per deck, following its position, pitch,
+// fader and bass EQ (the sim's mix) from the dashboard's /api/state.
+//
+// Loaded on demand by s5system.js (Sound in the SIM panel). window.S5AUDIO.
 (() => {
   "use strict";
   if (window.S5AUDIO) return;
@@ -14,8 +18,8 @@
   let ctx = null, master = null, music = null, musicLP = null, noiseBuf = null, pollTimer = null, schedTimer = null;
   let clock = null;          // { a0: audio time, b0: beat at a0, bpm }
   let show = { scene: "GROOVE", bpm: 126, beats_to_drop: 999, energy: 0.6, section: "groove" };
-  let nextStep = null;
-  let vol = +(localStorage.getItem("s5simVol") || 0.8);       // next 16th to schedule, in beats (multiples of 0.25)
+  let nextStep = null;                                          // next 16th to schedule, in beats (multiples of 0.25)
+  let vol = +(localStorage.getItem("s5simVol") || 0.8);
   const LOOKAHEAD = 0.15, STEP = 0.25;
   const KEY = 55;            // A1: bassline root (A minor)
   const BASS = [0, 0, 12, 0, 7, 0, 10, 12];   // semitones, one per 8th note of the bar
@@ -32,6 +36,7 @@
     musicLP = ctx.createBiquadFilter(); musicLP.type = "lowpass"; musicLP.frequency.value = 18000; musicLP.Q.value = 0.8;
     music = ctx.createGain(); music.gain.value = 1;
     music.connect(musicLP).connect(master);
+    deckBus = ctx.createGain(); deckBus.gain.value = vol; deckBus.connect(ctx.destination);   // real tracks skip the synth's compressor
     noiseBuf = ctx.createBuffer(1, ctx.sampleRate, ctx.sampleRate);
     const d = noiseBuf.getChannelData(0);
     for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1;
@@ -140,8 +145,58 @@
       }
     } catch (e) { /* showbrain unreachable: keep the last clock */ }
   }
+  // ---------------------------------------------------------------- real tracks (per deck)
+  const DECKS = window.S5AUTH && S5AUTH.url ? S5AUTH.url(8080, "/api/state") : "/api/state";
+  const AUDIO = path => (window.S5AUTH && S5AUTH.url ? S5AUTH.url(8080, path) : path);
+  const decks = {};          // deck number -> { el, src, low, gain, url, ready }
+  let real = false, deckTimer = null, deckBus = null;
+  function deck(n) {
+    if (decks[n]) return decks[n];
+    const el = new Audio(); el.preload = "auto"; el.preservesPitch = false; el.mozPreservesPitch = false; el.webkitPreservesPitch = false;
+    const src = ctx.createMediaElementSource(el), low = ctx.createBiquadFilter(), gain = ctx.createGain();
+    low.type = "lowshelf"; low.frequency.value = 200; gain.gain.value = 0;
+    src.connect(low).connect(gain).connect(deckBus);
+    return (decks[n] = { el, low, gain, url: null, ready: false });
+  }
+  async function loadDeck(d, url) {
+    d.url = url; d.ready = false; d.el.pause();
+    try {
+      const blob = await (await fetch(AUDIO(url))).blob();            // whole file: seeking then needs no range requests
+      if (d.url !== url) return;
+      if (d.el.src) URL.revokeObjectURL(d.el.src);
+      d.el.src = URL.createObjectURL(blob);
+      await new Promise(ok => { d.el.oncanplay = ok; d.el.onerror = ok; });
+      d.ready = true;
+    } catch (e) { d.url = null; }
+  }
+  async function deckPoll() {
+    let st;
+    const t0 = performance.now();
+    try { st = await (await fetch(DECKS, { cache: "no-store" })).json(); } catch (e) { return; }
+    const lag = (performance.now() - t0) / 2000;                     // seconds since the position was sampled
+    let any = false;
+    for (const p of st.players || []) {
+      const url = p.track && p.track.audio;
+      if (!url) { if (decks[p.number]) { decks[p.number].el.pause(); decks[p.number].gain.gain.value = 0; } continue; }
+      any = true;
+      const d = deck(p.number);
+      if (d.url !== url) { loadDeck(d, url); continue; }
+      if (!d.ready || !p.position) continue;
+      const rate = 1 + (p.status.pitchPct || 0) / 100, want = p.position.ms / 1000 + (p.status.playing ? lag * rate : 0);
+      const fader = p.sim ? p.sim.fader : p.status.onAir ? 1 : 0, bass = p.sim ? p.sim.bass : 1;
+      d.gain.gain.setTargetAtTime(fader, ctx.currentTime, 0.08);
+      d.low.gain.setTargetAtTime(-26 * (1 - bass), ctx.currentTime, 0.15);   // the sim's bass swap
+      if (!p.status.playing) { if (!d.el.paused) d.el.pause(); continue; }
+      const drift = d.el.currentTime - want;
+      if (d.el.paused || Math.abs(drift) > 0.15) { d.el.currentTime = Math.max(0, want); d.el.playbackRate = rate; if (d.el.paused) d.el.play().catch(() => {}); }
+      else d.el.playbackRate = rate * (1 - Math.max(-0.03, Math.min(0.03, drift * 0.5)));   // ease back into sync
+    }
+    real = any;
+    music.gain.setTargetAtTime(real ? 0 : 1, ctx.currentTime, 0.1);     // the synth steps aside for real tracks
+  }
+
   function schedule() {
-    if (!clock) return;
+    if (!clock || real) return;
     const until = ctx.currentTime + LOOKAHEAD;
     for (let guard = 0; guard < 64; guard++) {
       const t = timeOf(nextStep);
@@ -154,20 +209,25 @@
   async function start() {
     if (!ctx) build();
     await ctx.resume();
+    // Unlock both decks' players inside this tap (phones only let media start from a user gesture).
+    for (const n of [1, 2]) { const d = deck(n); d.el.muted = true; d.el.play().catch(() => {}); d.el.pause(); d.el.muted = false; }
     master.gain.setTargetAtTime(vol, ctx.currentTime, 0.05);
-    await poll();
-    clearInterval(pollTimer); clearInterval(schedTimer);
+    deckBus.gain.setTargetAtTime(vol, ctx.currentTime, 0.05);
+    await poll(); await deckPoll();
+    clearInterval(pollTimer); clearInterval(schedTimer); clearInterval(deckTimer);
     pollTimer = setInterval(poll, 250);
     schedTimer = setInterval(schedule, 25);
+    deckTimer = setInterval(deckPoll, 250);
   }
   function stop() {
-    clearInterval(pollTimer); clearInterval(schedTimer); pollTimer = schedTimer = null;
-    if (ctx) { master.gain.setTargetAtTime(0, ctx.currentTime, 0.05); setTimeout(() => ctx && ctx.suspend(), 300); }
+    clearInterval(pollTimer); clearInterval(schedTimer); clearInterval(deckTimer); pollTimer = schedTimer = deckTimer = null;
+    for (const d of Object.values(decks)) d.el.pause();
+    if (ctx) { master.gain.setTargetAtTime(0, ctx.currentTime, 0.05); deckBus.gain.setTargetAtTime(0, ctx.currentTime, 0.05); setTimeout(() => ctx && ctx.suspend(), 300); }
     clock = null;
   }
   function volume(v) {
     vol = Math.max(0, Math.min(1, v));
-    if (ctx && schedTimer) master.gain.setTargetAtTime(vol, ctx.currentTime, 0.05);
+    if (ctx && schedTimer) { master.gain.setTargetAtTime(vol, ctx.currentTime, 0.05); deckBus.gain.setTargetAtTime(vol, ctx.currentTime, 0.05); }
   }
-  window.S5AUDIO = { start, stop, volume, get playing() { return !!(ctx && ctx.state === "running" && schedTimer); } };
+  window.S5AUDIO = { start, stop, volume, get real() { return real; }, get playing() { return !!(ctx && ctx.state === "running" && schedTimer); } };
 })();
