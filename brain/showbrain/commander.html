@@ -128,13 +128,17 @@
   .wrap.tabbed > .card:not(.span) { width: 100%; max-width: 860px; justify-self: center; }
   .wrap.tabbed > .card:not(.span) > h2:first-child { display: none; }   /* the tab says which section this is */
   .wrap.tabbed .card h2::before { content: none; }
+  /* Keyboard shortcuts: a small map at the bottom of Performance (not in the top bar). Hidden on touch screens. */
+  .keymap { display: flex; flex-wrap: wrap; gap: 6px 14px; margin-top: 18px; padding-top: 14px; border-top: 1px solid var(--line); font-size: 12px; color: var(--dim); }
+  .keymap kbd { font: 600 11px/1 var(--font); color: var(--text); border: 1px solid var(--line2); padding: 3px 6px; margin-right: 3px; }
+  @media (pointer: coarse) { .keymap { display: none; } }
 </style>
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;500;600&display=swap" rel="stylesheet">
 <script src="/s5auth.js"></script>
 </head>
 <body>
-<h1 class="s5bar"><span class="s5home"><span class="s5logo" aria-label="SEKTOR5"><svg class="s5word" viewBox="0 0 568 100" width="79.52" height="14" aria-hidden="true"><path d="M13,0 L70,0 L70,21 L21,21 L21,40 L57,40 L70,53 L70,87 L57,100 L0,100 L0,79 L49,79 L49,61 L13,61 L0,48 L0,13 ZM96,0 L104,0 L104,100 L96,100 L83,87 L83,13 ZM108,0 L153,0 L153,21 L108,21 ZM108,40 L145,40 L145,61 L108,61 ZM108,79 L153,79 L153,100 L108,100 ZM179,0 L187,0 L187,100 L179,100 L166,87 L166,13 ZM191,34 L209,0 L236,0 L215,50 L236,100 L209,100 L191,66 ZM262,0 L306,0 L319,13 L319,21 L249,21 L249,13 ZM273.5,25 L294.5,25 L294.5,100 L273.5,100 ZM365,0 L350,0 L332,18 L332,82 L350,100 L365,100 L365,79 L358,79 L353,74 L353,26 L358,21 L365,21 ZM369,0 L384,0 L402,18 L402,82 L384,100 L369,100 L369,79 L376,79 L381,74 L381,26 L376,21 L369,21 ZM428,0 L436,0 L436,100 L428,100 L415,87 L415,13 ZM440,0 L472,0 L485,13 L485,48 L473,60 L440,60 L440,39 L464,39 L464,21 L440,21 ZM440,64 L463,64 L485,100 L462,100 Z" fill="currentColor"/><path class="s5five" d="M498,0 L568,0 L568,21 L519,21 L519,40 L555,40 L568,53 L568,87 L555,100 L498,100 L498,79 L547,79 L547,61 L498,61 Z"/></svg></span></span> <nav class="pages" id="pages"><a data-port="8080" data-path="/">Decks</a><a class="here" data-port="8090" data-path="/">Lighting</a><a data-port="8100" data-path="/edit">Projection</a><a data-port="8110" data-path="/">Visuals</a><a data-port="8100" data-path="/stage.html">Stage</a></nav><span class="keys">keys: space flash · S strobe · W blinder · B blackout · T tap · 0–4 looks · D drop</span></h1>
+<h1 class="s5bar"><span class="s5home"><span class="s5logo" aria-label="SEKTOR5"><svg class="s5word" viewBox="0 0 568 100" width="79.52" height="14" aria-hidden="true"><path d="M13,0 L70,0 L70,21 L21,21 L21,40 L57,40 L70,53 L70,87 L57,100 L0,100 L0,79 L49,79 L49,61 L13,61 L0,48 L0,13 ZM96,0 L104,0 L104,100 L96,100 L83,87 L83,13 ZM108,0 L153,0 L153,21 L108,21 ZM108,40 L145,40 L145,61 L108,61 ZM108,79 L153,79 L153,100 L108,100 ZM179,0 L187,0 L187,100 L179,100 L166,87 L166,13 ZM191,34 L209,0 L236,0 L215,50 L236,100 L209,100 L191,66 ZM262,0 L306,0 L319,13 L319,21 L249,21 L249,13 ZM273.5,25 L294.5,25 L294.5,100 L273.5,100 ZM365,0 L350,0 L332,18 L332,82 L350,100 L365,100 L365,79 L358,79 L353,74 L353,26 L358,21 L365,21 ZM369,0 L384,0 L402,18 L402,82 L384,100 L369,100 L369,79 L376,79 L381,74 L381,26 L376,21 L369,21 ZM428,0 L436,0 L436,100 L428,100 L415,87 L415,13 ZM440,0 L472,0 L485,13 L485,48 L473,60 L440,60 L440,39 L464,39 L464,21 L440,21 ZM440,64 L463,64 L485,100 L462,100 Z" fill="currentColor"/><path class="s5five" d="M498,0 L568,0 L568,21 L519,21 L519,40 L555,40 L568,53 L568,87 L555,100 L498,100 L498,79 L547,79 L547,61 L498,61 Z"/></svg></span></span> <nav class="pages" id="pages"><a data-port="8080" data-path="/">Decks</a><a class="here" data-port="8090" data-path="/">Lighting</a><a data-port="8100" data-path="/edit">Projection</a><a data-port="8110" data-path="/">Visuals</a><a data-port="8100" data-path="/stage.html">Stage</a></nav></h1>
 <div class="wrap tabbed">
 
 <div class="card span">
@@ -160,6 +164,10 @@
   <button id="mixreact" style="width:100%" onclick="cmd('mixer_react', !(S.mix && S.mix.react))" title="Lights react to the DJM: bass kill, fader level, Beat FX, filter">MIXER REACT</button>
   <label>Motion speed</label>
   <div class="seg" id="speed"><button data-v="0.5">½× HALF</button><button data-v="1">1×</button><button data-v="2">2× DOUBLE</button></div>
+  <div class="keymap" title="Keyboard shortcuts (a laptop next to the decks)">
+    <span><kbd>Space</kbd> flash</span><span><kbd>S</kbd> strobe</span><span><kbd>W</kbd> blinder</span><span><kbd>B</kbd> blackout</span>
+    <span><kbd>T</kbd> tap tempo</span><span><kbd>0</kbd>–<kbd>4</kbd> looks</span><span><kbd>D</kbd> drop now</span>
+  </div>
 </div>
 
 <div class="card">
