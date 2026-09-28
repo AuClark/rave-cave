@@ -1,0 +1,29 @@
+{
+  "title": "Atlantis Rising",
+  "about": "Moses parts the sea and finds Atlantis, overrun by dolphins with thumbs. The walls of water part over a cycle of beats (or through the song section, fully open by the drop), hold, then crash shut; Moses raises his staff on the beat; the crystal spire pulses on the kick; dolphins leap across the gap giving thumbs up.",
+  "groups": [
+    {"name": "The sea", "params": [
+      {"id": "cycle",    "label": "Part and close (beats, 0 = by hand)", "min": 0, "max": 128, "step": 4,   "default": 32},
+      {"id": "open",     "label": "Parted by hand",               "min": 0,   "max": 1,   "step": 0.01, "default": 1},
+      {"id": "section",  "label": "Part through the section",     "min": 0,   "max": 1,   "step": 1,    "default": 0}
+    ]},
+    {"name": "Dolphins", "params": [
+      {"id": "dolphins", "label": "Dolphins",                     "min": 0,   "max": 6,   "step": 1,    "default": 4},
+      {"id": "thumbs",   "label": "Thumb size",                   "min": 0.5, "max": 2.5, "step": 0.01, "default": 1.2}
+    ]},
+    {"name": "Atlantis", "params": [
+      {"id": "glow",     "label": "Crystal glow",                 "min": 0,   "max": 3,   "step": 0.01, "default": 1},
+      {"id": "rays",     "label": "Light rays",                   "min": 0,   "max": 3,   "step": 0.01, "default": 1},
+      {"id": "hue",      "label": "Glow hue shift",               "min": -0.5,"max": 0.5, "step": 0.005,"default": 0},
+      {"id": "follow",   "label": "Glow follows show hue",        "min": 0,   "max": 1,   "step": 1,    "default": 0}
+    ]},
+    {"name": "Look", "params": [
+      {"id": "size",     "label": "Size",                         "min": 0.4, "max": 2.5, "step": 0.01, "default": 1},
+      {"id": "line",     "label": "Ink line",                     "min": 0,   "max": 3,   "step": 0.01, "default": 1},
+      {"id": "bright",   "label": "Brightness",                   "min": 0,   "max": 2,   "step": 0.01, "default": 1}
+    ]},
+    {"name": "Beat", "params": [
+      {"id": "punch",    "label": "Crystal and thumbs on kick",   "min": 0,   "max": 2,   "step": 0.01, "default": 0.7}
+    ]}
+  ]
+}

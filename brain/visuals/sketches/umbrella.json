@@ -1,0 +1,30 @@
+{
+  "title": "Rain on Umbrella",
+  "about": "Looking up through a rain-soaked umbrella at a blurred night city: drops land, sit, then slide down the dome leaving trails, each one a lens onto a sharper view of the lights behind (after Radiant's Rain on Umbrella by Paul Bakaus). Impacts can land on the beat.",
+  "groups": [
+    {"name": "Rain", "params": [
+      {"id": "rain",   "label": "Rain (drops)",                "min": 0,   "max": 1,   "step": 0.01, "default": 0.55},
+      {"id": "size",   "label": "Drop size",                   "min": 0.4, "max": 2.5, "step": 0.01, "default": 1},
+      {"id": "life",   "label": "Drop life (beats)",           "min": 2,   "max": 32,  "step": 1,    "default": 8},
+      {"id": "slide",  "label": "Slide down the dome",         "min": 0,   "max": 4,   "step": 0.01, "default": 1.5},
+      {"id": "trail",  "label": "Trails",                      "min": 0,   "max": 2,   "step": 0.01, "default": 1},
+      {"id": "micro",  "label": "Micro-droplets",              "min": 0,   "max": 1,   "step": 0.01, "default": 0.45},
+      {"id": "onbeat", "label": "Impacts on the beat",         "min": 0,   "max": 1,   "step": 1,    "default": 1}
+    ]},
+    {"name": "Look", "params": [
+      {"id": "refr",   "label": "Refraction",                  "min": 0,   "max": 3,   "step": 0.01, "default": 1},
+      {"id": "blur",   "label": "City blur",                   "min": 0.2, "max": 2,   "step": 0.01, "default": 1},
+      {"id": "lights", "label": "City lights",                 "min": 0,   "max": 2.5, "step": 0.01, "default": 1},
+      {"id": "walk",   "label": "Walk (drift per beat)",       "min": -4,  "max": 4,   "step": 0.05, "default": 1},
+      {"id": "ribs",   "label": "Umbrella ribs",               "min": 0,   "max": 2,   "step": 0.01, "default": 1}
+    ]},
+    {"name": "Beat", "params": [
+      {"id": "punch",  "label": "Lights pulse on kick",        "min": 0,   "max": 2,   "step": 0.01, "default": 0.3}
+    ]},
+    {"name": "Colour", "params": [
+      {"id": "hue",    "label": "Hue shift",                   "min": 0,   "max": 1,   "step": 0.005,"default": 0},
+      {"id": "follow", "label": "Shift by show hue",           "min": 0,   "max": 1,   "step": 1,    "default": 0},
+      {"id": "bright", "label": "Brightness",                  "min": 0,   "max": 2,   "step": 0.01, "default": 1.2}
+    ]}
+  ]
+}

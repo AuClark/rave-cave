@@ -1,0 +1,30 @@
+{
+  "title": "Radiant Geometry",
+  "about": "Golden sacred geometry that morphs from a tiled lattice of star rosettes to a single central mandala with spiral arms (after Radiant's Radiant Geometry by Paul Bakaus). The morph can swing over a cycle of beats or build through the song section, lattice in the groove and mandala by the drop.",
+  "groups": [
+    {"name": "Pattern", "params": [
+      {"id": "pattern",    "label": "Pattern (lattice → mandala)", "min": 0,   "max": 1,   "step": 0.01, "default": 0.05},
+      {"id": "swing",      "label": "Swing toward mandala",        "min": 0,   "max": 1,   "step": 0.01, "default": 0},
+      {"id": "cycle",      "label": "Swing cycle (beats)",         "min": 4,   "max": 128, "step": 4,    "default": 32},
+      {"id": "morph",      "label": "Build through the section",   "min": 0,   "max": 1,   "step": 0.01, "default": 0},
+      {"id": "complexity", "label": "Complexity",                  "min": 0.3, "max": 2,   "step": 0.01, "default": 1},
+      {"id": "size",       "label": "Size",                        "min": 0.3, "max": 2.5, "step": 0.01, "default": 1}
+    ]},
+    {"name": "Motion", "params": [
+      {"id": "speed",      "label": "Time (per beat)",             "min": 0,   "max": 2,   "step": 0.01, "default": 0.476},
+      {"id": "rot",        "label": "Layer rotation",              "min": -3,  "max": 3,   "step": 0.01, "default": 0.3},
+      {"id": "spin",       "label": "Whole spin (turns/64 beats)", "min": -2,  "max": 2,   "step": 0.01, "default": 0}
+    ]},
+    {"name": "Beat", "params": [
+      {"id": "punch",      "label": "Glow and centre on kick",     "min": 0,   "max": 2,   "step": 0.01, "default": 0.4}
+    ]},
+    {"name": "Colour", "params": [
+      {"id": "glow",       "label": "Line glow",                   "min": 0,   "max": 3,   "step": 0.01, "default": 1},
+      {"id": "tint",       "label": "Original gold → tint",        "min": 0,   "max": 1,   "step": 0.01, "default": 0},
+      {"id": "hue",        "label": "Tint hue",                    "min": 0,   "max": 1,   "step": 0.005,"default": 0.07},
+      {"id": "sat",        "label": "Tint saturation",             "min": 0,   "max": 1,   "step": 0.01, "default": 0.6},
+      {"id": "bright",     "label": "Brightness",                  "min": 0,   "max": 2,   "step": 0.01, "default": 1},
+      {"id": "follow",     "label": "Follow show hue",             "min": 0,   "max": 1,   "step": 1,    "default": 0}
+    ]}
+  ]
+}

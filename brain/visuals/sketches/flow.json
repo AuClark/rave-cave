@@ -1,0 +1,31 @@
+{
+  "title": "Flow",
+  "about": "Particles streaming through a noise flow field, leaving fading trails (after Radiant's Flow Field with Particle Trails by Paul Bakaus). The field slowly evolves; the streams pulse and bend on the beat.",
+  "groups": [
+    {"name": "Field", "params": [
+      {"id": "scale",   "label": "Field detail",          "min": 0.3,  "max": 8,    "step": 0.05,  "default": 2},
+      {"id": "curl",    "label": "Curl",                  "min": 0,    "max": 2,    "step": 0.01,  "default": 1},
+      {"id": "evolve",  "label": "Evolve (per beat)",     "min": 0,    "max": 0.2,  "step": 0.001, "default": 0.02}
+    ]},
+    {"name": "Particles", "params": [
+      {"id": "density", "label": "Density (per height)",  "min": 8,    "max": 60,   "step": 1,     "default": 36},
+      {"id": "speed",   "label": "Speed (heights/beat)",  "min": 0.005,"max": 0.3,  "step": 0.005, "default": 0.04},
+      {"id": "trail",   "label": "Trail length",          "min": 0.01, "max": 0.5,  "step": 0.005, "default": 0.2},
+      {"id": "width",   "label": "Line width (px)",       "min": 0.5,  "max": 8,    "step": 0.1,   "default": 2},
+      {"id": "vary",    "label": "Width and alpha vary",  "min": 0,    "max": 1,    "step": 0.01,  "default": 0.7},
+      {"id": "steps",   "label": "Quality (trace steps)", "min": 8,    "max": 32,   "step": 1,     "default": 28}
+    ]},
+    {"name": "Beat", "params": [
+      {"id": "punch",   "label": "Beat punch",            "min": 0,    "max": 1,    "step": 0.01,  "default": 0.3},
+      {"id": "push",    "label": "Push from centre",      "min": 0,    "max": 1.5,  "step": 0.01,  "default": 0}
+    ]},
+    {"name": "Colour", "params": [
+      {"id": "hue",     "label": "Hue",                   "min": 0,    "max": 1,    "step": 0.005, "default": 0.07},
+      {"id": "spread",  "label": "Hue spread",            "min": 0,    "max": 0.3,  "step": 0.005, "default": 0.03},
+      {"id": "sat",     "label": "Saturation",            "min": 0,    "max": 1,    "step": 0.01,  "default": 0.5},
+      {"id": "bright",  "label": "Brightness",            "min": 0,    "max": 1.5,  "step": 0.01,  "default": 0.95},
+      {"id": "bg",      "label": "Background",            "min": 0,    "max": 0.2,  "step": 0.005, "default": 0.04},
+      {"id": "follow",  "label": "Follow show hue",       "min": 0,    "max": 1,    "step": 1,     "default": 0}
+    ]}
+  ]
+}

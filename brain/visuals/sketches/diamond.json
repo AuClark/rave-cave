@@ -1,0 +1,25 @@
+{
+  "title": "Diamond Caustics",
+  "about": "Prismatic fire through a brilliant-cut diamond: caustic light folds from faceted refraction, chromatic dispersion into rainbow fire, scintillating sparkles and star bursts (after Radiant's Diamond Caustics by Paul Bakaus). The sparkles and star bursts flash on the kick.",
+  "groups": [
+    {"name": "Diamond", "params": [
+      {"id": "brilliance", "label": "Brilliance",               "min": 0,   "max": 2.5, "step": 0.01, "default": 1},
+      {"id": "fire",       "label": "Fire (dispersion)",        "min": 0,   "max": 3,   "step": 0.01, "default": 1},
+      {"id": "sparkle",    "label": "Sparkles",                 "min": 0,   "max": 3,   "step": 0.01, "default": 1},
+      {"id": "stars",      "label": "Star bursts",              "min": 0,   "max": 3,   "step": 0.01, "default": 1},
+      {"id": "zoom",       "label": "Zoom",                     "min": 0.3, "max": 3,   "step": 0.01, "default": 1}
+    ]},
+    {"name": "Motion", "params": [
+      {"id": "speed",      "label": "Time (per beat)",          "min": 0,   "max": 3,   "step": 0.01, "default": 0.476},
+      {"id": "rot",        "label": "Turning",                  "min": -3,  "max": 3,   "step": 0.01, "default": 0.5}
+    ]},
+    {"name": "Beat", "params": [
+      {"id": "punch",      "label": "Sparkle on kick",          "min": 0,   "max": 3,   "step": 0.01, "default": 0.8}
+    ]},
+    {"name": "Colour", "params": [
+      {"id": "hue",        "label": "Hue shift",                "min": 0,   "max": 1,   "step": 0.005,"default": 0},
+      {"id": "follow",     "label": "Shift by show hue",        "min": 0,   "max": 1,   "step": 1,    "default": 0},
+      {"id": "bright",     "label": "Brightness",               "min": 0,   "max": 2,   "step": 0.01, "default": 0.55}
+    ]}
+  ]
+}

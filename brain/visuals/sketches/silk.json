@@ -1,0 +1,25 @@
+{
+  "title": "Silk Cascade",
+  "about": "Three layers of translucent silk in gold, rose and lavender, with flowing folds, anisotropic sheen and rare sparkles, drifting at different depths (after Radiant's Silk Cascade by Paul Bakaus). The sheen flashes on the kick.",
+  "groups": [
+    {"name": "Silk", "params": [
+      {"id": "flow",    "label": "Flow (per beat)",           "min": 0,   "max": 1.5, "step": 0.01, "default": 0.19},
+      {"id": "sheen",   "label": "Sheen (1 = original)",      "min": 0,   "max": 2.5, "step": 0.01, "default": 0.7},
+      {"id": "contrast","label": "Contrast (1 = original)",   "min": 0.5, "max": 3,   "step": 0.01, "default": 1.6},
+      {"id": "scale",   "label": "Fold size",                 "min": 0.3, "max": 3,   "step": 0.01, "default": 1},
+      {"id": "layers",  "label": "Layers",                    "min": 1,   "max": 3,   "step": 1,    "default": 3},
+      {"id": "sparkle", "label": "Sparkles",                  "min": 0,   "max": 4,   "step": 0.01, "default": 1}
+    ]},
+    {"name": "Light", "params": [
+      {"id": "light",   "label": "Light orbit (turns/64 beats)", "min": 0, "max": 4,   "step": 0.05, "default": 0}
+    ]},
+    {"name": "Beat", "params": [
+      {"id": "punch",   "label": "Sheen flashes on kick",     "min": 0,   "max": 2,   "step": 0.01, "default": 0.5}
+    ]},
+    {"name": "Colour", "params": [
+      {"id": "hue",     "label": "Hue shift",                 "min": 0,   "max": 1,   "step": 0.005,"default": 0},
+      {"id": "follow",  "label": "Shift by show hue",         "min": 0,   "max": 1,   "step": 1,    "default": 0},
+      {"id": "bright",  "label": "Brightness",                "min": 0,   "max": 2,   "step": 0.01, "default": 1}
+    ]}
+  ]
+}

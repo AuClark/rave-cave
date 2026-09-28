@@ -1,0 +1,26 @@
+{
+  "title": "Artpop Iridescence",
+  "about": "Iridescent soap-film bubbles: thin-film rainbow bands flowing over a domain-warped surface, with fresnel edge glow and chrome highlights (after Radiant's Artpop Iridescence by Paul Bakaus). The bands shimmer and the bubbles swell on the kick. The original's 4 octaves and full warp fold the film into fine grain and are heavy; the defaults (2 octaves, 0.4 warp) give clean swirls at about half the cost.",
+  "groups": [
+    {"name": "Film", "params": [
+      {"id": "thick",   "label": "Film thickness (bands)",   "min": 0,   "max": 3,   "step": 0.01, "default": 1},
+      {"id": "speed",   "label": "Flow (per beat)",          "min": 0,   "max": 2,   "step": 0.01, "default": 0.24},
+      {"id": "size",    "label": "Size",                     "min": 0.3, "max": 3,   "step": 0.01, "default": 1},
+      {"id": "small",   "label": "Small bubbles",            "min": 0,   "max": 1,   "step": 1,    "default": 1},
+      {"id": "warp",    "label": "Warp (1 = original)",      "min": 0,   "max": 1.5, "step": 0.01, "default": 0.4},
+      {"id": "spec",    "label": "Chrome highlights",        "min": 0,   "max": 3,   "step": 0.01, "default": 1}
+    ]},
+    {"name": "Beat", "params": [
+      {"id": "punch",   "label": "Bands shimmer on kick",    "min": 0,   "max": 2,   "step": 0.01, "default": 0.4},
+      {"id": "swell",   "label": "Bubbles swell on kick",    "min": 0,   "max": 2,   "step": 0.01, "default": 0.5}
+    ]},
+    {"name": "Colour", "params": [
+      {"id": "shift",   "label": "Band shift",               "min": 0,   "max": 1,   "step": 0.005,"default": 0},
+      {"id": "follow",  "label": "Shift by show hue",        "min": 0,   "max": 1,   "step": 1,    "default": 0},
+      {"id": "bright",  "label": "Brightness",               "min": 0,   "max": 2,   "step": 0.01, "default": 1}
+    ]},
+    {"name": "Quality", "params": [
+      {"id": "octaves", "label": "Octaves (4 = original)",   "min": 1,   "max": 4,   "step": 1,    "default": 2}
+    ]}
+  ]
+}
