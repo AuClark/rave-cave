@@ -75,8 +75,8 @@ For each loaded track, build a list of sections in **beats**:
   {"type": "outro",     "startBar": 159, "endBar": 166}]}
 ```
 
-Detection, in priority order:
-1. **rekordbox phrases** if present: `Up` means build, `Down` means breakdown, and `Chorus` after `Up`/`Down` means drop (high-mood tracks).
+Detection, in priority order (**the design; today only the waveform analysis and cue hints are implemented**, see [track-analysis.md](track-analysis.md)):
+1. **rekordbox phrases** if present (not read yet): `Up` means build, `Down` means breakdown, and `Chorus` after `Up`/`Down` means drop (high-mood tracks).
 2. **DJ cues**: a hot cue or memory point within a bar of a waveform candidate raises confidence. A cue comment containing "drop" confirms it.
 3. **Waveform analysis**: per-bar bass share and energy. A breakdown is a run of at least 4 low-bass bars. The drop is the first phrase boundary (8/16/32 bars) where bass returns strongly. The build is the rising-energy bars before the drop, or at least the last 8 bars of the breakdown.
 4. **Beat-in** (first bass after the intro) is its own event type. It gets a smaller hit than a real drop.
