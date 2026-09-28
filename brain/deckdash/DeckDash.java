@@ -69,6 +69,7 @@ public class DeckDash {
         http.createContext("/s5auth.js", ex -> send(ex, 200, "text/javascript", Files.readAllBytes(WEB.resolve("s5auth.js"))));
         http.createContext("/s5system.js", ex -> send(ex, 200, "text/javascript", Files.readAllBytes(WEB.resolve("s5system.js"))));
         http.createContext("/s5audio.js", ex -> send(ex, 200, "text/javascript", Files.readAllBytes(WEB.resolve("s5audio.js"))));
+        http.createContext("/shell", ex -> send(ex, 200, "text/html; charset=utf-8", Files.readAllBytes(WEB.resolve("s5shell.html"))));   // the sim's sound player
         http.createContext("/api/system", ex -> send(ex, 200, "application/json", SystemInfo.json().getBytes(StandardCharsets.UTF_8)));
         http.createContext("/api/system/tailscale", Tailscale::handle);
         http.createContext("/api/sim", Sim::handle);
