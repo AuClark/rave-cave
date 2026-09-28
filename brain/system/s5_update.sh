@@ -14,6 +14,7 @@ set -euo pipefail
 REPO=${S5_UPDATE_REPO:-https://github.com/AuClark/sektor5.git}
 DIR=$HOME/sektor5
 check=0; [[ ${1:-} == --check ]] && check=1
+exec 9>/tmp/s5-update.lock; flock -n 9 || { echo "already running"; exit 0; }   # one run at a time
 
 # What each target is built from (brain/deploy.sh copies these).
 declare -A FILES=(
