@@ -229,5 +229,8 @@
     vol = Math.max(0, Math.min(1, v));
     if (ctx && schedTimer) { master.gain.setTargetAtTime(vol, ctx.currentTime, 0.05); deckBus.gain.setTargetAtTime(vol, ctx.currentTime, 0.05); }
   }
-  window.S5AUDIO = { start, stop, volume, get real() { return real; }, get playing() { return !!(ctx && ctx.state === "running" && schedTimer); } };
+  // For checking sync: each deck player's position, rate and volume.
+  const decksInfo = () => Object.fromEntries(Object.entries(decks).map(([n, d]) => [n, { t: +d.el.currentTime.toFixed(3), paused: d.el.paused,
+    rate: +d.el.playbackRate.toFixed(4), vol: +d.gain.gain.value.toFixed(2), ready: d.ready }]));
+  window.S5AUDIO = { start, stop, volume, get real() { return real; }, get decks() { return decksInfo(); }, get playing() { return !!(ctx && ctx.state === "running" && schedTimer); } };
 })();
