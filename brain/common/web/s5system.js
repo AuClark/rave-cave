@@ -71,15 +71,21 @@
   #sys .acts button:disabled { opacity: .4; cursor: wait; }
   #sys a { color: var(--accent2); }`;
   const dotCss = `
-  .s5bar > .s5sim { flex: none; display: none; align-items: center; gap: 7px; height: 28px; padding: 0 10px; margin-left: auto; cursor: pointer;
-    position: sticky; right: 48px; background: #242424; color: #9a9a9a; border: 1px solid #555;
+  .s5bar > .s5right { margin-left: auto; display: flex; gap: 6px; align-items: center; flex: none; position: sticky; right: 36px; background: #242424; }
+  .s5bar > .s5right + .s5who { margin-left: 8px; }
+  .s5right > .s5sim { flex: none; display: none; align-items: center; gap: 7px; height: 28px; padding: 0 10px; cursor: pointer; background: #242424; color: #9a9a9a; border: 1px solid #555;
     font: 600 11px/1 "Montserrat", ui-sans-serif, system-ui, sans-serif; letter-spacing: .14em; text-transform: uppercase; }
-  .s5bar > .s5sim.on, .s5bar > .s5sim.offer { display: flex; }
-  .s5bar > .s5sim.on { color: #f2b84b; border-color: #f2b84b; }
-  .s5bar > .s5sim i { width: 7px; height: 7px; border-radius: 50%; background: currentColor; }
-  .s5bar > .s5sim.on i { animation: s5pulse 1.2s ease-in-out infinite; }
-  .s5bar > .s5sim.on + .s5who, .s5bar > .s5sim.offer + .s5who { margin-left: 0; }
-  html.s5-sim .s5bar #conn, html.s5-sim .herobar #conn { display: none !important; }   /* the page's LIVE pill: it's the simulator, not the decks */
+  .s5right > .s5sim.on, .s5right > .s5sim.live, .s5right > .s5sim.none, .s5right > .s5sim.offline { display: flex; }
+  .s5right > .s5sim.on { color: #f2b84b; border-color: #f2b84b; }
+  .s5right > .s5sim.live { color: #7ccf8a; border-color: #7ccf8a; }
+  .s5right > .s5spk { flex: none; width: 28px; height: 28px; padding: 0; display: grid; place-items: center; cursor: pointer; background: #242424; color: #9a9a9a; border: 1px solid #555; }
+  .s5right > .s5spk svg { width: 16px; height: 16px; }
+  .s5right > .s5spk.on { color: #f2b84b; border-color: #f2b84b; }
+  .s5right > .s5spk.wait { color: #f2b84b; border-color: #f2b84b; animation: s5pulse 1s ease-in-out infinite; }
+  .s5right > .s5sim.offline { color: #ef5b5b; border-color: #ef5b5b; }
+  .s5right > .s5sim i { width: 7px; height: 7px; border-radius: 50%; background: currentColor; }
+  .s5right > .s5sim.on i { animation: s5pulse 1.2s ease-in-out infinite; }
+  .s5bar #conn, .herobar #conn { display: none !important; }   /* the status pill (right) says it all */
   @keyframes s5pulse { 50% { opacity: .35; } }
   .s5home .hdot { position: absolute; left: 88px; top: 50%; width: 7px; height: 7px; margin-top: -3.5px; border-radius: 50%; background: #555;
     opacity: 0; transition: opacity .4s, background .4s; }
@@ -223,7 +229,10 @@
       if (dot) dot.className = "hdot " + h;
       if (dot) dot.title = h === "ok" ? "System healthy" : h === "warn" ? "System: needs a look" : "System: problem";
       if (sysEl.classList.contains("open")) { sysRender(d); root.getElementById("sysAge").textContent = "updated " + new Date(d.ts).toLocaleTimeString(); }
-    } catch (e) { if (dot) { dot.className = "hdot bad"; dot.title = "Can't reach the dashboard"; } }
+    } catch (e) {
+      if (dot) { dot.className = "hdot bad"; dot.title = "Can't reach the dashboard"; }
+      pill.className = "s5sim offline"; pill.innerHTML = "Offline"; pill.title = "Can't reach the brain";
+    }
   }
   function sysOpen(on) {
     sysEl.classList.toggle("open", on); sysEl.setAttribute("aria-hidden", on ? "false" : "true");
@@ -239,41 +248,68 @@
   // has its own port on the rig's network, and localStorage is per port).
   const pref = k => (document.cookie.match(new RegExp("(?:^|; )" + k + "=([^;]*)")) || [])[1] || null;
   const setPref = (k, v) => { document.cookie = `${k}=${encodeURIComponent(v)}; path=/; max-age=31536000; SameSite=Lax`; };
-  let simState = null, soundTried = false;
+  let simState = null;
   addEventListener("s5sound", () => { if (simState) simRender(simState); if (pop.classList.contains("open")) popRender(); });
   const pill = document.createElement("button");
   pill.type = "button";
   pill.className = "s5sim";
   const bar = document.querySelector(".s5bar");
-  if (bar) bar.insertBefore(pill, bar.querySelector(".s5who"));
+  // Right-hand group, next to the lock: [speaker] [status pill].
+  const right = document.createElement("span");
+  right.className = "s5right";
+  if (bar) { bar.insertBefore(right, bar.querySelector(".s5who")); right.appendChild(pill); }
+  // Speaker, left of the pill while the sim runs: sound on/off in one tap. The sound lives in the
+  // player (/shell): from a normal page, turning it on moves you into the player.
+  const inShell = !!(window.S5AUTH && S5AUTH.inShell);
+  let sound = { playing: false, blocked: false };
+  const spk = document.createElement("button");
+  spk.type = "button"; spk.className = "s5spk";
+  const SPK_ON = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M4 9h4l5-4v14l-5-4H4z" fill="currentColor"/><path d="M16 9a4 4 0 0 1 0 6M18.5 6.5a8 8 0 0 1 0 11"/></svg>';
+  const SPK_OFF = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M4 9h4l5-4v14l-5-4H4z" fill="currentColor"/><path d="M16.5 9.5l5 5M21.5 9.5l-5 5"/></svg>';
+  function spkRender() {
+    const on = inShell && sound.playing, wait = inShell && sound.blocked;
+    spk.className = "s5spk" + (on ? " on" : "") + (wait ? " wait" : "");
+    spk.innerHTML = on ? SPK_ON : SPK_OFF;
+    spk.title = wait ? "Tap anywhere to start the sound" : on ? "Sound on. Tap to mute." : "Sound off. Tap to play the simulation's sound.";
+    spk.setAttribute("aria-label", spk.title);
+  }
+  function setSound(on) {
+    setPref("s5sound", on ? "1" : "0");
+    if (inShell) parent.postMessage({ s5: "sound", on }, "*");
+    else if (on) location.href = S5AUTH.shellUrl(location.href);                 // into the player, this page in it
+  }
+  spk.addEventListener("click", e => { e.stopPropagation(); setSound(!(inShell && sound.playing)); });
+  addEventListener("message", e => { if (e.data && e.data.s5 === "sound") { sound = e.data; spkRender(); if (pop.classList.contains("open")) popRender(); } });
+  right.insertBefore(spk, pill);
+  spkRender();
   function simRender(sim) {
     if (!sim) return;
     simState = sim;
-    const dismissed = sessionStorage.getItem("s5simDismissed") === "1";
-    const offer = !sim.on && sim.available && !sim.djlink && sim.uptime_s > 20 && !dismissed;
+    // One status pill: SIM, LIVE (decks on DJ Link) or NO DECKS. Tap it to switch.
+    const mode = sim.on ? "on" : sim.djlink && sim.decks > 0 ? "live" : "none";
     document.documentElement.classList.toggle("s5-sim", !!sim.on);
-    pill.className = "s5sim" + (sim.on ? " on" : offer ? " offer" : "");
-    const tapForSound = sim.on && window.S5AUDIO && S5AUDIO.blocked;
-    pill.innerHTML = sim.on ? `<i></i>Sim${tapForSound ? " · tap for sound" : ""}` : "No decks";
-    // Sound is a setting, not per page: turned on once, every page picks it up while the sim runs.
-    if (sim.on && pref("s5sound") === "1" && !soundTried) {
-      soundTried = true;
-      loadAudio().then(() => { S5AUDIO.volume(+(pref("s5vol") || 0.8)); S5AUDIO.start(); }).catch(() => {});
-    }
-    pill.title = sim.on ? "Simulation: a synthetic DJ set. Tap for sound or to go back to the real decks." : "No decks found. Tap to run a simulation.";
-    if (!sim.on && !offer) pop.classList.remove("open");
+    pill.className = "s5sim " + mode;
+    pill.innerHTML = { on: "<i></i>Sim", live: "<i></i>Live", none: "No decks" }[mode];
+    spk.style.display = sim.on ? "" : "none";
+    pill.title = { on: "Simulation: a synthetic DJ set. Tap for sound or to go back to the real decks.",
+                   live: `Live: ${sim.decks} deck${sim.decks === 1 ? "" : "s"} on DJ Link. Tap to switch to the simulation.`,
+                   none: "No decks found. Tap to run a simulation." }[mode];
     if (pop.classList.contains("open")) popRender();
   }
   function popRender() {
-    const sim = simState || {}, playing = window.S5AUDIO && S5AUDIO.playing, vol = +(pref("s5vol") || 0.8);
+    const sim = simState || {}, playing = inShell && sound.playing, vol = +(pref("s5vol") || 0.8);
+    const live = !sim.on && sim.djlink && sim.decks > 0, canSim = sim.available;
     pop.className = "open" + (sim.on ? "" : " offer");
-    pop.innerHTML = sim.on
+    pop.innerHTML = live
+      ? `<h4 style="color:#7ccf8a">Live</h4><p>${sim.decks} deck${sim.decks === 1 ? "" : "s"} on DJ Link: the lights follow the real set.</p>` +
+        (canSim ? `<div class="row"><button data-sim="on" class="wide" data-confirm="1">Switch to simulation</button></div>` : "")
+      : sim.on
       ? `<h4>Simulation</h4><p>A synthetic DJ set at ${Math.round(sim.bpm || 126)} BPM. The lights, projection and visuals follow it.</p>` +
         `<div class="row"><button data-sim="sound" class="${playing ? "go" : ""}">${playing ? "Sound on" : "Sound off"}</button>` +
         `<input type="range" min="0" max="1" step="0.05" value="${vol}" data-sim="vol" aria-label="Volume"></div>` +
         `<div class="row"><button data-sim="off" class="wide">Back to real decks</button></div>`
       : `<h4>No decks found</h4><p>Run a synthetic DJ set to try the rig. Everything else is real, including the lights.</p>` +
-        `<div class="row"><button data-sim="on" class="go wide">Start simulation</button><button data-sim="x">Not now</button></div>`;
+        (canSim ? `<div class="row"><button data-sim="on" class="go wide">Start simulation</button><button data-sim="x">Close</button></div>` : "");
   }
   pill.addEventListener("click", e => {
     e.stopPropagation();
@@ -289,28 +325,23 @@
   pop.addEventListener("input", async e => {
     if (e.target.dataset.sim !== "vol") return;
     setPref("s5vol", e.target.value);
-    if (window.S5AUDIO) S5AUDIO.volume(+e.target.value);
+    if (inShell) parent.postMessage({ s5: "vol", v: e.target.value }, "*");
   });
   pop.addEventListener("click", async e => {
     const b = e.target.closest("button[data-sim]");
     if (!b) return;
-    if (b.dataset.sim === "x") { sessionStorage.setItem("s5simDismissed", "1"); pop.classList.remove("open"); simRender(simState); return; }
-    if (b.dataset.sim === "sound") {
-      try {
-        await loadAudio();
-        S5AUDIO.volume(+(pref("s5vol") || 0.8));
-        const on = !S5AUDIO.playing;
-        setPref("s5sound", on ? "1" : "0");            // remembered: other pages turn it on too
-        if (on) await S5AUDIO.start(); else S5AUDIO.stop();             // the tap is the gesture browsers need for sound
-      } catch (e2) { alert("Couldn't start the sound."); }
-      popRender();
-      return;
-    }
+    if (b.dataset.sim === "x") { pop.classList.remove("open"); return; }
+    if (b.dataset.confirm && !confirm("Switch to the simulation? The lights, projection and visuals follow it instead of the decks, until you go back.")) return;
+    if (b.dataset.sim === "sound") { setSound(!(inShell && sound.playing)); popRender(); return; }
     b.disabled = true; b.textContent = b.dataset.sim === "on" ? "Starting…" : "Stopping…";
     try {
       const r = await fetch(API + "/api/sim", { method: "POST", credentials: "include", headers: { "Content-Type": "text/plain" },
                                                 body: JSON.stringify({ on: b.dataset.sim === "on" }) });
-      if (r.ok) { location.reload(); return; }   // pages reconnect to the new source
+      if (r.ok) {                                   // pages reconnect to the new source
+        if (inShell && b.dataset.sim === "off") parent.postMessage({ s5: "leave", url: location.href }, "*");   // no sim: out of the player
+        else location.reload();
+        return;
+      }
       const d = await r.json().catch(() => ({}));
       if (r.status !== 401) alert(d.error || "Couldn't switch simulation.");
     } catch (e2) { /* brain unreachable */ }

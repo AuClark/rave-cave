@@ -1,0 +1,73 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Sektor5</title>
+<style>
+  html, body { margin: 0; height: 100%; background: #242424; overflow: hidden; }
+  iframe { position: fixed; inset: 0; width: 100%; height: 100%; border: 0; display: block; }
+</style>
+</head>
+<body>
+<!--
+  The simulation's sound player (served by deckdash at /shell). It holds the audio (s5audio.js) and
+  shows the control pages inside itself, so the sound keeps playing when you switch pages: each page
+  would otherwise be a new page load, and the browser stops a page's audio when it goes.
+
+  The pages know they're in here (iframe name "s5shell", see s5auth.js): their page links, the
+  speaker button and the volume go through postMessage. The address bar keeps the page you're on
+  (#URL), so a reload comes back to it. Going back to the real decks leaves the player.
+-->
+<iframe id="page" name="s5shell" allow="autoplay; fullscreen"></iframe>
+<script>
+// The same page addresses as s5auth.js (a port on the rig's network, a path over HTTPS).
+const PREFIX = { 8090: "/lighting", 8100: "/projection", 8110: "/visuals" };
+window.S5AUTH = { url: (port, path = "/") => location.protocol === "https:"
+  ? `${location.origin}${PREFIX[+port] || ""}${path}` : `${location.protocol}//${location.hostname}:${port}${path}` };
+</script>
+<script src="/s5audio.js"></script>
+<script>
+const frame = document.getElementById("page");
+const cookie = k => (document.cookie.match(new RegExp("(?:^|; )" + k + "=([^;]*)")) || [])[1];
+const setCookie = (k, v) => { document.cookie = `${k}=${v}; path=/; max-age=31536000; SameSite=Lax`; };
+let here = decodeURIComponent(location.hash.slice(1)) || "/";
+frame.src = here;
+
+function tell() {        // the page's speaker button shows this
+  frame.contentWindow && frame.contentWindow.postMessage({ s5: "sound", playing: S5AUDIO.playing, blocked: S5AUDIO.blocked }, "*");
+}
+addEventListener("s5sound", tell);
+function soundOn() {
+  S5AUDIO.volume(+(cookie("s5vol") || 0.8));
+  S5AUDIO.start().then(tell);
+  setTimeout(tell, 600);
+}
+function leave(url) {     // back to a normal page (sound off with it)
+  S5AUDIO.stop();
+  location.replace(url || here);
+}
+
+addEventListener("message", e => {
+  const m = e.data || {};
+  if (!m.s5) return;
+  if (m.s5 === "nav") frame.src = m.url;                                     // a page link: stay in here
+  else if (m.s5 === "here") {                                                // a page loaded
+    here = m.url; history.replaceState(null, "", "#" + encodeURIComponent(m.url));
+    document.title = m.title || "Sektor5"; tell();
+  }
+  else if (m.s5 === "sound") { setCookie("s5sound", m.on ? 1 : 0); if (m.on) soundOn(); else { S5AUDIO.stop(); tell(); } }
+  else if (m.s5 === "vol") { setCookie("s5vol", m.v); S5AUDIO.volume(+m.v); }
+  else if (m.s5 === "gesture") { if (cookie("s5sound") === "1" && !S5AUDIO.playing) soundOn(); }   // a tap in the page counts here too
+  else if (m.s5 === "leave") leave(m.url);
+});
+
+// Sound was on: carry on (the browser may want a tap first: the page's speaker says so).
+if (cookie("s5sound") === "1") soundOn();
+// Simulation turned off (from anywhere): leave the player.
+setInterval(async () => {
+  try { const s = await (await fetch("/api/sim", { cache: "no-store" })).json(); if (!s.on) leave(); } catch (e) { /* brain restarting */ }
+}, 5000);
+</script>
+</body>
+</html>

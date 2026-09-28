@@ -55,7 +55,7 @@ How it works: deckdash ([`Sim.java`](../brain/deckdash/Sim.java)) runs `fakerig.
 
 ### Sound
 
-Tap the **SIM** pill, then **Sound**: music plays in that browser, in time with the show. It's a setting, not per page: once it's on, every page you open picks it up while the simulation runs. Browsers won't start sound on a newly opened page until it's touched, so after switching pages the pill may say **Sim · tap for sound**: the first tap anywhere brings it back, at the right point in the track.
+Tap the **speaker** (left of the SIM pill in the top bar) for sound in that browser, in time with the show. The sound lives in a small player page (`/shell`, [`s5shell.html`](../brain/common/web/s5shell.html)) that shows the control pages inside itself, so it keeps playing while you switch between Decks, Lighting, Projection, Visuals and Stage. Tapping the speaker on a normal page moves you into the player (it looks the same; the address bar shows `/shell#…`); going back to the real decks leaves it. Browsers need one tap before they'll make sound: until then the speaker pulses. The **SIM** pill's panel has the volume.
 
 - **Real tracks** (below) play their actual audio, one player per deck, following the deck's position, pitch, fader and bass EQ as the sim mixes (the bass swap is a real low cut). It stays within a few tens of milliseconds of the deck, at the deck's exact pitch.
 - **Synthetic tracks** have no audio, so [`s5audio.js`](../brain/common/web/s5audio.js) synthesises house music that follows showbrain's beat clock: kick, hats, clap and bassline in grooves and drops; a pad and a dark filter in breakdowns; a filter sweep, snare roll and riser in builds; a beat of silence before the drop.

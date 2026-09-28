@@ -200,6 +200,21 @@
       reachable(a.dataset.port).then(ok => { if (ok || !S5.admin) return; off("Not reachable from here. Use the rig's Wi-Fi or Tailscale."); });
     });
   }
+  // Inside the simulation's sound player (/shell, s5shell.html): tell it which page this is, keep the
+  // page links in the player (so the sound keeps playing), and pass taps up (they let sound start).
+  S5.inShell = window.parent !== window && window.name === "s5shell";
+  S5.shellUrl = target => S5.url(8080, "/shell") + "#" + encodeURIComponent(target || location.href);
+  if (S5.inShell) {
+    const hello = () => parent.postMessage({ s5: "here", url: location.href, title: document.title }, "*");
+    if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", hello); else hello();
+    addEventListener("pointerdown", () => parent.postMessage({ s5: "gesture" }, "*"), true);
+    document.addEventListener("click", e => {
+      const a = e.target.closest && e.target.closest("a[href]");
+      if (!a || e.defaultPrevented || a.target === "_blank" || e.metaKey || e.ctrlKey) return;
+      e.preventDefault();
+      parent.postMessage({ s5: "nav", url: a.href }, "*");
+    });
+  }
   document.addEventListener("click", e => {
     const a = e.target.closest && e.target.closest("a.s5-off");
     if (a) { e.preventDefault(); if (S5.enabled && !S5.admin) prompt("That page is admin only. Enter the PIN."); }
