@@ -31,9 +31,10 @@ const hud = document.getElementById("hud"), tap = document.getElementById("tap")
 if (q.get("hud") === "1") hud.classList.remove("hidden");
 let localTest = q.get("test") === "1", online = false;
 const PROJ = q.get("p") || "";                        // which projector (its surfaces and masks)
+const BASE = location.pathname.startsWith("/projection") ? "/projection" : "";   // opened through the dashboard's address
 
 const R = new MapRenderer(document.getElementById("gl"), document.getElementById("ov"));
-connectEvents(R, { onStatus: ok => (online = ok) });
+connectEvents(R, { onStatus: ok => (online = ok), url: BASE + "/api/events" });
 connectVisuals(R);   // generative sketch + live params for "gen" surfaces
 
 // Render resolution: the projector's GPU is weak, so in auto mode (layout.render_scale = 0)
@@ -43,7 +44,7 @@ let scale = 1, fps = 60, lastT = 0, good = 0, W = 1920, H = 1080;
 const GPU = R.gpuName();
 function applyScale() { R.resize(Math.max(64, Math.round(W * scale)), Math.max(36, Math.round(H * scale))); }
 function report() {
-  fetch("/api/screen", { method: "POST", body: JSON.stringify({ p: PROJ, w: W, h: H, fps, scale, gpu: GPU }) }).catch(() => {});
+  fetch(BASE + "/api/screen", { method: "POST", body: JSON.stringify({ p: PROJ, w: W, h: H, fps, scale, gpu: GPU }) }).catch(() => {});
 }
 function resize() {
   const d = devicePixelRatio || 1;

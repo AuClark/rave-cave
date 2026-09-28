@@ -311,7 +311,7 @@ class MapRenderer {
 
   async _loadSketch(name, preset, key) {
     this.sketches[key] = { loading: true };
-    const base = window.S5AUTH && S5AUTH.url ? S5AUTH.url(8110, "") : `${location.protocol}//${location.hostname}:8110`;
+    const base = visualsBase();
     try {
       const r = await fetch(`${base}/api/sketches/${encodeURIComponent(name)}` + (preset ? `?preset=${encodeURIComponent(preset)}` : ""));
       if (!r.ok) throw new Error(`${name}: ${r.status}`);
@@ -515,10 +515,18 @@ function connectEvents(renderer, { onLayout, onScreen, onScreens, onStatus, onSk
   return () => es && es.close();
 }
 
+// The visuals service's address: :8110 on the rig's network, /visuals through the dashboard's address
+// (HTTPS / Tailscale). /s5auth.js knows; the projector output page doesn't load it, so work it out.
+function visualsBase() {
+  if (window.S5AUTH && S5AUTH.url) return S5AUTH.url(8110, "");
+  if (location.protocol === "https:" || location.pathname.startsWith("/projection")) return location.origin + "/visuals";
+  return `${location.protocol}//${location.hostname}:8110`;
+}
+
 // The visuals service (:8110, same host) feeds content "gen": its sketch and live params.
 // The beat clock comes from the projector's own stream, so this one's state is ignored.
 function connectVisuals(renderer, opts = {}) {
   // The visuals page's address comes from /s5auth.js (a port on the rig's network, /visuals over HTTPS).
-  const url = window.S5AUTH && S5AUTH.url ? S5AUTH.url(8110, "/api/events") : `${location.protocol}//${location.hostname}:8110/api/events`;
+  const url = visualsBase() + "/api/events";
   return connectEvents(renderer, { state: false, reload: false, ...opts, url });
 }
