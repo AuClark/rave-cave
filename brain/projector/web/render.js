@@ -6,7 +6,9 @@
 // quad, so it lands with correct perspective on angled surfaces. Masks are black
 // polygons drawn on top. All content is beat-locked to the show engine's state.
 // Surfaces can have rounded corners and a border band drawn over their content.
-// Content "gen" is the live generative sketch from the visuals service (:8110).
+// Content "gen" is a generative sketch from the visuals service (:8110): the live one (whatever the
+// Visuals page shows), or the surface's own "sketch" (+ "preset"), fetched and compiled once.
+// With several projectors, each surface and mask belongs to one; draw() renders one projector.
 // Sketches can also read the live track's waveform by beat: wave(beat) (see COMMON).
 
 "use strict";
@@ -265,6 +267,8 @@ class MapRenderer {
     this.clock = new ShowClock();
     this.genParams = {};      // live values from the visuals service
     this.genError = null;
+    this.liveSketch = null;   // the active sketch's name
+    this.sketches = {};       // "name|preset" -> { prog, values } once loaded, { loading } / { error } before
     this.wave = null;         // the live track's waveform (setWave)
     this.waveTex = gl.createTexture();
   }
@@ -283,6 +287,10 @@ class MapRenderer {
 
   // Compile the visuals service's sketch as content "gen". A broken sketch keeps the last good one.
   setSketch(sk) {
+    // The sketch that was live may have been changed on the Visuals page: fetch it afresh next time.
+    if (this.liveSketch && this.liveSketch !== sk.name)
+      for (const k of Object.keys(this.sketches)) if (k.startsWith(this.liveSketch + "|")) delete this.sketches[k];
+    this.liveSketch = sk.name;
     try {
       const ids = sk.groups.flatMap(g => g.params.map(p => p.id));
       const prog = this._program(COMMON + sk.glsl, ids.map(id => "p_" + id));
@@ -290,6 +298,32 @@ class MapRenderer {
       this.progs.gen = prog; this.genError = null;
     } catch (e) {
       this.genError = String(e); console.error("sketch", sk.name, e);
+    }
+  }
+
+  // What a "gen" surface draws: the live sketch, or its own one (loaded on first use; nothing until then).
+  sketchFor(s) {
+    if (!s.sketch || s.sketch === this.liveSketch) return this.progs.gen ? { prog: this.progs.gen, values: this.genParams } : null;
+    const key = s.sketch + "|" + (s.preset || ""), e = this.sketches[key];
+    if (!e) this._loadSketch(s.sketch, s.preset, key);
+    return e && e.prog ? e : null;
+  }
+
+  async _loadSketch(name, preset, key) {
+    this.sketches[key] = { loading: true };
+    const base = window.S5AUTH && S5AUTH.url ? S5AUTH.url(8110, "") : `${location.protocol}//${location.hostname}:8110`;
+    try {
+      const r = await fetch(`${base}/api/sketches/${encodeURIComponent(name)}` + (preset ? `?preset=${encodeURIComponent(preset)}` : ""));
+      if (!r.ok) throw new Error(`${name}: ${r.status}`);
+      const { sketch: sk, values } = await r.json();
+      const ids = sk.groups.flatMap(g => g.params.map(p => p.id));
+      const prog = this._program(COMMON + sk.glsl, ids.map(id => "p_" + id));
+      prog.ids = ids; prog.name = sk.name;
+      this.sketches[key] = { prog, values };
+    } catch (e) {
+      console.error("sketch", name, e);
+      this.sketches[key] = { error: String(e) };
+      setTimeout(() => { if (this.sketches[key] && this.sketches[key].error) delete this.sketches[key]; }, 15000);   // retry later
     }
   }
 
@@ -353,8 +387,16 @@ class MapRenderer {
     const f = this.clock.frame(now);
     this._updateTitle();
     gl.enable(gl.BLEND); gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
+    const P = this.projectorId(opts.projector), mine = x => (x.projector || "main") === P;
     for (const s of L.surfaces) {
-      const pr = this.progs[(L.test || opts.test) ? "test" : s.content] || this.progs.show;
+      if (!mine(s)) continue;
+      const test = L.test || opts.test;
+      let pr = this.progs[test ? "test" : s.content] || this.progs.show, vals = this.genParams;
+      if (!test && s.content === "gen") {
+        const g = this.sketchFor(s);
+        if (!g) continue;                                       // its sketch is still loading
+        pr = g.prog; vals = g.values;
+      }
       gl.useProgram(pr.p);
       gl.enableVertexAttribArray(pr.a);
       gl.vertexAttribPointer(pr.a, 2, gl.FLOAT, false, 0, 0);
@@ -376,7 +418,7 @@ class MapRenderer {
       gl.uniform1f(u.u_radius, s.radius || 0); gl.uniform1f(u.u_border, s.border || 0);
       gl.uniform1f(u.u_bbright, s.border_bright ?? 1); gl.uniform1f(u.u_bsat, s.border_sat ?? 0);
       gl.uniform1f(u.u_bpulse, s.border_pulse ?? 0);
-      if (pr.ids) for (const id of pr.ids) gl.uniform1f(u["p_" + id], this.genParams[id] ?? 0);
+      if (pr.ids) for (const id of pr.ids) gl.uniform1f(u["p_" + id], vals[id] ?? 0);
       const wv = this.wave;
       gl.activeTexture(gl.TEXTURE1); gl.bindTexture(gl.TEXTURE_2D, wv ? this.waveTex : this.tex); gl.uniform1i(u.u_wave, 1);
       gl.uniform4f(u.u_wv, wv ? wv.w : 1, wv ? wv.h : 1, wv ? wv.spb : 0, wv ? wv.beats : 0);
@@ -389,6 +431,7 @@ class MapRenderer {
     o.fillStyle = "#000";
     if (L.masks.length || L.edit || opts.handles) this.ovDirty = true;
     for (const m of L.masks) {
+      if (!mine(m)) continue;
       o.beginPath();
       m.points.forEach(([x, y], i) => (i ? o.lineTo(x * W, y * H) : o.moveTo(x * W, y * H)));
       o.closePath(); o.fill();
@@ -396,12 +439,20 @@ class MapRenderer {
     if (L.edit || opts.handles) this.drawHandles(opts);
   }
 
+  // Which projector this page draws: the one asked for, if the layout has it, else the first.
+  projectorId(want) {
+    const ids = ((this.layout && this.layout.projectors) || [{ id: "main" }]).map(p => p.id);
+    return ids.includes(want) ? want : ids[0];
+  }
+
   drawHandles(opts = {}) {
     const L = this.layout, o = this.o, W = this.ov.width, H = this.ov.height;
+    const P = this.projectorId(opts.projector), mine = x => (x.projector || "main") === P;
     const r = Math.max(8, Math.min(W, H) * 0.012);
     o.lineWidth = Math.max(2, r / 4);
     o.font = `600 ${Math.round(r * 1.6)}px system-ui, sans-serif`;
     for (const s of L.surfaces) {
+      if (!mine(s)) continue;
       const sel = s.id === L.selected;
       o.strokeStyle = sel ? "#2fe6ff" : "rgba(255,255,255,0.6)";
       o.beginPath();
@@ -414,9 +465,10 @@ class MapRenderer {
       });
       const cx = s.corners.reduce((a, c) => a + c[0], 0) / 4 * W, cy = s.corners.reduce((a, c) => a + c[1], 0) / 4 * H;
       o.fillStyle = sel ? "#2fe6ff" : "#fff"; o.textAlign = "center";
-      o.fillText(`${s.name || s.id} · ${s.content}`, cx, cy);
+      o.fillText(`${s.name || s.id} · ${s.content === "gen" && s.sketch ? s.sketch + (s.preset ? " · " + s.preset : "") : s.content}`, cx, cy);
     }
     for (const m of L.masks) {
+      if (!mine(m)) continue;
       o.strokeStyle = m.id === L.selected ? "#ff2fd0" : "rgba(255,47,208,0.6)";
       o.setLineDash([r, r / 2]);
       o.beginPath();
@@ -438,7 +490,7 @@ class MapRenderer {
 // Connect to an event stream (the projector host's by default); calls the handlers as messages arrive.
 // Each service says hello with a version of its page code; when that changes (a deploy),
 // the page reloads itself so nobody has to hard-refresh the projector. reload: false opts out.
-function connectEvents(renderer, { onLayout, onScreen, onStatus, onSketch, onParams, url = "/api/events", state = true, reload = true } = {}) {
+function connectEvents(renderer, { onLayout, onScreen, onScreens, onStatus, onSketch, onParams, url = "/api/events", state = true, reload = true } = {}) {
   let es, version = null;
   const open = () => {
     es = new EventSource(url);
@@ -453,6 +505,7 @@ function connectEvents(renderer, { onLayout, onScreen, onStatus, onSketch, onPar
       }
       else if (m.t === "layout") onLayout ? onLayout(m.layout) : (renderer.layout = m.layout);
       else if (m.t === "screen" && onScreen) onScreen(m.screen);
+      else if (m.t === "screens" && onScreens) onScreens(m.screens);
       else if (m.t === "sketch") { renderer.setSketch(m.sketch); onSketch && onSketch(m.sketch); }
       else if (m.t === "params") { renderer.genParams = m.params; onParams && onParams(m.params); }
       else if (m.t === "wave") renderer.setWave(m.wave);
