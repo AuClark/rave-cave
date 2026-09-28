@@ -205,6 +205,15 @@ The brain was renamed from `ravecave` to `sektor5` on 27 Sep 2026. What that too
 - `sudo systemctl restart avahi-daemon` for the new `.local` name. `avahi-alias-ravecave.service` keeps the old name answering (it publishes the Wi-Fi address at start; restart it if that address changes).
 - Tailscale: `tailscale set --hostname=sektor5`, then rebuild the serve config for the new name: `tailscale serve reset` and the funnel line from above. The old `ts.net` link stops working.
 
+## Auto-update
+
+The brain follows GitHub's `main` on its own: `s5-update.timer` runs [`s5_update.sh`](../brain/system/s5_update.sh) 3 minutes after boot and every 15 minutes. It keeps a copy of the repo in `~/sektor5`, compares each target's deployed commit (`~/.deployed/<target>`) with `main` for that target's files, and deploys only what's behind (`S5_BRAIN_HOST=local brain/deploy.sh live <target>`, running on the brain itself). So a merged PR is live within about 15 minutes, without anyone running `deploy.sh`.
+
+- **It waits while a real deck is playing** (a restart would drop the lights mid-set) and tries again next time. The simulation doesn't count.
+- **It never touches `/preview/`** (the dashboard test page).
+- `setup_brain.sh` installs and enables it. Check with `/usr/local/lib/sektor5/s5_update.sh --check`; logs: `journalctl -u s5-update`; turn it off with `sudo systemctl disable --now s5-update.timer`.
+- Deploying from the Mac still works as before and records the same markers, so the two don't fight: a PR deployed for testing (`--pr N`) is replaced by `main` at the next check.
+
 ## Argon ONE case
 
 `sektor5-2` (the Pi 4) lives in an Argon ONE case. `setup_brain.sh` sets it up; on another board those parts do nothing.

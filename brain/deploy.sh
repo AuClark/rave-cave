@@ -31,6 +31,19 @@ S5_BRAIN_HOST=${S5_BRAIN_HOST:-${RAVE_BRAIN_HOST:-}}
 S5_BOX_HOST=${S5_BOX_HOST:-${RAVE_BOX_HOST:-}}
 BRAIN=${PI:-pi@${S5_BRAIN_HOST:-sektor5.local}}
 BOX=${BOX:-raver@${S5_BOX_HOST:-rave-box.local}}
+# S5_BRAIN_HOST=local: deploy on this machine (the brain updating itself, see brain/system/s5_update.sh).
+# ssh/rsync to the brain then run here: relative paths are from $HOME, like over ssh.
+if [[ ${S5_BRAIN_HOST:-} == local ]]; then
+  BRAIN=local
+  ssh() { if [[ $1 == local ]]; then shift; (cd ~ && bash -c "$*"); else command ssh "$@"; fi; }
+  rsync() {
+    local a=() x p
+    for x in "$@"; do
+      if [[ $x == local:* ]]; then p=${x#local:}; [[ $p == /* ]] || p=$HOME/$p; a+=("$p"); else a+=("$x"); fi
+    done
+    command rsync "${a[@]}"
+  }
+fi
 
 force=0 src=here
 while [[ $# -gt 0 ]]; do
@@ -49,8 +62,8 @@ die() { echo "deploy: $*" >&2; exit 1; }
 mark() {
   local host=$BRAIN targets=$what
   [[ $what == pyramid || $what == panel ]] && host=$BOX
-  [[ $what == all ]] && targets="deckdash showbrain mixer projector"
-  local line="$1 @ $2, $(date '+%F %T') by $(git config user.name || whoami)"
+  [[ $what == all ]] && targets="deckdash web showbrain mixer projector visuals tools"
+  local line="$1 @ $2, $(date '+%F %T') by ${S5_DEPLOY_BY:-$(git config user.name || whoami)}"
   ssh "$host" "mkdir -p ~/.deployed && for t in $targets; do echo '$line' > ~/.deployed/\$t; done"
 }
 
