@@ -686,7 +686,7 @@ UDMX_DEVICES = {}      # one UDMX per process, shared by every DMX fixture
 class Fixture:
     def __init__(self, cfg, index=0, group=1):
         self.cfg = cfg
-        self.kind = cfg["kind"]             # strip | panel | dmx_par
+        self.kind = cfg["kind"]             # strip | panel | pyramid | dmx_par
         self.role = dict(cfg.get("role", {}), index=index, group=group)
         self.state = {}
         self.delay = cfg.get("delay_ms", 0) / 1000.0
@@ -702,7 +702,8 @@ class Fixture:
             return
         self.w = cfg.get("width", 128)
         self.h = cfg.get("height", 16)
-        count = cfg["leds"] if self.kind == "strip" else self.w * self.h
+        self.legs = cfg.get("leds_per_leg", 60)       # pyramid: four legs of this many, then the laser
+        count = cfg["leds"] if self.kind == "strip" else 4 * self.legs + 1 if self.kind == "pyramid" else self.w * self.h
         self.out = DDPOutput(cfg["host"], count, brightness=cfg.get("brightness", 0.6), name=cfg.get("name"))
 
     @property
@@ -725,8 +726,7 @@ class Fixture:
                     self._send([0] * max(self.chans.values()))
                 elif getattr(self, "out", None) is not None:
                     import numpy as np
-                    n = self.cfg["leds"] if self.kind == "strip" else self.w * self.h
-                    self.out.send_array(np.zeros((n, 3), np.float32))
+                    self.out.send_array(np.zeros((self.out.count, 3), np.float32))
             except Exception:
                 pass
             return None
@@ -737,10 +737,14 @@ class Fixture:
         if self.kind == "dmx_par":
             frame = self._par_frame(ctx, level, fx)
         else:
+            laser = None
             if self.kind == "strip":
                 px = looks.strip(ctx, self.cfg["leds"], self.role, self.state)
                 if self.cfg.get("reverse"):
                     px = px[::-1]
+            elif self.kind == "pyramid":
+                px = looks.pyramid(ctx, self.legs, self.role, self.state)
+                laser, px = px[-1, 0] > 0.5, px[:-1]
             else:
                 px = looks.panel(ctx, self.w, self.h, self.role, self.state)
             if fx["strobe"] is not None:
@@ -748,6 +752,10 @@ class Fixture:
             if fx["white"] > 0:
                 px = px + (1.0 - px) * fx["white"]
             frame = px * level
+            if laser is not None:
+                # The laser is on/off (WLED's On/Off output): full on whatever the brightness, off in a blackout.
+                on = laser and level > 0
+                frame = np.vstack([frame, np.full((1, 3), (1.0 / max(0.01, self.out.brightness)) if on else 0.0, np.float32)])
         if preview:
             self.preview = self._preview(frame)
         # Delay compensation: fast outputs (USB DMX) wait so they land with the Wi-Fi fixtures.
@@ -780,8 +788,8 @@ class Fixture:
             if peak > 1:                            # keep the hue, don't clip channels
                 rgb /= peak
             return ["#%02x%02x%02x" % tuple(int(round(x * 255)) for x in rgb)]
-        a = frame if self.kind == "strip" else frame.mean(axis=0)
-        n = min(len(a), 300 if self.kind == "strip" else 40)
+        a = frame if self.kind in ("strip", "pyramid") else frame.mean(axis=0)
+        n = len(a) if self.kind == "pyramid" else min(len(a), 300 if self.kind == "strip" else 40)   # a pyramid's map must stay whole
         a = a[np.linspace(0, len(a) - 1, n).astype(int)] * self.out.brightness
         return ["#%02x%02x%02x" % tuple(px) for px in (np.clip(a, 0, 1) * 255).round().astype(int).tolist()]
 
@@ -887,7 +895,8 @@ def main():
             "look": engine.look, "palette": {"mode": engine.palette_mode, "hue": engine.palette_hue},
             "speed": engine.speed, "tap_bpm": round(engine.tap_bpm, 1),
             "forced": engine.forced, "fixtures": [f.name for f in fixtures],
-            "fixture_info": {f.name: {"kind": f.kind, "leds": f.cfg.get("leds"), "reverse": bool(f.cfg.get("reverse"))} for f in fixtures},
+            "fixture_info": {f.name: {"kind": f.kind, "leds": f.cfg.get("leds") or (f.out.count if f.kind == "pyramid" else None),
+                                      "legs": f.legs if f.kind == "pyramid" else None, "reverse": bool(f.cfg.get("reverse"))} for f in fixtures},
             "fixture_ctl": engine.fixture_ctl,
             "preview": {f.name: f.preview for f in fixtures},
             "frames": list(engine.frames),

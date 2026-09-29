@@ -14,15 +14,16 @@ class DDPOutput:
     def __init__(self, host, count, port=4048, brightness=1.0, name=None):
         # Hostnames (e.g. rave-tube-1.local) are resolved once, then refreshed every 30 s in the
         # background, so a changed IP is picked up without a per-frame DNS/mDNS lookup.
+        # The first lookup runs in the background too: a device that isn't on the network yet (an
+        # unresolvable .local name can take seconds) mustn't hold up the show starting.
         self.host, self.port = host, port
         self.addr = None
-        self._resolve()
-        threading.Thread(target=self._refresh, daemon=True).start()
         self.count = count
         self.brightness = brightness
         self.name = name or host
         self.sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         self.seq = 0
+        threading.Thread(target=self._refresh, daemon=True).start()
 
     def _resolve(self):
         try:
@@ -32,8 +33,8 @@ class DDPOutput:
 
     def _refresh(self):
         while True:
-            time.sleep(30 if self.addr else 3)
             self._resolve()
+            time.sleep(30 if self.addr else 3)
 
     def send_array(self, rgb):
         """rgb: numpy float array (..., 3) in 0..1, pixel order already flattened row-major."""

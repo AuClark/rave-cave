@@ -144,7 +144,7 @@
    "id": "pyrL",
    "type": "pyramid",
    "name": "Leg pyramid L",
-   "source": "sim",
+   "source": "pyramidL",
    "pos": [
     -3.6,
     0,
@@ -162,7 +162,7 @@
    "id": "pyrR",
    "type": "pyramid",
    "name": "Leg pyramid R",
-   "source": "sim",
+   "source": "pyramidR",
    "pos": [
     3.6,
     0,

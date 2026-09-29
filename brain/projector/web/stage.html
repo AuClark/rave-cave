@@ -623,28 +623,35 @@ function buildPyramid(fx, T, g, parts) {
   parts.pyr.light = new THREE.PointLight(0xffffff, 0, 4, 2); parts.pyr.light.position.y = fx.cover ? G.top * 0.45 : 0.06; g.add(parts.pyr.light);
 }
 
-// The pyramids' simulated show (until showbrain has looks for them): what each LED does in each
-// section of the song, and when the laser fires. Leg k (FL, FR, BR, BL), x = 0 at the foot, 1 at the top;
-// side -1 / 1 for the left / right pyramid, so the pair mirror each other. See the doc's "Looks".
+// The pyramids' simulated show, for when showbrain isn't sending (nothing playing, or the Section
+// preview): a sketch of showbrain's own looks (looks.pyramid). Leg k (FL, FR, BR, BL), x = 0 at the
+// foot, 1 at the top; side -1 / 1 for the left / right pyramid, so the pair mirror each other.
+const SPIRAL_TURNS = 6;
+function pyrSpiral(order, x) {                                     // position along a spiral up the four legs, 0..1
+  const t = x * SPIRAL_TURNS, seg = Math.min(Math.floor(t), SPIRAL_TURNS - 1);
+  return (4 * seg + order + (t - seg)) / (4 * SPIRAL_TURNS);
+}
 const pyrC = new THREE.Color(), pyrW = new THREE.Color(1, 1, 1);
 function pyramidLook(f, k, x, side, out) {
   const sc = f.scene, kick = Math.exp(-6 * f.frac), I = f.intensity ?? 0.8;
   const leg = side < 0 ? k : (5 - k) % 4;                          // the right one runs the other way round
   const beat = Math.floor(f.beat), bw = ((beat % 4) + 4) % 4;
   if (f.black) return out.setRGB(0, 0, 0);
-  if (sc === "PREDROP")                                            // dark, but the apex holds its breath
-    return out.copy(pyrW).multiplyScalar(x > 0.93 ? 0.35 + 0.35 * Math.sin(f.beat * Math.PI * 4) ** 2 : 0);
-  if (sc === "BUILD" || sc === "HOLD") {                           // fill from the feet to the apex; flicker quickens
-    const fill = Math.max(0.04, f.progress || 0), div = (f.progress || 0) > 0.75 ? 8 : (f.progress || 0) > 0.5 ? 4 : 2;
-    const flick = ((f.beat * div) % 1) < 0.5 ? 1 : 0.35, edge = Math.max(0, 1 - Math.abs(x - fill) * 30);
-    out.copy(hsl(f.hue + x * 0.08)).multiplyScalar(x < fill ? (0.25 + 0.55 * (f.progress || 0)) * flick : 0);
-    return out.lerp(pyrW, edge * 0.8).multiplyScalar(I);
+  if (sc === "PREDROP")                                            // dark, but for the tips of the legs
+    return out.copy(pyrW).multiplyScalar(x > 0.9 ? 0.3 : 0);
+  if (sc === "BUILD" || sc === "HOLD") {                           // the spiral fill, feet to apex; flicker quickens
+    const p = f.progress || 0, sp = pyrSpiral(leg, x), head = 0.02 + 0.98 * p;
+    if (sp > head) return out.setRGB(0, 0, 0);
+    const rate = p < 0.5 ? 1 : p < 0.75 ? 2 : p < 0.9 ? 4 : 8, on = ((f.beat * rate) % 1) < 0.5 || sc === "HOLD";
+    out.copy(hsl(f.hue + 0.12 * x, 1 - 0.6 * p * x)).multiplyScalar((0.4 + 0.6 * p) * (on ? 1 : 0.3));
+    return out.lerp(pyrW, Math.max(0, 1 - (head - sp) * 40)).multiplyScalar(I);
   }
   if (sc === "DROP") {                                             // a burst down from the apex each beat, full colour
     if (f.since < 1) { const front = 1 - f.since; return out.copy(x >= front ? pyrW : hsl(f.hue)).multiplyScalar(x >= front ? 1 : 0.15); }
     const ring = Math.max(0, 1 - Math.abs((1 - x) - f.frac) * 7);
-    out.copy(hsl(f.hue + (leg % 2) * 0.5)).multiplyScalar(0.3 + 0.6 * kick);
-    return out.lerp(pyrW, ring * 0.7).multiplyScalar(I);
+    const spin = f.since >= 16 && leg === ((Math.floor(f.beat) % 4) + 4) % 4 ? 0.35 + 0.4 * kick : 0;
+    out.copy(hsl(f.hue + (leg % 2) * 0.5)).multiplyScalar(0.5 + 0.5 * kick);
+    return out.lerp(pyrW, Math.max(ring, spin) * 0.75).multiplyScalar(I);
   }
   if (sc === "BREAKDOWN" || sc === "INTRO" || sc === "OUTRO") {    // slow breathing, soft complementary colour
     const breathe = 0.5 - 0.5 * Math.cos(f.beat * Math.PI / 4), lvl = 0.08 + 0.3 * breathe * (0.6 + 0.4 * x);
@@ -653,15 +660,12 @@ function pyramidLook(f, k, x, side, out) {
   if (sc === "IDLE" || !sc) return out.copy(hsl(f.hue + x * 0.3 + k * 0.25, 0.9)).multiplyScalar(0.12);
   // GROOVE: a comet up one leg per beat, round the pyramid; the feet pulse with the kick
   const head = f.frac * 1.15, on = leg === bw, tail = on ? Math.max(0, 1 - (head - x) * 5) * (x <= head ? 1 : 0) : 0;
-  out.copy(hsl(f.hue + x * 0.06)).multiplyScalar(0.06 + 0.25 * kick * (1 - x));
+  out.copy(hsl(f.hue + x * 0.06)).multiplyScalar((0.12 + 0.5 * kick) * (1 - 0.6 * x));
   return out.lerp(pyrW, tail * 0.85).multiplyScalar(I);
 }
-function pyramidLaser(f) {
-  if (f.black) return false;
-  if (f.scene === "PREDROP") return true;                          // the only light in the room before the drop
-  if (f.scene === "DROP") return f.since < 16 ? f.frac < 0.5 : f.bwb === 1 && f.frac < 0.5;   // on the kick, then on the one
-  if (f.scene === "BUILD" || f.scene === "HOLD") return (f.progress || 0) > 0.9 && ((f.beat * 4) % 1) < 0.5;
-  return false;
+function pyramidLaser(f) {                                         // on with the drop: held a bar, on the kick, then on the one
+  if (f.black || f.scene !== "DROP") return false;
+  return f.since < 4 ? true : f.since < 32 ? f.frac < 0.5 : f.bwb === 1 && f.frac < 0.5;
 }
 function updatePyramid(fx, p, f, live, fast) {
   const P = p.pyr, n = P.n, side = fx.pos[0] < 0 ? -1 : 1, h = THREE.DataUtils.toHalfFloat;

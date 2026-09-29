@@ -2,7 +2,7 @@
 
 Two small pyramids, one either side of the stage. Each is four aluminium legs slotted into a 3D-printed top junction. A WS2815 strip runs up the outside of each leg, an ESP32 at the top drives each leg from its own pin, and a red laser points straight up out of the apex. A white fabric cover over the frame is optional.
 
-**Status (30 Sep 2026):** designed; not built yet. They're modelled in the Stage view (the outdoor venue, and **Add fixture → Leg pyramid**) with simulated looks, so the show can be worked out before the hardware exists. They aren't fixtures in showbrain yet.
+**Status (30 Sep 2026):** designed; not built yet. Showbrain already drives them (`pyramidL`, `pyramidR` in [`config.json`](../../brain/showbrain/config.json), kind `pyramid`), and the Stage view shows what it sends, so the show can be worked out before the hardware exists. Until the controllers are on the network the output goes nowhere.
 
 These are a different fixture from the big [LED pyramid](pyramid.md) (600 LEDs on the Pi `rave-box`).
 
@@ -81,14 +81,14 @@ The same for the Stage view (`source` set to the fixture's name) and for showbra
 
 ## Looks
 
-What the Stage view simulates now, and the plan for showbrain. **View → Section** previews each one on a 128 BPM clock. The two pyramids mirror each other.
+Showbrain's looks (`looks.pyramid` in [`looks.py`](../../brain/showbrain/looks.py)). The Stage view shows them live whenever a deck is playing (or the simulation is on); with nothing playing, it runs a sketch of the same looks itself, and **View → Section** previews each one on a 128 BPM clock. The two pyramids mirror each other, so a spiral turns towards the DJ on both.
 
 | Section | Legs | Laser |
 |---|---|---|
-| Groove | A white comet runs up one leg per beat, round the pyramid; the feet pulse with the kick in the show colour | off |
-| Build / hold | The legs fill from the feet to the apex with the build's progress, with a bright line at the fill; they flicker on 8ths, then 16ths, then 32nds as it nears the drop | flickers in the last 10% |
-| Predrop | Dark, except the top few LEDs breathing white | **on, steady**: the only light before the drop |
-| Drop | On the downbeat a white burst runs from the apex down all four legs, then full colour (alternate legs in the complementary colour) with a white ring falling from the apex each beat | on the kick for 4 bars, then on the one |
+| Groove | The feet pulse with the kick in the show colour, plus (changing with the track and every 16 bars) an **orbit**: a white comet up one leg per beat, round the pyramid, or a **spiral chase**: a comet climbing the spiral once a bar | off |
+| Build / hold | **The spiral fill**: the legs light from the feet in a spiral round the outside (six turns, a leg at a time), reaching the apex as the build ends, led by a white head; the lit part flickers faster (on the beat, 8ths, 16ths, 32nds) as the drop nears. A hold freezes it | off |
+| Predrop | Dark, except the tips of the legs | off |
+| Drop | On the downbeat a white burst runs from the apex down all four legs, then full colour (alternate legs in the complementary colour) pulsing with the kick, with a white ring falling from the apex each beat; after 4 bars a white highlight also turns round the legs, a leg a beat | **comes on with the drop**: held for the first bar, then on the kick to bar 8, then on the one |
 | Breakdown, intro, outro | Slow breathing in a soft complementary colour, brighter towards the top | off |
 | Strobe, blinder, blackout | follow the rest of the rig | off in a blackout |
 
@@ -104,5 +104,5 @@ Keep it to a low-power module (**Class 2, under 1 mW**, or at most Class 3R) and
 ## To do
 
 - Build and wire one; pick the LED density.
-- Add both as fixtures in [`brain/showbrain/config.json`](../../brain/showbrain/config.json) (`kind: "strip"`, 241 LEDs), with pyramid looks in showbrain that use the map above, then link them in the Stage view.
+- Set their hosts (`S5_PYRAMID_L_HOST` / `_R_HOST` in `.env`, default `rave-pyramid-l.local` / `-r.local`) once they're built; `leds_per_leg` if not 60.
 - In the Blender file (`stage.blend`): replace `Side_Pyramid_L` / `_R` with these, so the venue export no longer needs `venue.hide` (see [stage.md](../stage.md#venues)).
