@@ -1,0 +1,40 @@
+{
+  "title": "Sisyphus",
+  "about": "A dung beetle pushing the sun up a hill that never ends, drawn clean. Hand redraws the whole thing in another style -- crayon scribble, 1930s rubber-hose cartoon, acid -- or cycles all four every few bars. The sky runs day to night on its own loop and the night gets visitors, including a tractor beam that lifts the sun away while the beetle carries on pushing nothing. Its legs run on the A Hit driver, so they walk on the kick. Reactivity is the standard three slots, see docs/reactive.md.",
+  "groups": [
+    {"name": "Hill", "params": [
+      {"id": "hill",   "label": "Slope",                        "min": 0.1, "max": 1.2, "step": 0.01, "default": 0.55},
+      {"id": "climb",  "label": "Bars per climb",               "min": 4,   "max": 64,  "step": 4,    "default": 16},
+      {"id": "size",   "label": "Beetle and sun size",          "min": 0.5, "max": 2,   "step": 0.05, "default": 1},
+      {"id": "legs",   "label": "Leg swing",                    "min": 0,   "max": 1.5, "step": 0.01, "default": 0.8}
+    ]},
+    {"name": "Sky", "params": [
+      {"id": "day",    "label": "Bars per day and night",       "min": 8,   "max": 128, "step": 8,    "default": 32},
+      {"id": "aliens", "label": "Night visitors",               "min": 0,   "max": 1,   "step": 0.01, "default": 0.7}
+    ]},
+    {"name": "Hand", "params": [
+      {"id": "style",  "label": "Hand (0 crayon, 1 cuphead, 2 acid, 3 clean, 4 cycle)", "min": 0, "max": 4, "step": 1, "default": 3},
+      {"id": "swap",   "label": "Bars per hand (cycle only)",   "min": 0.25, "max": 16, "step": 0.25, "default": 4},
+      {"id": "boil",   "label": "Boil",                         "min": 0,   "max": 1,   "step": 0.01, "default": 0},
+      {"id": "ink",    "label": "Ink",                          "min": 0.2, "max": 3,   "step": 0.05, "default": 1}
+    ]},
+    {"name": "Reactivity", "params": [
+      {"id": "aband",  "label": "A Hit · band (0 off, 1 kick, 2 chords, 3 hats, 4 all, 5 energy)", "min": 0, "max": 5, "step": 1, "default": 1},
+      {"id": "aloop",  "label": "A Hit · loop (0 ½beat, 1 beat, 2 bar, 3 2bar, 4 4bar, 5 8bar, 6 16bar)", "min": 0, "max": 6, "step": 1, "default": 1},
+      {"id": "ashape", "label": "A Hit · shape (0 follow, 1 punch, 2 ramp, 3 swell, 4 gate, 5 step)", "min": 0, "max": 5, "step": 1, "default": 1},
+      {"id": "aamt",   "label": "A Hit · amount",               "min": 0, "max": 1, "step": 0.01, "default": 0.7},
+      {"id": "bband",  "label": "B Move · band",                "min": 0, "max": 5, "step": 1, "default": 3},
+      {"id": "bloop",  "label": "B Move · loop",                "min": 0, "max": 6, "step": 1, "default": 0},
+      {"id": "bshape", "label": "B Move · shape",               "min": 0, "max": 5, "step": 1, "default": 0},
+      {"id": "bamt",   "label": "B Move · amount",              "min": 0, "max": 1, "step": 0.01, "default": 0.45},
+      {"id": "cband",  "label": "C Change · band",              "min": 0, "max": 5, "step": 1, "default": 2},
+      {"id": "cloop",  "label": "C Change · loop",              "min": 0, "max": 6, "step": 1, "default": 5},
+      {"id": "cshape", "label": "C Change · shape",             "min": 0, "max": 5, "step": 1, "default": 3},
+      {"id": "camt",   "label": "C Change · amount",            "min": 0, "max": 1, "step": 0.01, "default": 0.9}
+    ]},
+    {"name": "Colour", "params": [
+      {"id": "hue",    "label": "Sun hue",                      "min": 0, "max": 1, "step": 0.005, "default": 0.09},
+      {"id": "follow", "label": "Follow show hue",              "min": 0, "max": 1, "step": 1,     "default": 0}
+    ]}
+  ]
+}

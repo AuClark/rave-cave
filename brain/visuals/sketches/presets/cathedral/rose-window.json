@@ -1,0 +1,13 @@
+{
+ "sides": 12,
+ "twist": 0,
+ "spin": 0.02,
+ "sway": 0,
+ "bore": 0.5,
+ "bay": 8,
+ "form": 1.15,
+ "fog": 0.18,
+ "glow": 0.6,
+ "hue": 0.86,
+ "spread": 0.45
+}

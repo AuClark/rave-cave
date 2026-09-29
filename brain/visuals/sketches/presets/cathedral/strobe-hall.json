@@ -1,0 +1,10 @@
+{
+ "aband": 3, "aloop": 0, "ashape": 4, "aamt": 1.0,
+ "bband": 1, "bloop": 1, "bshape": 1, "bamt": 0.5,
+ "glow": 1.0,
+ "bay": 1,
+ "twist": 0.14,
+ "fog": 0.12,
+ "hue": 0.98,
+ "spread": 0.35
+}

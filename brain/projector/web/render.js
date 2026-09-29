@@ -54,6 +54,38 @@ class ShowClock {
   }
 }
 
+// ---------------------------------------------------------------- parameter automation
+
+// Any sketch parameter can move on its own between a range the user sets. The control page
+// stores the settings; the value itself is worked out here, every frame, from the beat. That
+// keeps it locked to the music, costs nothing on the network, needs no shader recompile, and
+// means the projector and the preview arrive at the same number without talking to each other.
+//
+// rate is in cycles per beat like every other speed in the rig: a 1/4 note is one beat, so
+// rate 1. hz: true is the one intentional exception and free-runs on wall time instead --
+// see docs/reactive.md. Shapes: 0 sine, 1 triangle, 2 saw up, 3 saw down, 4 square,
+// 5 random step, 6 smooth random.
+//
+// duty (0..1, default 0.5) is how much of a square's cycle is spent at the top. Down at 0.15 it
+// is a strobe rather than a chop, which is what the Launchpad's STROBE pad wants.
+function autoHash(n) { const x = Math.sin(n * 127.1 + 311.7) * 43758.5453; return x - Math.floor(x); }
+function autoEval(a, beat, inBar, time) {
+  const t = (a.hz ? time : (a.retrig ? inBar : beat)) * (a.rate || 0) + (a.phase || 0);
+  const x = t - Math.floor(t), n = Math.floor(t);
+  let v;
+  switch (a.shape | 0) {
+    case 1: v = 1 - Math.abs(2 * x - 1); break;
+    case 2: v = x; break;
+    case 3: v = 1 - x; break;
+    case 4: v = x < (a.duty === undefined ? 0.5 : a.duty) ? 1 : 0; break;
+    case 5: v = autoHash(n); break;
+    case 6: { const u = x * x * (3 - 2 * x); v = autoHash(n) * (1 - u) + autoHash(n + 1) * u; break; }
+    default: v = 0.5 - 0.5 * Math.cos(6.2831853 * x);
+  }
+  const lo = a.lo, hi = a.hi;
+  return lo + (hi - lo) * v;
+}
+
 // ---------------------------------------------------------------- homography
 
 // Unit square (0,0),(1,0),(1,1),(0,1) -> quad corners. Returns 3x3 row-major.
@@ -127,12 +159,65 @@ vec4 wave(float beat) {
   float i0 = floor(i);
   return mix(waveTexel(i0), waveTexel(min(i0 + 1.0, n - 1.0)), i - i0);
 }
+// Words typed on the Visuals page, drawn to a texture by the page and handed to every sketch.
+// Eight rows of 1/8 the height, one word each, white on black, each word scaled to fit its row
+// with its letterforms intact. u_textn says how many rows are actually in use.
+uniform sampler2D u_text; uniform float u_textn;
+// Coverage of word ROW at uv, where uv is 0..1 across that word's own row and uv.y = 0 is the
+// top of it. Off the edge of the word it is 0, so a sketch can lay it anywhere without clipping.
+float word(vec2 uv, float row) {
+  if (uv.x < 0.0 || uv.x > 1.0 || uv.y < 0.0 || uv.y > 1.0) return 0.0;
+  float k = mod(floor(row + 0.5), max(1.0, u_textn));
+  return texture2D(u_text, vec2(uv.x, (k + uv.y) * 0.125)).r;
+}
 vec3 hsv(float h, float s, float v) {
   vec3 k = clamp(abs(mod(h * 6.0 + vec3(0.0, 4.0, 2.0), 6.0) - 3.0) - 1.0, 0.0, 1.0);
   return v * mix(vec3(1.0), k, s);
 }
 float hash(vec2 p) { return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
 float kick() { return exp(-6.0 * u_frac); }
+// --- Audio-reactive drivers (docs/reactive.md) ------------------------------
+// One frequency band of the live track, 0..1. 0 = off, and off means 1.0: not gated
+// by sound, so the shape below runs on tempo alone (the LFO case).
+float band(float b, float beat) {
+  if (b < 0.5) return 1.0;
+  vec4 w = wave(beat);
+  if (b < 1.5) return w.y;          // kick / low end
+  if (b < 2.5) return w.z;          // chords / mids
+  if (b < 3.5) return w.w;          // hats / highs
+  if (b < 4.5) return w.x;          // everything
+  return u_energy;                  // the show engine's energy
+}
+// Loop length in beats: half a beat, a beat, then 1, 2, 4, 8, 16 bars.
+float loopBeats(float r) {
+  if (r < 0.5) return 0.5;
+  if (r < 1.5) return 1.0;
+  if (r < 2.5) return 4.0;
+  if (r < 3.5) return 8.0;
+  if (r < 4.5) return 16.0;
+  if (r < 5.5) return 32.0;
+  return 64.0;
+}
+// The beat counter shifted so every downbeat is a multiple of 4, which puts loops of a
+// bar or longer on the "1" instead of wherever the track's first beat happened to fall.
+float barBeat() { return u_beat - mod(floor(u_beat) - (u_bwb - 1.0), 4.0); }
+// A driver, 0..1: the loop says when it fires, the band says how hard.
+float drive(float bd, float rate, float shape, float amt) {
+  float L = loopBeats(rate), bb = barBeat();
+  float ph = fract(bb / L);                                        // 0..1 through this loop
+  float n = floor(bb / L);                                         // which loop we are in
+  // How loud the band was when the loop fired. Two samples over the first beat, so a long
+  // loop isn't decided by whatever happened to be in one 32nd note.
+  float hit = max(band(bd, n * L + 0.15), band(bd, n * L + 0.55));
+  float v;
+  if      (shape < 0.5) v = band(bd, u_beat);                      // follow
+  else if (shape < 1.5) v = hit * exp(-5.0 * ph * max(L, 1.0));    // punch
+  else if (shape < 2.5) v = hit * ph;                              // ramp
+  else if (shape < 3.5) v = hit * (0.5 - 0.5 * cos(6.2831 * ph));  // swell
+  else if (shape < 4.5) v = hit * step(ph, 0.5);                   // gate
+  else                  v = hit * hash(vec2(n, bd));               // step
+  return amt * clamp(v, 0.0, 1.0);
+}
 vec3 content(vec2 uv);
 void main() {
   vec2 p = vec2(gl_FragCoord.x / u_res.x, 1.0 - gl_FragCoord.y / u_res.y);
@@ -266,11 +351,24 @@ class MapRenderer {
     this.layout = null;
     this.clock = new ShowClock();
     this.genParams = {};      // live values from the visuals service
+    this.genAuto = {};        // per-parameter automation settings, from the same place
+    this.genSpec = {};        // id -> {min, max, step, kind} out of the sketch's schema
+    this.genLive = {};        // what the shader actually gets: genParams with automation applied
+    this.genFreeze = false;   // hold every automated value where it is (the page's Freeze)
+    this._frz = null;
+    this.lastFrame = null;    // the clock frame this draw used, for pages that want to read it
     this.genError = null;
     this.liveSketch = null;   // the active sketch's name
     this.sketches = {};       // "name|preset" -> { prog, values } once loaded, { loading } / { error } before
     this.wave = null;         // the live track's waveform (setWave)
     this.waveTex = gl.createTexture();
+    this.textTex = gl.createTexture();
+    this.textN = 1;
+    this.textCanvas = document.createElement("canvas");
+    // 2048 across eight rows is 256px a row. A near ring can magnify one row over half the
+    // screen, and at 128 the diagonals of the letterforms stair-step visibly.
+    this.textCanvas.width = 2048; this.textCanvas.height = 2048;
+    this.setText("SEKTOR5");
   }
 
   // The live track's waveform from the visuals service: RGBA bytes (height, bass, mids, highs), base64.
@@ -285,6 +383,37 @@ class MapRenderer {
     this.wave = { w: w.w, h: w.h, spb: w.spb, beats: w.beats, loop: w.loop ? 1 : 0, title: w.title, source: w.source };
   }
 
+  // The words typed on the Visuals page, drawn into an eight-row atlas: one word per row,
+  // each scaled to fit its row so the letterforms stay right whatever the word's length. Split
+  // on | or a newline. Done on the CPU once per change, so the shader just samples it.
+  setText(str) {
+    const words = String(str || "").split(/[|\n]/).map(w => w.trim()).filter(Boolean).slice(0, 8);
+    if (!words.length) words.push("SEKTOR5");
+    this.textN = words.length;
+    const c = this.textCanvas, g = c.getContext("2d"), ROW = c.height / 8;
+    g.fillStyle = "#000"; g.fillRect(0, 0, c.width, c.height);
+    g.fillStyle = "#fff"; g.textAlign = "center"; g.textBaseline = "middle";
+    words.forEach((w, i) => {
+      let size = Math.round(ROW * 0.82);
+      g.font = `900 ${size}px system-ui, sans-serif`;
+      const max = c.width * 0.96;
+      const wide = g.measureText(w).width;
+      if (wide > max) {                                   // long words shrink to fit their row
+        size = Math.max(8, Math.floor(size * max / wide));
+        g.font = `900 ${size}px system-ui, sans-serif`;
+      }
+      g.fillText(w, c.width / 2, i * ROW + ROW / 2);
+    });
+    const gl = this.gl;
+    gl.bindTexture(gl.TEXTURE_2D, this.textTex);
+    gl.texImage2D(gl.TEXTURE_2D, 0, gl.LUMINANCE, gl.LUMINANCE, gl.UNSIGNED_BYTE, c);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+    this.text = str;
+  }
+
   // Compile the visuals service's sketch as content "gen". A broken sketch keeps the last good one.
   setSketch(sk) {
     // The sketch that was live may have been changed on the Visuals page: fetch it afresh next time.
@@ -293,6 +422,10 @@ class MapRenderer {
     this.liveSketch = sk.name;
     try {
       const ids = sk.groups.flatMap(g => g.params.map(p => p.id));
+      const spec = {};
+      for (const g of sk.groups) for (const p of g.params)
+        spec[p.id] = { min: p.min, max: p.max, step: p.step, kind: p.kind || "" };
+      this.genSpec = spec;
       const prog = this._program(COMMON + sk.glsl, ids.map(id => "p_" + id));
       prog.ids = ids; prog.name = sk.name;
       this.progs.gen = prog; this.genError = null;
@@ -302,8 +435,11 @@ class MapRenderer {
   }
 
   // What a "gen" surface draws: the live sketch, or its own one (loaded on first use; nothing until then).
+  // The live one gets genLive -- the held values with this frame's automation on top. A surface
+  // pinned to its own sketch gets the plain values it was fetched with: automation belongs to the
+  // sketch the Visuals page is driving, and there is only one set of it.
   sketchFor(s) {
-    if (!s.sketch || s.sketch === this.liveSketch) return this.progs.gen ? { prog: this.progs.gen, values: this.genParams } : null;
+    if (!s.sketch || s.sketch === this.liveSketch) return this.progs.gen ? { prog: this.progs.gen, values: this.genLive } : null;
     const key = s.sketch + "|" + (s.preset || ""), e = this.sketches[key];
     if (!e) this._loadSketch(s.sketch, s.preset, key);
     return e && e.prog ? e : null;
@@ -342,7 +478,7 @@ class MapRenderer {
     for (const n of ["u_res", "u_Hinv", "u_aspect", "u_beat", "u_frac", "u_bwb", "u_bar", "u_hue", "u_scene", "u_progress",
                      "u_since", "u_energy", "u_sp", "u_opacity", "u_bright", "u_sel", "u_time", "u_tex",
                      "u_radius", "u_border", "u_bbright", "u_bsat", "u_bpulse", "u_px", "u_box",
-                     "u_wave", "u_wv", "u_wloop", ...extra])
+                     "u_wave", "u_wv", "u_wloop", "u_text", "u_textn", ...extra])
       u[n] = gl.getUniformLocation(p, n);
     return { p, u, a: gl.getAttribLocation(p, "a") };
   }
@@ -385,6 +521,8 @@ class MapRenderer {
     if (!L) return;
     this.clock.lead = L.lead_ms ?? 60;
     const f = this.clock.frame(now);
+    this.lastFrame = f;
+    this._genFrame(f, now);
     this._updateTitle();
     gl.enable(gl.BLEND); gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
     const P = this.projectorId(opts.projector), mine = x => (x.projector || "main") === P;
@@ -423,6 +561,8 @@ class MapRenderer {
       gl.activeTexture(gl.TEXTURE1); gl.bindTexture(gl.TEXTURE_2D, wv ? this.waveTex : this.tex); gl.uniform1i(u.u_wave, 1);
       gl.uniform4f(u.u_wv, wv ? wv.w : 1, wv ? wv.h : 1, wv ? wv.spb : 0, wv ? wv.beats : 0);
       gl.uniform1f(u.u_wloop, wv ? wv.loop : 0);
+      gl.activeTexture(gl.TEXTURE2); gl.bindTexture(gl.TEXTURE_2D, this.textTex); gl.uniform1i(u.u_text, 2);
+      gl.uniform1f(u.u_textn, this.textN);
       gl.activeTexture(gl.TEXTURE0); gl.bindTexture(gl.TEXTURE_2D, this.tex); gl.uniform1i(u.u_tex, 0);
       gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
     }
@@ -443,6 +583,31 @@ class MapRenderer {
   projectorId(want) {
     const ids = ((this.layout && this.layout.projectors) || [{ id: "main" }]).map(p => p.id);
     return ids.includes(want) ? want : ids[0];
+  }
+
+  // The live parameter values for this frame: the held values, with automation moved on top.
+  // Once per frame and shared by every surface, so a layout with six of them costs the same.
+  _genFrame(f, now) {
+    const live = this.genLive, A = this.genAuto, S = this.genSpec;
+    for (const id in this.genParams) live[id] = this.genParams[id];
+    // The beat counter shifted so downbeats are multiples of 4, same as barBeat() in the
+    // shaders, so "retrigger on bar" fires on the 1 and not wherever the track happened to start.
+    const bb = f.beat - ((((Math.floor(f.beat) - (f.bwb - 1)) % 4) + 4) % 4);
+    const inBar = bb - 4 * Math.floor(bb / 4);
+    const t = now / 1000;
+    // Freeze holds the clock the automation reads rather than switching it off, so every value
+    // stays exactly where it was and carries on from there when it is let go.
+    if (this.genFreeze) { if (!this._frz) this._frz = { beat: f.beat, inBar, t }; }
+    else this._frz = null;
+    const F = this._frz;
+    for (const id in A) {
+      const a = A[id];
+      if (!a || !a.on) continue;
+      const s = S[id];
+      let v = autoEval(a, F ? F.beat : f.beat, F ? F.inBar : inBar, F ? F.t : t);
+      if (s) v = Math.max(s.min, Math.min(s.max, v));    // never outside what the sketch allows
+      live[id] = v;
+    }
   }
 
   drawHandles(opts = {}) {
@@ -490,7 +655,7 @@ class MapRenderer {
 // Connect to an event stream (the projector host's by default); calls the handlers as messages arrive.
 // Each service says hello with a version of its page code; when that changes (a deploy),
 // the page reloads itself so nobody has to hard-refresh the projector. reload: false opts out.
-function connectEvents(renderer, { onLayout, onScreen, onScreens, onStatus, onSketch, onParams, url = "/api/events", state = true, reload = true } = {}) {
+function connectEvents(renderer, { onLayout, onScreen, onScreens, onStatus, onSketch, onParams, onAuto, onText, url = "/api/events", state = true, reload = true } = {}) {
   let es, version = null;
   const open = () => {
     es = new EventSource(url);
@@ -508,7 +673,13 @@ function connectEvents(renderer, { onLayout, onScreen, onScreens, onStatus, onSk
       else if (m.t === "screens" && onScreens) onScreens(m.screens);
       else if (m.t === "sketch") { renderer.setSketch(m.sketch); onSketch && onSketch(m.sketch); }
       else if (m.t === "params") { renderer.genParams = m.params; onParams && onParams(m.params); }
+      else if (m.t === "auto") {
+        renderer.genAuto = m.auto || {};
+        renderer.genFreeze = !!m.freeze;
+        onAuto && onAuto(renderer.genAuto, renderer.genFreeze);
+      }
       else if (m.t === "wave") renderer.setWave(m.wave);
+      else if (m.t === "text") { renderer.setText(m.text); onText && onText(m.text); }
     };
   };
   open();

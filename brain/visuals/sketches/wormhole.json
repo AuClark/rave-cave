@@ -1,0 +1,56 @@
+{
+  "title": "Wormhole",
+  "about": "Your own words running round the inside of a pipe you are looking down at an angle. Type them on the Visuals page and separate them with | -- up to eight, one per ring, cycling as the bars go by. Two ideas stacked: the log of the radius gives a distance that never runs out, so the rings go on for ever and travelling inward is one term; then a Mobius transform tips the whole plane off its axis, which maps circles to circles but moves the centre, so the rings come out nested and not concentric and the vanishing point sits off to one side. It is meant to be read, and the sliders are scaled for that: every range is set so the words stay legible across the whole of it, the speeds are slow (travel tops out at a ring a bar, spin at a turn every two bars), the type can never be subdivided past four words to a ring however the wedges divide it, and the things that smear type -- the chromatic split, the trails, the bloom -- cannot be pushed past a smear. Two tone and Mirror are marked fixed so the dice leave them alone: one decides card against ink and the other decides whether half the words read backwards, and neither is an energy. So a randomise, Drop included, gives you a different tunnel and not an unreadable one. Twist counts whole rings gained per turn because a helix only closes up if it is whole -- a fraction leaves a hard straight line out of the vanishing point where the angle wraps -- and it doubles as how many words are in the cycle. Hectic is how much of those effects the A Hit driver brings in, so it goes wild on the drop and behaves itself the rest of the time. Reactivity is the standard three slots, see docs/reactive.md.",
+  "groups": [
+    {"name": "Pipe", "params": [
+      {"id": "off",    "label": "Vanishing point off centre",         "min": 0,   "max": 0.55, "step": 0.005, "default": 0.34},
+      {"id": "offspin", "kind": "rate", "label": "It wanders round (cycles per beat; full is a lap every 8 bars)", "min": -0.032, "max": 0.032, "step": 0.002, "default": 0.008},
+      {"id": "rings",  "label": "Rings per turn of scale (more means thinner rings)", "min": 1.2, "max": 5, "step": 0.05, "default": 3.6},
+      {"id": "reps",   "label": "Times the word goes round (capped so Mirror never squeezes past 4)", "min": 1, "max": 4, "step": 1, "default": 2},
+      {"id": "height", "label": "How much of a ring the word fills",  "min": 0.55, "max": 1,  "step": 0.01, "default": 0.74},
+      {"id": "zoom",   "kind": "rate", "label": "Travel inward (cycles per beat; full is a ring a bar)", "min": -0.25, "max": 0.25, "step": 0.005, "default": 0.0625},
+      {"id": "spin",   "kind": "rate", "label": "Spin (cycles per beat; full is a turn every 2 bars)", "min": -0.125, "max": 0.125, "step": 0.002, "default": 0.006},
+      {"id": "twist",  "label": "Twist into a helix (whole rings gained per turn; also how many words cycle)", "min": -3, "max": 3, "step": 1, "default": 0},
+      {"id": "counter", "kind": "rate", "label": "Alternate rings creep back (cycles per beat)", "min": -0.064, "max": 0.064, "step": 0.002, "default": 0},
+      {"id": "mirror", "kind": "fixed", "label": "Mirror into wedges (1 off; words stay whole, but half come out mirror-image)", "min": 1, "max": 4, "step": 1, "default": 1}
+    ]},
+    {"name": "Type", "params": [
+      {"id": "seam",   "label": "Hairline between the rings (pixels)", "min": 0,   "max": 2.5, "step": 0.05, "default": 1.2},
+      {"id": "weight", "label": "Weight of the outline and bloom",     "min": 0,   "max": 1.2, "step": 0.05, "default": 0.5},
+      {"id": "edge",   "label": "Outline round the letters",           "min": 0,   "max": 1,   "step": 0.01, "default": 0},
+      {"id": "hectic", "label": "How hard the hit goes wild",          "min": 0,   "max": 0.8, "step": 0.01, "default": 0.45}
+    ]},
+    {"name": "Effects (the hit brings these in)", "params": [
+      {"id": "chroma", "label": "Chromatic split, always on",          "min": 0,   "max": 0.5, "step": 0.01, "default": 0},
+      {"id": "trail",  "label": "Trails, always on",                   "min": 0,   "max": 0.6, "step": 0.01, "default": 0},
+      {"id": "glow",   "label": "Bloom, always on",                    "min": 0,   "max": 0.7, "step": 0.01, "default": 0}
+    ]},
+    {"name": "Scene", "params": [
+      {"id": "mono", "kind": "fixed", "label": "Two tone (1 black on white)", "min": 0, "max": 1, "step": 0.01, "default": 1},
+      {"id": "bg",     "label": "Background when not two tone",        "min": 0,   "max": 0.35, "step": 0.01, "default": 0.10},
+      {"id": "fog",    "label": "Fog into the vanishing point (low is a wider fog)", "min": 0.3, "max": 1, "step": 0.01, "default": 0.5},
+      {"id": "vign",   "label": "Vignette",                            "min": 0,   "max": 0.6, "step": 0.01, "default": 0.15}
+    ]},
+    {"name": "Reactivity", "params": [
+      {"id": "aband",  "label": "A Hit · band (0 off, 1 kick, 2 chords, 3 hats, 4 all, 5 energy)", "min": 0, "max": 5, "step": 1, "default": 1},
+      {"id": "aloop",  "label": "A Hit · loop (0 ½beat, 1 beat, 2 bar, 3 2bar, 4 4bar, 5 8bar, 6 16bar)", "min": 0, "max": 6, "step": 1, "default": 2},
+      {"id": "ashape", "label": "A Hit · shape (0 follow, 1 punch, 2 ramp, 3 swell, 4 gate, 5 step)", "min": 0, "max": 5, "step": 1, "default": 1},
+      {"id": "aamt",   "label": "A Hit · amount",                      "min": 0, "max": 1, "step": 0.01, "default": 0.45},
+      {"id": "bband",  "label": "B Move · band",                       "min": 0, "max": 5, "step": 1, "default": 2},
+      {"id": "bloop",  "label": "B Move · loop",                       "min": 0, "max": 6, "step": 1, "default": 5},
+      {"id": "bshape", "label": "B Move · shape",                      "min": 0, "max": 5, "step": 1, "default": 3},
+      {"id": "bamt",   "label": "B Move · amount",                     "min": 0, "max": 1, "step": 0.01, "default": 0.3},
+      {"id": "cband",  "label": "C Change · band",                     "min": 0, "max": 5, "step": 1, "default": 2},
+      {"id": "cloop",  "label": "C Change · loop",                     "min": 0, "max": 6, "step": 1, "default": 5},
+      {"id": "cshape", "label": "C Change · shape",                    "min": 0, "max": 5, "step": 1, "default": 3},
+      {"id": "camt",   "label": "C Change · amount",                   "min": 0, "max": 1, "step": 0.01, "default": 0.4}
+    ]},
+    {"name": "Colour", "params": [
+      {"id": "hue",    "label": "Hue (when not two tone)",             "min": 0, "max": 1, "step": 0.005, "default": 0.72},
+      {"id": "palette", "energy": 0, "label": "Hues in the palette",   "min": 2, "max": 8, "step": 1,     "default": 4},
+      {"id": "spread", "label": "Hue spread down the pipe",            "min": 0, "max": 1, "step": 0.01,  "default": 0.45},
+      {"id": "sat",    "label": "Saturation",                          "min": 0, "max": 1, "step": 0.01,  "default": 0.95},
+      {"id": "follow", "label": "Follow show hue",                     "min": 0, "max": 1, "step": 1,     "default": 0}
+    ]}
+  ]
+}

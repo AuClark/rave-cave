@@ -8,7 +8,7 @@
       {"id": "shine",  "label": "Shine",                 "min": 0,     "max": 1,    "step": 0.01,  "default": 0.5},
       {"id": "irid",   "label": "Iridescence",           "min": 0,     "max": 1,    "step": 0.01,  "default": 0.5},
       {"id": "wave",   "label": "Ripple",                "min": 0,     "max": 1,    "step": 0.01,  "default": 0.5},
-      {"id": "wspeed", "label": "Ripple speed (cycles/beat)", "min": -2, "max": 2, "step": 0.01,  "default": 0.5},
+      {"id": "wspeed", "kind": "rate", "label": "Ripple speed (cycles/beat)", "min": -2, "max": 2, "step": 0.01,  "default": 0.5},
       {"id": "beat",   "label": "Beat punch",            "min": 0,     "max": 1,    "step": 0.01,  "default": 0.5}
     ]},
     {"name": "Eye", "params": [

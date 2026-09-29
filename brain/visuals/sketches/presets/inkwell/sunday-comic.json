@@ -1,0 +1,21 @@
+{
+ "layout": 0,
+ "cast": 4,
+ "face": 0.9,
+ "ink": 1.5,
+ "boil": 0.05,
+ "film": 0.05,
+ "pat": 0.15,
+ "bg": 0.55,
+ "sat": 1.0,
+ "spread": 0.9,
+ "hue": 0.62,
+ "kal": 0.04,
+ "dance": 0.9,
+ "rosette": 0.6,
+ "patmode": 2,
+ "palette": 5,
+ "faceodds": 1.0,
+ "prop": 1.0,
+ "propodds": 0.9
+}

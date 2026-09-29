@@ -1,0 +1,22 @@
+{
+ "layout": 1,
+ "cast": 8,
+ "size": 0.7,
+ "swap": 8,
+ "spin": 0.006,
+ "zoom": 0.05,
+ "pat": 0.5,
+ "patscale": 1.6,
+ "patspin": 0.03,
+ "bg": 0.34,
+ "kal": 0.05,
+ "hue": 0.25,
+ "spread": 0.35,
+ "bounce": 0.5,
+ "rosette": 0.3,
+ "patmode": 1,
+ "palette": 3,
+ "prop": 0.6,
+ "propodds": 0.4,
+ "faceodds": 0.25
+}
