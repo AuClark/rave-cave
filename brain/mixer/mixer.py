@@ -93,6 +93,38 @@ def db(x):
 
 # ---------------------------------------------------------------- master-mix analysis
 
+class Stereo:
+    """Left/right per stereo pair (ch1, ch2, master), smoothed over about a second: how alike the two
+    sides are (corr: 1 = mono), how wide (width_db: side vs mid, near 0 = wide, under -30 = mono)
+    and which side is louder (bal_db: + = left). Whole band and highs (2 kHz+, where the stereo in a
+    club track lives: hats, percussion, effects). None while the pair is silent."""
+    K = 0.1                                        # per 50 ms block: about 1 s
+
+    def __init__(self):
+        self.acc = [None, None, None]
+
+    def update(self, pairs, active):
+        out = {}
+        for i, (name, p) in enumerate(zip(("ch1", "ch2", "master"), pairs)):
+            if not active[i]:
+                self.acc[i] = None
+                out[name] = None
+                continue
+            L, R = p[:, 0].astype(np.float64), p[:, 1].astype(np.float64)
+            hi = lambda v: np.fft.irfft(np.fft.rfft(v) * (np.fft.rfftfreq(len(v), 1 / RATE) >= 2000), n=len(v))
+            Lh, Rh = hi(L), hi(R)
+            e = np.array([L @ L, R @ R, L @ R, Lh @ Lh, Rh @ Rh, Lh @ Rh])      # energies and cross terms
+            self.acc[i] = e if self.acc[i] is None else self.acc[i] * (1 - self.K) + e * self.K
+            a = self.acc[i]
+            def stats(ll, rr, lr):
+                mid, side = (ll + rr + 2 * lr) / 4, (ll + rr - 2 * lr) / 4
+                return {"corr": round(float(lr / (np.sqrt(ll * rr) + 1e-18)), 3),
+                        "width_db": round(float(10 * np.log10((side + 1e-18) / (mid + 1e-18))), 1),
+                        "bal_db": round(float(10 * np.log10((ll + 1e-18) / (rr + 1e-18))), 1)}
+            out[name] = {**stats(a[0], a[1], a[2]), "highs": stats(a[3], a[4], a[5])}
+        return out
+
+
 class Analyser:
     """Bass / mid / high energy, kicks and "bass out" from the master mix, one 50 ms block at a time.
 
@@ -328,6 +360,7 @@ def run():
         blk = n * CH * 3
         peak_hold = np.full(3, SILENCE_DB)
         ana = Analyser(n)
+        st = Stereo()
         try:
             while True:
                 b = cap.stdout.read(blk)
@@ -358,7 +391,8 @@ def run():
                                         "peak_hold_db": round(float(peak_hold[i]), 1),
                                         "active": bool(rms_db[i] > SILENCE_DB)} for i, n in enumerate(names)},
                        "share": {"ch1": round(share[0], 3), "ch2": round(share[1], 3)},
-                       "midi": midi, "audio": audio, "rec": rec.state()}
+                       "midi": midi, "audio": audio, "rec": rec.state(),
+                       "stereo": st.update(pairs, [bool(x > SILENCE_DB) for x in rms_db])}
                 data = json.dumps(msg).encode()
                 for tgt in TARGETS:
                     sock.sendto(data, tgt)

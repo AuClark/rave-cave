@@ -21,6 +21,10 @@ change to the projector and to the control page.
   /api/select       POST {"sketch": NAME} to switch sketch
   /api/presets      GET preset names for the active sketch (?sketch=NAME for another one)
   /api/presets/NAME GET a preset; POST saves current values as NAME; POST .../NAME/load
+  /api/transition   GET the transition settings (and the types); POST {"type", "beats", "sync",
+                    "presets"} to change them. Switching sketch (and loading a preset, if
+                    "presets") hands over through a transition, synced to the beat.
+  /api/next         POST: mix to another sketch (random, with one of its presets) through a transition
 
 Live values and presets live in state/ next to this file (not in git). Presets can also ship
 with a sketch in sketches/presets/NAME/ (in git); one saved on the brain with the same name wins.
@@ -29,7 +33,9 @@ with a sketch in sketches/presets/NAME/ (in git); one saved on the brain with th
 """
 import hashlib
 import json
+import math
 import queue
+import random
 import re
 import sys
 import threading
@@ -65,6 +71,21 @@ TEXT_MAX = 240
 CTRL = re.compile(r"[\x00-\x08\x0b-\x1f\x7f]")
 last_state = b"null"
 wave = None             # the live track's waveform message (trackwave.py)
+
+# Transitions (render.js draws them). Each type is a shader mode; "auto" picks one that suits the
+# song section showbrain is in, and a length for it; "cut" is an instant change on the sync point.
+TRANS_TYPES = ["crossfade", "wipe", "iris", "dissolve", "luma", "tiles", "slices", "zoom", "swirl",
+               "stutter", "flash", "pixelate"]
+TRANS_BEATS = {"crossfade": 8, "dissolve": 8, "luma": 8, "wipe": 4, "iris": 4, "tiles": 4, "slices": 4,
+               "zoom": 4, "swirl": 4, "pixelate": 4, "stutter": 2, "flash": 1, "cut": 0}
+TRANS_AUTO = [   # (song sections, the types that suit them, beats)
+    (("DROP", "PREDROP"), ["flash", "stutter", "zoom"], None),
+    (("BUILD", "HOLD"), ["zoom", "swirl", "pixelate", "tiles"], 4),
+    (("BREAKDOWN", "INTRO", "OUTRO", "PAUSED", "IDLE"), ["dissolve", "luma", "crossfade", "iris"], 16),
+]
+TRANS_GROOVE = ["wipe", "iris", "tiles", "slices", "dissolve", "pixelate", "swirl"]
+transition = {"type": "auto", "beats": 0, "sync": "bar", "presets": True}   # beats 0 = the type's own
+last_type = None
 
 
 def code_version():
@@ -181,6 +202,93 @@ def select(name):
     if tx is not None:
         text = clean_text(tx)
     (STATE / "active").write_text(name)
+
+
+def save_transition():
+    (STATE / "transition.json").write_text(json.dumps(transition, indent=1))
+
+
+def scene_now():
+    try:
+        return (json.loads(last_state) or {}).get("scene") or "GROOVE"
+    except ValueError:
+        return "GROOVE"
+
+
+def clean_trans(d):
+    """Transition settings from a request, checked: a bad value is an error (nothing changes)."""
+    if not isinstance(d, dict):
+        raise ValueError("transition must be an object")
+    out = {}
+    if "type" in d:
+        if d["type"] not in ["auto", "cut", "none"] + TRANS_TYPES:
+            raise ValueError(f"unknown transition type {d['type']!r}")
+        out["type"] = d["type"]
+    if "beats" in d:
+        b = float(d["beats"])
+        if not math.isfinite(b):
+            raise ValueError("beats must be a number")
+        out["beats"] = max(0.0, min(64.0, b))
+    if "sync" in d:
+        if d["sync"] not in ("now", "beat", "bar", "phrase"):
+            raise ValueError(f"unknown sync {d['sync']!r}")
+        out["sync"] = d["sync"]
+    if "presets" in d:
+        out["presets"] = bool(d["presets"])
+    return out
+
+
+def make_trans(override=None):
+    """The transition message for a change now: its type (auto picks one for the song section,
+    not the same as last time), length in beats, sync point and a seed. None for an instant change."""
+    global last_type
+    t = dict(transition, **(override or {}))
+    kind, beats = t.get("type", "auto"), float(t.get("beats") or 0)
+    if kind == "none":
+        return None
+    if kind == "auto":
+        scene = scene_now()
+        pool, auto_beats = TRANS_GROOVE, None
+        for scenes, types, b in TRANS_AUTO:
+            if scene in scenes:
+                pool, auto_beats = types, b
+        choices = [x for x in pool if x != last_type] or pool
+        kind = random.choice(choices)
+        if not beats:
+            beats = auto_beats or TRANS_BEATS[kind]
+    if not beats:
+        beats = TRANS_BEATS.get(kind, 4)
+    last_type = kind
+    if kind == "cut":
+        return {"type": "cut", "mode": 0, "beats": 0, "sync": t.get("sync", "bar"), "seed": random.random()}
+    return {"type": kind, "mode": TRANS_TYPES.index(kind), "beats": beats, "sync": t.get("sync", "bar"),
+            "seed": random.random()}
+
+
+def switch(name, preset=None, override=None):
+    """Make NAME live (optionally with one of its presets) and tell every page, with a transition:
+    the sketch and values first (the pages keep the old automation for the outgoing side), then
+    the new sketch's automation and words."""
+    global values, auto, text
+    with lock:
+        select(name)
+        if preset:
+            f = preset_file(preset)
+            if f.is_file():
+                v, a, tx = split_saved(json.loads(f.read_text()))
+                values = clamp_values(sketch, v, defaults(sketch))
+                auto = clamp_auto(sketch, a, auto_defaults(sketch))
+                if tx is not None:
+                    text = clean_text(tx)
+                save_values()
+        sk, snap = sketch, dict(values)
+        asnap, frz, tsnap = {k: dict(v) for k, v in auto.items()}, auto_freeze, text
+        tr = make_trans(override)
+    broadcast({"t": "sketch", "sketch": sk, "trans": tr})
+    broadcast({"t": "params", "params": snap})
+    broadcast({"t": "auto", "auto": asnap, "freeze": frz})
+    broadcast({"t": "text", "text": tsnap})
+    return tr
 
 
 def save_values():
@@ -333,6 +441,9 @@ class H(SimpleHTTPRequestHandler):
                 if name and name not in sketch_names():
                     return self._json(404, {"error": "no such sketch"})
                 return self._json(200, {"presets": preset_names(name)})
+            if path == "/api/transition":
+                return self._json(200, {"settings": transition, "types": ["auto", "cut"] + TRANS_TYPES + ["none"],
+                                        "last": last_type})
             # Any sketch, for a projection surface that shows it: definition + values (?preset=NAME)
             m = re.match(r"^/api/sketches/([^/]+)$", path)
             if m:
@@ -384,22 +495,37 @@ class H(SimpleHTTPRequestHandler):
                 broadcast({"t": "text", "text": snap})
                 return self._json(200, {"ok": True})
             if path == "/api/select":
-                name = self._body().get("sketch", "")
+                d = self._body()
+                name = d.get("sketch", "")
                 if name not in sketch_names():
                     return self._json(404, {"error": "no such sketch"})
+                preset, override = d.get("preset"), clean_trans(d.get("transition") or {})
+                if preset and not SAFE_NAME.match(str(preset)):
+                    return self._json(400, {"error": "bad preset name"})
+                tr = switch(name, preset, override)
+                return self._json(200, {"ok": True, "trans": tr})
+            if path == "/api/next":
+                d = self._body()
+                override = clean_trans(d.get("transition") or {})
+                others = [n for n in sketch_names() if n != sketch["name"]] or sketch_names()
+                name = random.choice(others)
+                shipped = sorted(p.stem for p in (SKETCHES / "presets" / name).glob("*.json"))
+                tr = switch(name, random.choice(shipped) if shipped else None, override)
+                return self._json(200, {"ok": True, "sketch": name, "trans": tr})
+            if path == "/api/transition":
+                d = clean_trans(self._body())
                 with lock:
-                    select(name)
-                    sk, snap = sketch, dict(values)
-                    asnap = {k: dict(v) for k, v in auto.items()}
-                broadcast({"t": "sketch", "sketch": sk})
-                broadcast({"t": "params", "params": snap})
-                broadcast({"t": "auto", "auto": asnap, "freeze": auto_freeze})
-                return self._json(200, {"ok": True})
+                    transition.update(d)
+                    save_transition()
+                    snap = dict(transition)
+                broadcast({"t": "transition", "settings": snap})
+                return self._json(200, {"ok": True, "settings": snap})
             m = re.match(r"^/api/presets/([^/]+?)(/load)?$", path)
             if m:
                 name = urllib.parse.unquote(m.group(1))
                 if not SAFE_NAME.match(name):
                     return self._json(400, {"error": "bad name"})
+                tr = None
                 with lock:
                     if m.group(2):
                         f = preset_file(name)
@@ -416,12 +542,13 @@ class H(SimpleHTTPRequestHandler):
                         snap = dict(values)
                         asnap = {k: dict(v2) for k, v2 in auto.items()}
                         tsnap = text
+                        tr = make_trans() if transition.get("presets") else None
                     else:
                         (preset_dir() / f"{name}.json").write_text(
                             json.dumps({"_v": 2, "values": values, "auto": auto, "text": text}, indent=1))
                         snap = asnap = tsnap = None
                 if snap is not None:
-                    broadcast({"t": "params", "params": snap})
+                    broadcast({"t": "params", "params": snap, "trans": tr})
                     broadcast({"t": "auto", "auto": asnap, "freeze": auto_freeze})
                     broadcast({"t": "text", "text": tsnap})
                 return self._json(200, {"ok": True})
@@ -441,6 +568,7 @@ class H(SimpleHTTPRequestHandler):
                      "data: " + json.dumps({"t": "params", "params": values}) + "\n\n"
                      "data: " + json.dumps({"t": "auto", "auto": auto, "freeze": auto_freeze}) + "\n\n"
                      "data: " + json.dumps({"t": "text", "text": text}) + "\n\n"
+                     "data: " + json.dumps({"t": "transition", "settings": transition}) + "\n\n"
                      + ("data: " + json.dumps({"t": "wave", "wave": wave}) + "\n\n" if wave else "")).encode()
         try:
             self.wfile.write(first)
@@ -468,6 +596,10 @@ if __name__ == "__main__":
     except OSError:
         active = ""
     select(active if active in names else names[0])
+    try:
+        transition.update(json.loads((STATE / "transition.json").read_text()))
+    except (OSError, ValueError):
+        pass
     threading.Thread(target=state_pump, daemon=True).start()
     trackwave.Follower(DECKDASH, STATE, live_player, set_wave).start()
     log(f"visuals up on :{PORT} (sketch {sketch['name']}; {len(names)} available)")
