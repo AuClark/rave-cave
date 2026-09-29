@@ -15,6 +15,15 @@ import time
 import urllib.request
 
 secs = float(sys.argv[1]) if len(sys.argv) > 1 else 30
+try:
+    with urllib.request.urlopen("http://127.0.0.1:8080/api/sim", timeout=2) as r:
+        if json.load(r).get("on"):
+            print("the simulation is on (no real decks found), so there's no real mixer audio to check.\n"
+                  "Plug the DJM-450's USB into the brain and the decks into the network; the sim turns off\n"
+                  "by itself when the decks appear (or turn it off in the System view), then run this again.")
+            sys.exit(1)
+except OSError:
+    pass
 seen = {"ch1": [], "ch2": [], "master": []}
 end = time.time() + secs
 print(f"watching the mixer's left/right for {secs:.0f} s (play a stereo track, fader up)...", flush=True)
