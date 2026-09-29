@@ -23,6 +23,7 @@ The stage in 3D: a 4.8 × 3 m platform, a back wall, a lighting truss, and the D
   - Strobe, blinder and the drop's white hit are drawn by the page on the same beat clock, frame-exact, so they can't fall between updates.
   - **Match real lights** (saved with the layout): an LED display gain, a wash gain, a **Projectors** trim, and gamma (1.0 = as sent, WLED's realtime default; 2.8 if the fixture applies its own gamma). Set these by eye against the real rig.
 - **Projectors** each show the projector output (as mapped), the Visuals page (generative), or nothing. To make the *real* projector show the visuals, set its surface content to "generative" on the Projection page.
+  - A projector throws a 16:9 picture, **Throw** being its horizontal angle, so it lands where the real one would. It's also a camera: **LOOK THROUGH**, **SEND TO EDITOR** (the Projection editor's backdrop) and **MAP ONTO** (surfaces for the faces of a part of the set, e.g. the pyramid), under Selected. See [projector.md](fixtures/projector.md#mapping-from-the-stage-view).
 - **Simulated fixtures** follow the scene, beat, colour, strobe and blackout.
 - **Linking:** any fixture can be linked to a real fixture from the panel.
 

@@ -116,7 +116,7 @@ def clean_layout(d):
     surfaces = []
     for s in d.get("surfaces", [])[:32]:
         c = s.get("corners", [])
-        if len(c) != 4:
+        if len(c) not in (3, 4):          # a quad, or a triangle (apex, base right, base left)
             continue
         surfaces.append({
             "id": str(s.get("id") or f"s{len(surfaces) + 1}")[:24],
@@ -143,6 +143,15 @@ def clean_layout(d):
                           "points": [[coord(x), coord(y)] for x, y in pts[:64]], "projector": owner(m)})
     out["masks"] = masks
     return out
+
+
+def backdrop_file(path):
+    """layouts/backdrop-<projector>.jpg for ?p=<projector> (the first projector if none), or None."""
+    q = urllib.parse.parse_qs(urllib.parse.urlparse(path).query)
+    with lock:
+        ids = [x["id"] for x in layout["projectors"]]
+    pid = (q.get("p") or [ids[0]])[0]
+    return LAYOUTS / f"backdrop-{pid}.jpg" if PROJ_ID.match(pid) and pid in ids else None
 
 
 def load_layout():
@@ -252,6 +261,18 @@ class H(SimpleHTTPRequestHandler):
         if path == "/api/stage":
             f = LAYOUTS / "stage.json"
             return self._json(200, json.loads(f.read_text()) if f.is_file() else {"fixtures": None})
+        if path == "/api/backdrop":
+            f = backdrop_file(self.path)
+            if not f or not f.is_file():
+                return self._json(404, {"error": "no backdrop for this projector (Stage view: SEND TO EDITOR)"})
+            body = f.read_bytes()
+            self.send_response(200)
+            self.send_header("Content-Type", "image/jpeg")
+            self.send_header("Cache-Control", "no-store")
+            self.send_header("Content-Length", str(len(body)))
+            self.end_headers()
+            self.wfile.write(body)
+            return
         if path == "/edit":
             self.path = "/edit.html"
         if path == "/stage":
@@ -282,6 +303,20 @@ class H(SimpleHTTPRequestHandler):
                 with lock:
                     (LAYOUTS / "stage.json").write_text(body)
                 broadcast({"t": "stage", "stage": d})
+                return self._json(200, {"ok": True})
+            if path == "/api/backdrop":
+                # The Stage view's picture of the set through this projector's lens, for mapping in
+                # the editor (simulator only: the projector itself never shows it).
+                f = backdrop_file(self.path)
+                n = int(self.headers.get("Content-Length", 0))
+                if not f or not 0 < n <= 4_000_000:
+                    return self._json(400, {"error": "a JPEG up to 4 MB, for ?p=<projector>"})
+                data = self.rfile.read(n)
+                if data[:3] != b"\xff\xd8\xff":
+                    return self._json(400, {"error": "not a JPEG"})
+                LAYOUTS.mkdir(exist_ok=True)
+                f.write_bytes(data)
+                broadcast({"t": "backdrop", "p": f.stem.removeprefix("backdrop-"), "at": int(time.time())})
                 return self._json(200, {"ok": True})
             if path == "/api/screen":
                 d = self._body()

@@ -134,6 +134,9 @@
       <div class="row" id="rowAngle"><span id="lAngle">Beam</span><input id="pAngle" type="range" min="2" max="70" step="1"></div>
       <div class="row" id="rowCount"><span id="lCount">Beams</span><input id="pCount" type="number" min="1" max="240" step="1"></div>
       <div class="row" id="rowSize"><span>Size</span><div class="xyz" style="grid-template-columns:1fr 1fr"><input id="sw" type="number" step="0.1" min="0.2" max="12"><input id="sh" type="number" step="0.1" min="0.2" max="8"></div></div>
+      <div class="row" id="rowLens"><span>Lens</span><div class="btns" style="margin:0;flex-wrap:wrap"><button id="bLook" title="See the set through this projector's lens">LOOK THROUGH</button><button id="bShot" title="Send the set as this projector sees it to the Projection editor, as a backdrop to map surfaces onto">SEND TO EDITOR</button></div></div>
+      <div class="row" id="rowMap"><span>Map onto</span><div style="display:flex;gap:6px;min-width:0"><select id="pMapPart" style="flex:1;min-width:0" title="A part of the set this projector sees"></select><button id="bMap" title="Add a surface for each face of it that this projector sees (triangles for a pyramid), in the projection layout">MAP</button></div></div>
+      <div class="note" id="mapNote" style="margin:-2px 0 8px"></div>
       <div class="row" id="rowBright"><span>Brightness</span><div style="display:flex;gap:8px;align-items:center"><input id="pBright" type="range" min="0" max="1.5" step="0.05" style="flex:1"><span id="vBright" style="width:38px;text-align:right;color:var(--dim);font-size:12px"></span></div></div>
       <div class="row" id="rowCover"><span>Cover</span><label style="display:flex;gap:8px;align-items:center"><input id="pCover" type="checkbox"> White fabric over the frame</label></div>
       <div class="row" id="rowColour"><span>Colour</span><input id="pColour" type="color" style="padding:0;height:30px"></div>
@@ -240,7 +243,9 @@ const ROOM_CAMS = {
 };
 let CAMS = ROOM_CAMS;                           // a venue brings its own
 function setCam(k) {
-  const c = CAMS[k]; camera.position.set(...c.pos); orbit.target.set(...c.look); orbit.update();
+  const c = CAMS[k]; camera.position.set(...c.pos); orbit.target.set(...c.look);
+  if (camera.fov !== 50) { camera.fov = 50; camera.updateProjectionMatrix(); }       // after LOOK THROUGH
+  orbit.update();
   document.querySelectorAll("[data-cam]").forEach(b => b.classList.toggle("on", b.dataset.cam === k));
 }
 document.querySelectorAll("[data-cam]").forEach(b => b.onclick = () => setCam(b.dataset.cam));
@@ -525,6 +530,139 @@ function bodyMesh(w, h, d, colour = 0x1a1a1a) {
   const m = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), mat(colour, 0.5, 0.4)); m.castShadow = true; return m;
 }
 
+// ------------------------------------------------------------------ projectors as cameras
+// A projector's lens: 16:9, Throw = the horizontal angle. The same frustum throws the picture in
+// this view and is the "camera" for looking through it, the editor's backdrop and mapping.
+// three.js lights a spotlight's whole cone and only applies its picture inside the shadow frustum,
+// so the frustum is a square that contains the cone, and the 16:9 picture sits in the middle of a
+// square texture (band: its share of the width and height), black around it: light only lands on
+// the real projector's rectangle.
+function lensOf(fx) {
+  const tH = Math.tan(THREE.MathUtils.degToRad(Math.max(5, Math.min(120, fx.angle || TYPES.projector.angle))) / 2), tV = tH * 9 / 16;
+  const S = Math.hypot(tH, tV);                                            // the cone's radius (in tan units) = the square's half-size
+  return { vFov: THREE.MathUtils.radToDeg(2 * Math.atan(tV)), cone: Math.atan(S), band: [tH / S, tV / S] };
+}
+function projCamera(fx, p) {
+  const cam = new THREE.PerspectiveCamera(lensOf(fx).vFov, 16 / 9, 0.05, 80);
+  p.group.updateMatrixWorld(true); p.spot.getWorldPosition(cam.position);
+  cam.lookAt(new THREE.Vector3(...fx.aim)); cam.updateMatrixWorld(true); cam.updateProjectionMatrix();
+  return cam;
+}
+// Which projection projector a Stage projector shows: its output is drawn from the first one's layout.
+const projId = () => (mapRenderer && mapRenderer.layout && mapRenderer.projectorId()) || "main";
+
+// LOOK THROUGH: this view's camera to the projector's lens (orbiting moves it off again).
+function lookThrough(fx, p) {
+  const c = projCamera(fx, p);
+  camera.position.copy(c.position); camera.fov = c.fov; camera.updateProjectionMatrix();
+  orbit.target.set(...fx.aim); orbit.update();
+  document.querySelectorAll("[data-cam]").forEach(b => b.classList.remove("on"));
+}
+
+// Render the set through a projector's lens with work lights on (no fog, beams or projection), as a
+// JPEG: the Projection editor's backdrop, so surfaces can be dragged onto the real shapes.
+function lensShot(fx, p, w = 1280, h = 720) {
+  const cam = projCamera(fx, p), hidden = [];
+  scene.traverse(o => { if (o.visible && (o.isInstancedMesh || (o.material && o.material.isShaderMaterial) || o === p.handle)) { hidden.push(o); o.visible = false; } });
+  const spots = [...built.values()].filter(q => q.spot).map(q => [q.spot, q.spot.intensity]);
+  spots.forEach(([l]) => (l.intensity = 0));
+  const fog = scene.fog, hi = hemi.intensity, gz = gizmo.visible, size = renderer.getSize(new THREE.Vector2());
+  // Work lights: a soft fill, and a lamp at the lens, so what the projector can reach is lit and its edges show.
+  const fill = new THREE.AmbientLight(0xffffff, 0.8), lamp = new THREE.PointLight(0xffffff, 40, 0, 1.2), side = new THREE.DirectionalLight(0xffffff, 1.2);
+  lamp.position.copy(cam.position); side.position.set(cam.position.x + 6, cam.position.y + 3, cam.position.z + 2);   // from one side: faces read apart
+  scene.add(fill, lamp, side);
+  scene.fog = null; hemi.intensity = hi + 1.2; gizmo.visible = false;
+  renderer.setSize(w, h, false); renderer.render(scene, cam);
+  scene.remove(fill, lamp, side); lamp.dispose(); side.dispose();
+  const url = renderer.domElement.toDataURL("image/jpeg", 0.85);
+  renderer.setSize(size.x, size.y, false);
+  scene.fog = fog; hemi.intensity = hi; gizmo.visible = gz;
+  spots.forEach(([l, v]) => (l.intensity = v)); hidden.forEach(o => (o.visible = true));
+  resize();
+  return url;
+}
+async function sendLensShot(fx, p) {
+  const blob = await (await fetch(lensShot(fx, p))).blob();
+  const r = await fetch(`${PROJ}/api/backdrop?p=${encodeURIComponent(projId())}`, { method: "POST", body: blob, headers: { "Content-Type": "image/jpeg" } });
+  $("mapNote").textContent = r.ok ? `Sent: the Projection editor's backdrop for "${projId()}" (turn on BACKDROP there).`
+    : r.status === 401 ? "Unlock (admin PIN) to send it." : `Couldn't send it (${r.status}).`;
+}
+
+// MAP ONTO: the faces of a part of the set that this projector sees, as projection surfaces (a
+// triangle per triangular face, a quad per four-cornered one), in the output's coordinates.
+function facesSeen(fx, p, part) {
+  const m = venueMeshes.get(part); if (!m || !m.geometry) return [];
+  const cam = projCamera(fx, p), pos = m.geometry.attributes.position, idx = m.geometry.index;
+  m.updateMatrixWorld(true);
+  const n = idx ? idx.count : pos.count, at = k => new THREE.Vector3().fromBufferAttribute(pos, idx ? idx.getX(k) : k).applyMatrix4(m.matrixWorld);
+  // Which side of a face is outside: away from the part's centre (right for a convex part like a
+  // pyramid or a box, whichever way the model's faces happen to be wound).
+  const centre = new THREE.Vector3();
+  for (let k = 0; k < n; k++) centre.add(at(k));
+  centre.divideScalar(Math.max(1, n));
+  const groups = new Map();
+  for (let k = 0; k + 2 < n; k += 3) {
+    const a = at(k), b = at(k + 1), c = at(k + 2);
+    const nrm = new THREE.Vector3().subVectors(b, a).cross(new THREE.Vector3().subVectors(c, a));
+    if (nrm.lengthSq() < 1e-10) continue;
+    nrm.normalize();
+    const mid = a.clone().add(b).add(c).divideScalar(3);
+    if (nrm.dot(mid.clone().sub(centre)) < 0) nrm.negate();
+    if (nrm.dot(cam.position.clone().sub(mid)) <= 1e-6) continue;           // faces away from the lens
+    const key = `${nrm.x.toFixed(2)},${nrm.y.toFixed(2)},${nrm.z.toFixed(2)},${nrm.dot(a).toFixed(2)}`;   // one flat face
+    if (!groups.has(key)) groups.set(key, []);
+    groups.get(key).push(a, b, c);
+  }
+  const faces = [];
+  for (const pts of groups.values()) {
+    const uniq = [];
+    for (const v of pts) if (!uniq.some(u => u.distanceToSquared(v) < 1e-6)) uniq.push(v);
+    const px = uniq.map(v => { const q = v.clone().project(cam); return { x: (q.x + 1) / 2, y: (1 - q.y) / 2, z: q.z }; });
+    if (px.some(q => q.z > 1 || q.x < -0.02 || q.x > 1.02 || q.y < -0.02 || q.y > 1.02)) continue;   // not all in the picture
+    const area = Math.abs(px.reduce((s, q, i) => { const r = px[(i + 1) % px.length]; return s + q.x * r.y - r.x * q.y; }, 0)) / 2;
+    let corners;
+    if (px.length === 3) {                                                   // apex (topmost), base right, base left
+      const top = px.reduce((a, b) => (b.y < a.y ? b : a)), rest = px.filter(q => q !== top).sort((a, b) => b.x - a.x);
+      corners = [top, ...rest];
+    } else if (px.length === 4) {                                            // clockwise from the top left
+      const cx = px.reduce((s, q) => s + q.x, 0) / 4, cy = px.reduce((s, q) => s + q.y, 0) / 4;
+      corners = px.slice().sort((a, b) => Math.atan2(a.y - cy, a.x - cx) - Math.atan2(b.y - cy, b.x - cx));
+      const tl = corners.reduce((i, q, j) => (q.x + q.y < corners[i].x + corners[i].y ? j : i), 0);
+      corners = corners.slice(tl).concat(corners.slice(0, tl));
+    } else continue;                                                         // curved or many-sided: map it by hand
+    if (area < 1e-4) continue;
+    faces.push({ corners: corners.map(q => [+q.x.toFixed(4), +q.y.toFixed(4)]), cx: corners.reduce((s, q) => s + q.x, 0) / corners.length, area });
+  }
+  faces.sort((a, b) => a.cx - b.cx);
+  const names = faces.length === 2 ? ["left face", "right face"] : faces.length === 3 ? ["left face", "middle face", "right face"] : faces.map((_, i) => `face ${i + 1}`);
+  return faces.map((f, i) => ({ ...f, name: names[i] }));
+}
+function mapCandidates(fx, p) {
+  return [...venueMeshes.keys()].map(k => ({ k, a: facesSeen(fx, p, k).reduce((s, f) => s + f.area, 0) })).filter(c => c.a > 0.001).sort((a, b) => b.a - a.a).slice(0, 15).map(c => c.k);
+}
+async function mapOnto(fx, p, part) {
+  const faces = facesSeen(fx, p, part);
+  if (!faces.length) return ($("mapNote").textContent = `${fx.name} doesn't see a flat face of ${part} completely.`);
+  const L = await (await fetch(`${PROJ}/api/layout`)).json(), pid = projId(), prefix = part + " · ";
+  const old = L.surfaces.filter(s => (s.projector || "main") === pid && s.name.startsWith(prefix));
+  if (!confirm(`Map ${faces.length} surface${faces.length > 1 ? "s" : ""} onto ${part} (${faces.map(f => f.name).join(", ")}) for projector "${pid}"?` +
+               (old.length ? ` This replaces the ${old.length} mapped there before (keeping their content).` : "")) ) return;
+  let sketches = [];
+  try { const d = await (await fetch(`${visualsBase()}/api/sketches`)).json(); sketches = (d.sketches || []).map(x => typeof x === "string" ? x : x.name).filter(x => x !== d.active); } catch (e) {}
+  const used = new Set(L.surfaces.map(s => s.id)), newId = () => { let i = 1; while (used.has("s" + i)) i++; used.add("s" + i); return "s" + i; };
+  const made = faces.map((f, i) => {
+    const was = old.find(s => s.name === prefix + f.name);
+    return was ? { ...was, corners: f.corners }
+      : { id: newId(), name: prefix + f.name, content: "gen", sketch: i === 0 ? null : sketches[(i - 1) % Math.max(1, sketches.length)] || null, preset: null,
+          opacity: 1, hue_shift: 0, radius: 0, border: 0, projector: pid, corners: f.corners };   // a different sketch on each face
+  });
+  L.surfaces = L.surfaces.filter(s => !old.includes(s)).concat(made);
+  delete L.screen; delete L.screens;
+  const r = await fetch(`${PROJ}/api/layout`, { method: "POST", body: JSON.stringify(L) });
+  $("mapNote").textContent = r.ok ? `Mapped ${made.length} onto ${part}: ${made.map(s => s.name.slice(prefix.length) + (s.content === "gen" ? ` (${s.sketch || "live sketch"})` : "")).join(", ")}. Fine-tune in Projection, with BACKDROP on.`
+    : r.status === 401 ? "Unlock (admin PIN) to map." : `Couldn't save the layout (${r.status}).`;
+}
+
 // The floor tubes' fold-out base: a collar the tube sits in, on four short legs that splay out.
 const TUBE_BASE = { lift: 0.1, reach: 0.16 };
 function tubeBase() {
@@ -738,10 +876,15 @@ function build(fx) {
     const lens = new THREE.Mesh(new THREE.CylinderGeometry(0.04, 0.04, 0.03, 20), new THREE.MeshBasicMaterial({ color: 0x9fb4ff }));
     lens.rotation.x = Math.PI / 2; lens.position.z = 0.16; g.add(lens);
     if (!venue) { const stand = bodyMesh(0.04, Math.max(0.01, fx.pos[1] - STAGE.h), 0.04, 0x333333); stand.position.y = -(fx.pos[1] - STAGE.h) / 2; g.add(stand); }   // a venue models its own mounts
-    // The image is projected through the spotlight's square shadow frustum; open the round cone wide
-    // enough to contain that square, so the picture lands as a rectangle with sharp edges.
-    const spot = new THREE.SpotLight(0xffffff, 0, 14, Math.min(1.4, THREE.MathUtils.degToRad(fx.angle || T.angle) / 2 * 1.45), 0, 1.2);
-    spot.map = fx.source === "visuals" ? visTex : projTex; spot.castShadow = true; spot.shadow.mapSize.set(512, 512); spot.shadow.bias = -0.0005;
+    // The picture is thrown as the real projector's would be: 16:9, Throw = its horizontal angle
+    // (lensOf: letterboxed in a square texture, redrawn each frame from the projection's canvas).
+    // The same lens is the projector's "camera" (projCamera: LOOK THROUGH, SEND TO EDITOR, MAP ONTO).
+    const L = lensOf(fx), lensCv = document.createElement("canvas");
+    lensCv.width = lensCv.height = 512;
+    const lensTex = new THREE.CanvasTexture(lensCv); lensTex.colorSpace = THREE.SRGBColorSpace;
+    const spot = new THREE.SpotLight(0xffffff, 0, 14, Math.min(1.45, L.cone), 0, 1.2);
+    spot.map = lensTex; spot.castShadow = true; spot.shadow.mapSize.set(512, 512); spot.shadow.bias = -0.0005;
+    parts.lensCv = lensCv; parts.lensTex = lensTex; parts.band = L.band;
     spot.target = aim; spot.position.set(0, 0, 0.17); g.add(spot);
     const beam = beamMesh(fx.angle || T.angle, 5); beam.position.z = 0.17; g.add(beam);
     parts.spot = spot; parts.beam = beam; parts.hit = [b]; parts.lens = lens;
@@ -1008,6 +1151,14 @@ function update(now) {
   const uses = new Set(rig.filter(fx => fx.type === "projector").map(fx => fx.source));
   if (mapRenderer && uses.has("projector")) { try { mapRenderer.draw(now); projTex.needsUpdate = true; } catch (e) { /* layout not in yet */ } }
   if (visRenderer && uses.has("visuals")) { try { visRenderer.draw(now); visTex.needsUpdate = true; } catch (e) { /* sketch not in yet */ } }
+  // Each projector's lens: its picture, letterboxed in the middle of its square texture (lensOf).
+  for (const fx of rig) {
+    const p = fx.type === "projector" && built.get(fx.id); if (!p || !p.lensCv) continue;
+    const c = p.lensCv.getContext("2d"), N = p.lensCv.width, [bw, bh] = p.band;
+    c.fillStyle = "#000"; c.fillRect(0, 0, N, N);
+    if (fx.source !== "off") c.drawImage(fx.source === "visuals" ? visCanvas : projCanvas, (1 - bw) / 2 * N, (1 - bh) / 2 * N, bw * N, bh * N);
+    p.lensTex.needsUpdate = true;
+  }
   const s = show;
   $("#hud").innerHTML = `<span class="scene">${s ? s.scene || "—" : "—"}</span>` +
     (s && s.live ? `deck <b>${s.live}</b> · <b>${(s.bpm || 0).toFixed(1)}</b> BPM · bar ${s.bar || 0}` + (s.title ? ` · ${esc(s.title)}` : "") : "no deck playing") +
@@ -1104,10 +1255,26 @@ function fillProps(fx) {
   $("#laserNote").style.display = fx.type === "laser" ? "" : "none";
   $("#rowColour").style.display = ["laser", "wash", "moving"].includes(fx.type) && fx.source === "sim" ? "" : "none";
   $("#rowBright").style.display = fx.type === "projector" ? "" : "none";
+  const mapping = fx.type === "projector" && fx.source === "projector";
+  $("#rowLens").style.display = fx.type === "projector" ? "" : "none";
+  $("#bShot").disabled = !mapping;
+  $("#rowMap").style.display = mapping && venue ? "" : "none";
+  $("#mapNote").style.display = fx.type === "projector" ? "" : "none";
+  if (fx.type === "projector" && !mapping) $("#mapNote").textContent = "SEND TO EDITOR and MAP are for projectors driven by the projector output (Driven by).";
+  else if (fx.type === "projector" && $("#mapNote").dataset.fx !== fx.id) $("#mapNote").textContent = `Its picture is projector "${projId()}" in Projection.`;
+  $("#mapNote").dataset.fx = fx.id;
+  // The parts it sees: worked out a moment after the last change (not on every drag step).
+  clearTimeout(mapListTimer);
+  if (mapping && venue) mapListTimer = setTimeout(() => {
+    const p = built.get(fx.id); if (!p || document.activeElement === $("#pMapPart") || cur() !== fx) return;
+    const have = $("#pMapPart").value, opts = mapCandidates(fx, p), pick = opts.includes(have) ? have : opts.includes("Pyramid") ? "Pyramid" : opts[0];
+    $("#pMapPart").innerHTML = opts.length ? opts.map(k => `<option${k === pick ? " selected" : ""}>${esc(k)}</option>`).join("") : "<option value=''>(nothing flat in full view)</option>";
+  }, 250);
   if (fx.type === "projector") { $("#pBright").value = fx.brightness ?? 1; $("#vBright").textContent = Math.round((fx.brightness ?? 1) * 100) + "%"; }
   $("#pColour").value = fx.colour || "#ff5a1f";
 }
 const cur = () => rig.find(f => f.id === selected);
+let mapListTimer = null;
 function edited(fx, needsRebuild) { if (needsRebuild) rebuild(fx); else place(fx, built.get(fx.id)); renderList(); saveRig(); }
 $("#pName").oninput = e => { const fx = cur(); if (fx) { fx.name = e.target.value; renderList(); saveRig(); } };
 $("#pSource").onchange = e => { const fx = cur(); if (fx) { fx.source = e.target.value; fillProps(fx); edited(fx, fx.type === "projector"); } };
@@ -1119,6 +1286,9 @@ $("#pAngle").onchange = e => { const fx = cur(); if (fx) { fx.angle = +e.target.
 $("#pCount").onchange = e => { const fx = cur(); if (fx) { fx.count = Math.max(1, Math.min(240, Math.round(+e.target.value))); edited(fx, true); } };
 $("#pCover").onchange = e => { const fx = cur(); if (fx) { fx.cover = e.target.checked; edited(fx, true); } };
 $("#pColour").oninput = e => { const fx = cur(); if (fx) { fx.colour = e.target.value; edited(fx, fx.type === "laser"); } };
+$("#bLook").onclick = () => { const fx = cur(), p = fx && built.get(fx.id); if (p) lookThrough(fx, p); };
+$("#bShot").onclick = () => { const fx = cur(), p = fx && built.get(fx.id); if (p) sendLensShot(fx, p); };
+$("#bMap").onclick = () => { const fx = cur(), p = fx && built.get(fx.id), part = $("#pMapPart").value; if (p && part) mapOnto(fx, p, part); };
 $("#gMove").onclick = () => { gizmoMode = "move"; $("#gMove").classList.add("on"); $("#gAim").classList.remove("on"); attachGizmo(); };
 $("#gAim").onclick = () => { gizmoMode = "aim"; $("#gAim").classList.add("on"); $("#gMove").classList.remove("on"); attachGizmo(); };
 $("#bDup").onclick = () => {
