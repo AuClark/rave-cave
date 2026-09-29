@@ -22,6 +22,11 @@ change to the projector and to the control page.
   /api/shuffle      GET Shuffle's state; POST {"on", "theme", "every", "skip"} to change it (see below)
   /api/presets      GET preset names for the active sketch (?sketch=NAME for another one)
   /api/presets/NAME GET a preset; POST saves current values as NAME; POST .../NAME/load
+  /api/transition   GET the transition settings (and the types); POST {"type", "beats", "sync"
+                    (now, beat, bar, phrase, or drop: land on the next predicted drop),
+                    "presets"} to change them. Switching sketch (and loading a preset, if
+                    "presets") hands over through a transition, synced to the beat.
+  /api/next         POST: mix to Shuffle's next pick (theme, next up, ticked in) through a transition
 
 Themes (sketches/themes.json) group the sketches for the Visuals page. Shuffle picks a sketch from
 one theme, with one of its presets, every so many bars on the downbeat. It runs here, not in a page,
@@ -73,6 +78,21 @@ CTRL = re.compile(r"[\x00-\x08\x0b-\x1f\x7f]")
 last_state = b"null"
 last_state_at = 0.0     # when last_state was fetched, to extrapolate the beat from
 wave = None             # the live track's waveform message (trackwave.py)
+
+# Transitions (render.js draws them). Each type is a shader mode; "auto" picks one that suits the
+# song section showbrain is in, and a length for it; "cut" is an instant change on the sync point.
+TRANS_TYPES = ["crossfade", "wipe", "iris", "dissolve", "luma", "tiles", "slices", "zoom", "swirl",
+               "stutter", "flash", "pixelate"]
+TRANS_BEATS = {"crossfade": 8, "dissolve": 8, "luma": 8, "wipe": 4, "iris": 4, "tiles": 4, "slices": 4,
+               "zoom": 4, "swirl": 4, "pixelate": 4, "stutter": 2, "flash": 1, "cut": 0}
+TRANS_AUTO = [   # (song sections, the types that suit them, beats)
+    (("DROP", "PREDROP"), ["flash", "stutter", "zoom"], None),
+    (("BUILD", "HOLD"), ["zoom", "swirl", "pixelate", "tiles"], 4),
+    (("BREAKDOWN", "INTRO", "OUTRO", "PAUSED", "IDLE"), ["dissolve", "luma", "crossfade", "iris"], 16),
+]
+TRANS_GROOVE = ["wipe", "iris", "tiles", "slices", "dissolve", "pixelate", "swirl"]
+transition = {"type": "auto", "beats": 0, "sync": "bar", "presets": True}   # beats 0 = the type's own
+last_type = None
 
 
 def code_version():
@@ -215,13 +235,108 @@ def load_preset(name):
     return True
 
 
-def look_messages():
-    """Everything a page needs after the sketch or preset changes. Caller holds the lock."""
-    return [{"t": "sketch", "sketch": sketch}, {"t": "params", "params": dict(values)},
-            {"t": "auto", "auto": {k: dict(v) for k, v in auto.items()}, "freeze": auto_freeze},
-            # select() restores the words saved with a sketch, so the pages need them too, or
-            # the projector keeps drawing the old ones until it next reconnects.
-            {"t": "text", "text": text}]
+def save_transition():
+    (STATE / "transition.json").write_text(json.dumps(transition, indent=1))
+
+
+def scene_now():
+    try:
+        return (json.loads(last_state) or {}).get("scene") or "GROOVE"
+    except ValueError:
+        return "GROOVE"
+
+
+def clean_trans(d):
+    """Transition settings from a request, checked: a bad value is an error (nothing changes)."""
+    if not isinstance(d, dict):
+        raise ValueError("transition must be an object")
+    out = {}
+    if "type" in d:
+        if d["type"] not in ["auto", "cut", "none"] + TRANS_TYPES:
+            raise ValueError(f"unknown transition type {d['type']!r}")
+        out["type"] = d["type"]
+    if "beats" in d:
+        b = float(d["beats"])
+        if not math.isfinite(b):
+            raise ValueError("beats must be a number")
+        out["beats"] = max(0.0, min(64.0, b))
+    if "sync" in d:
+        if d["sync"] not in ("now", "beat", "bar", "phrase", "drop"):
+            raise ValueError(f"unknown sync {d['sync']!r}")
+        out["sync"] = d["sync"]
+    if "presets" in d:
+        out["presets"] = bool(d["presets"])
+    return out
+
+
+def beats_to_drop_now():
+    """Beats to the next drop showbrain predicts from the track's analysis, or None."""
+    try:
+        v = (json.loads(last_state) or {}).get("beats_to_drop")
+        return float(v) if v is not None else None
+    except (ValueError, TypeError):
+        return None
+
+
+def make_trans(override=None):
+    """The transition message for a change now: its type (auto picks one for the song section,
+    not the same as last time), length in beats, sync point and a seed. None for an instant change."""
+    global last_type
+    t = dict(transition, **(override or {}))
+    kind, beats = t.get("type", "auto"), float(t.get("beats") or 0)
+    if kind == "none":
+        return None
+    if kind == "auto":
+        scene = scene_now()
+        pool, auto_beats = TRANS_GROOVE, None
+        for scenes, types, b in TRANS_AUTO:
+            if scene in scenes:
+                pool, auto_beats = types, b
+        choices = [x for x in pool if x != last_type] or pool
+        kind = random.choice(choices)
+        if not beats:
+            beats = auto_beats or TRANS_BEATS[kind]
+        # Heading into a drop showbrain can see coming: land the change on it.
+        btd = beats_to_drop_now()
+        if scene in ("BUILD", "HOLD", "PREDROP") and btd is not None and 0 < btd <= 64:
+            t["sync"] = "drop"
+    if not beats:
+        beats = TRANS_BEATS.get(kind, 4)
+    last_type = kind
+    if kind == "cut":
+        return {"type": "cut", "mode": 0, "beats": 0, "sync": t.get("sync", "bar"), "seed": random.random()}
+    return {"type": kind, "mode": TRANS_TYPES.index(kind), "beats": beats, "sync": t.get("sync", "bar"),
+            "seed": random.random()}
+
+
+def switch(name, preset=None, override=None, bars=None):
+    """Make NAME live (optionally with one of its presets) and tell every page, with a transition:
+    the sketch and values first (the pages keep the old automation for the outgoing side), then
+    the new sketch's automation and words.
+
+    BARS is set when Shuffle makes the change: it has already picked the downbeat, so the
+    transition starts on the next bar whatever the settings say (the renderer lines "bar" up on
+    every page, however late the message), is never longer than Shuffle's period, and an instant
+    change becomes a cut on that 1. A change by hand gives Shuffle's countdown a full period."""
+    with lock:
+        select(name)
+        if preset:
+            load_preset(preset)
+        if bars is None:
+            shuffle_touch()
+        sk, snap = sketch, dict(values)
+        asnap, frz, tsnap = {k: dict(v) for k, v in auto.items()}, auto_freeze, text
+        tr = make_trans(override)
+        if bars is not None:
+            tr = dict(tr or {"type": "cut", "mode": 0, "beats": 0, "seed": random.random()}, sync="bar")
+            tr["beats"] = min(tr["beats"], bars * 4)
+        smsg = shuffle_message()
+    broadcast({"t": "sketch", "sketch": sk, "trans": tr})
+    broadcast({"t": "params", "params": snap})
+    broadcast({"t": "auto", "auto": asnap, "freeze": frz})
+    broadcast({"t": "text", "text": tsnap})
+    broadcast(smsg)
+    return tr
 
 
 def save_values():
@@ -329,7 +444,9 @@ def values_for(name, preset=None):
 
 THEMES = SKETCHES / "themes.json"
 SHUFFLE_EVERY = (1, 2, 4, 8, 16, 32)          # bars
-SHUFFLE_LEAD = 0.12                           # s: fire this early, so the change lands on the 1
+# Shuffle sends its change this early, inside the last beat of the bar. The transition is synced to
+# "bar", so every page starts it exactly on the coming downbeat, however late the message arrives.
+SHUFFLE_LEAD = 0.35                           # s
 # queue: the look to play at the next change, {"sketch", "preset" or None}, then random picks carry on.
 # out: per theme, what Shuffle leaves out: {theme: {"sketches": [...], "presets": {sketch: [...]}}}.
 # Both only steer Shuffle; anything can still be picked by hand.
@@ -556,17 +673,13 @@ def shuffle_loop():
             if skip_at is not None and bar < skip_at - 1:
                 skip_at = bar + 1                              # the count went backwards meanwhile
             fire = (shuffle["on"] and bar >= shuf_next) or (skip_at is not None and bar >= skip_at)
+            pick = None
             if fire:
                 try:
-                    name, preset = shuffle_pick()
-                    select(name)
-                    if preset:
-                        load_preset(preset)
-                    log(f"shuffle: {name}" + (f" / {preset}" if preset else ""))
-                except (OSError, ValueError, KeyError) as e:
-                    log(f"shuffle: could not change: {e}")
+                    pick = shuffle_pick()
+                except (OSError, ValueError, KeyError, IndexError) as e:
+                    log(f"shuffle: could not pick: {e}")
                 shuf_next, skip_at, changed = bar + every, None, True
-                msgs = look_messages()
             # The countdown goes out once a bar while Shuffle is on, and on any change.
             if changed or (shuffle["on"] and bar != shuf_bar):
                 shuf_bar = bar
@@ -574,6 +687,12 @@ def shuffle_loop():
             shuf_bar = bar
         for msg in msgs:
             broadcast(msg)
+        if pick:
+            try:
+                switch(*pick, bars=every)
+                log(f"shuffle: {pick[0]}" + (f" / {pick[1]}" if pick[1] else ""))
+            except (OSError, ValueError, KeyError) as e:
+                log(f"shuffle: could not change: {e}")
 
 
 class H(SimpleHTTPRequestHandler):
@@ -636,6 +755,9 @@ class H(SimpleHTTPRequestHandler):
                 if name and name not in sketch_names():
                     return self._json(404, {"error": "no such sketch"})
                 return self._json(200, {"presets": preset_names(name)})
+            if path == "/api/transition":
+                return self._json(200, {"settings": transition, "types": ["auto", "cut"] + TRANS_TYPES + ["none"],
+                                        "last": last_type})
             # Any sketch, for a projection surface that shows it: definition + values (?preset=NAME)
             m = re.match(r"^/api/sketches/([^/]+)$", path)
             if m:
@@ -687,16 +809,31 @@ class H(SimpleHTTPRequestHandler):
                 broadcast({"t": "text", "text": snap})
                 return self._json(200, {"ok": True})
             if path == "/api/select":
-                name = self._body().get("sketch", "")
+                d = self._body()
+                name = d.get("sketch", "")
                 if name not in sketch_names():
                     return self._json(404, {"error": "no such sketch"})
+                preset, override = d.get("preset"), clean_trans(d.get("transition") or {})
+                if preset and not SAFE_NAME.match(str(preset)):
+                    return self._json(400, {"error": "bad preset name"})
+                tr = switch(name, preset, override)
+                return self._json(200, {"ok": True, "trans": tr})
+            if path == "/api/next":
+                d = self._body()
+                override = clean_trans(d.get("transition") or {})
+                # Shuffle's own picker: from its theme, Next up first, only what is ticked in.
                 with lock:
-                    select(name)
-                    shuffle_touch()
-                    msgs = look_messages() + [shuffle_message()]
-                for msg in msgs:
-                    broadcast(msg)
-                return self._json(200, {"ok": True})
+                    name, preset = shuffle_pick()
+                tr = switch(name, preset, override)
+                return self._json(200, {"ok": True, "sketch": name, "trans": tr})
+            if path == "/api/transition":
+                d = clean_trans(self._body())
+                with lock:
+                    transition.update(d)
+                    save_transition()
+                    snap = dict(transition)
+                broadcast({"t": "transition", "settings": snap})
+                return self._json(200, {"ok": True, "settings": snap})
             if path == "/api/shuffle":
                 d = self._body()
                 with lock:
@@ -711,6 +848,7 @@ class H(SimpleHTTPRequestHandler):
                 name = urllib.parse.unquote(m.group(1))
                 if not SAFE_NAME.match(name):
                     return self._json(400, {"error": "bad name"})
+                tr = None
                 with lock:
                     if m.group(2):
                         if not load_preset(name):
@@ -719,13 +857,14 @@ class H(SimpleHTTPRequestHandler):
                         snap = dict(values)
                         asnap = {k: dict(v2) for k, v2 in auto.items()}
                         tsnap = text
+                        tr = make_trans() if transition.get("presets") else None
                     else:
                         (preset_dir() / f"{name}.json").write_text(
                             json.dumps({"_v": 2, "values": values, "auto": auto, "text": text}, indent=1))
                         snap = asnap = tsnap = None
                 if snap is not None:
                     broadcast(shuffle_message_unlocked())
-                    broadcast({"t": "params", "params": snap})
+                    broadcast({"t": "params", "params": snap, "trans": tr})
                     broadcast({"t": "auto", "auto": asnap, "freeze": auto_freeze})
                     broadcast({"t": "text", "text": tsnap})
                 return self._json(200, {"ok": True})
@@ -746,6 +885,7 @@ class H(SimpleHTTPRequestHandler):
                      "data: " + json.dumps({"t": "auto", "auto": auto, "freeze": auto_freeze}) + "\n\n"
                      "data: " + json.dumps({"t": "text", "text": text}) + "\n\n"
                      "data: " + json.dumps(shuffle_message()) + "\n\n"
+                     "data: " + json.dumps({"t": "transition", "settings": transition}) + "\n\n"
                      + ("data: " + json.dumps({"t": "wave", "wave": wave}) + "\n\n" if wave else "")).encode()
         try:
             self.wfile.write(first)
@@ -774,6 +914,10 @@ if __name__ == "__main__":
         active = ""
     select(active if active in names else names[0])
     shuffle_restore()
+    try:
+        transition.update(json.loads((STATE / "transition.json").read_text()))
+    except (OSError, ValueError):
+        pass
     threading.Thread(target=state_pump, daemon=True).start()
     threading.Thread(target=shuffle_loop, daemon=True).start()
     trackwave.Follower(DECKDASH, STATE, live_player, set_wave).start()

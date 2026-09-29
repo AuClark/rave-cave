@@ -1,6 +1,7 @@
 {
   "title": "Alien Dairy",
   "about": "Two greys milking a dancing cow under their saucer, in a moonlit field. The cow bobs, sways, stamps its legs in pairs, head-bops and swishes its tail on the beat; the greys take turns, one squirt per beat, into a bucket that fills over the phrase; the saucer's lights chase and its tractor beam flickers on the kick.",
+  "climax": {"cycle": "fill", "peak": 0.97, "lock": "droplock", "what": "the bucket full"},
   "groups": [
     {"name": "Scene", "params": [
       {"id": "dance",  "label": "Dance",                     "min": 0,   "max": 2.5, "step": 0.01, "default": 1},
@@ -20,7 +21,8 @@
       {"id": "bright", "label": "Brightness",                "min": 0,   "max": 2,   "step": 0.01, "default": 1}
     ]},
     {"name": "Beat", "params": [
-      {"id": "punch",  "label": "Beam flares on kick",       "min": 0,   "max": 2,   "step": 0.01, "default": 0.6}
+      {"id": "punch",  "label": "Beam flares on kick",       "min": 0,   "max": 2,   "step": 0.01, "default": 0.6},
+      {"id": "droplock", "label": "Land the climax on the drop", "min": 0, "max": 1, "step": 1, "default": 1, "kind": "fixed"}
     ]}
   ]
 }

@@ -28,7 +28,7 @@ follows here is the reference.
 | | |
 |---|---|
 | Values | `GET`/`POST` `/api/params`, as before: `{id: value}` |
-| Themes and Shuffle | `sketches/themes.json` groups the sketches (a sketch not listed shows under Other). `GET /api/sketches` returns `themes` and `titles` with the names. `GET`/`POST` `/api/shuffle`: `{on, theme, every, skip, queue, out}`; `queue` is `{sketch, preset}` (or null to clear) for the next change, `out` is one theme's `{theme, sketches, presets: {sketch: [...]}}` left out of Shuffle, replaced whole; `every` is 1, 2, 4, 8, 16 or 32 bars; `skip` changes on the next 1. It runs in `visuals.py` on showbrain's beat (a 120 BPM idle clock with no deck), fires 0.12 s before the downbeat so the new sketch is up on the 1, and is saved in `state/shuffle.json`. Picking a sketch or preset by hand restarts the period |
+| Themes and Shuffle | `sketches/themes.json` groups the sketches (a sketch not listed shows under Other). `GET /api/sketches` returns `themes` and `titles` with the names. `GET`/`POST` `/api/shuffle`: `{on, theme, every, skip, queue, out}`; `queue` is `{sketch, preset}` (or null to clear) for the next change, `out` is one theme's `{theme, sketches, presets: {sketch: [...]}}` left out of Shuffle, replaced whole; `every` is 1, 2, 4, 8, 16 or 32 bars; `skip` changes on the next 1. It runs in `visuals.py` on showbrain's beat (a 120 BPM idle clock with no deck), hands over through the transitions below synced to the bar so the change lands on the 1, and is saved in `state/shuffle.json`. Picking a sketch or preset by hand restarts the period |
 | Ranges and automation | `GET`/`POST` `/api/auto`: `{id: {on, lo, hi, rate, shape, phase, retrig, hz, duty}}`, plus `_freeze` on POST to hold every automation where it stands |
 | Presets | `{"_v": 2, "values": {...}, "auto": {...}}`. A preset written before automation existed is a flat `{id: value}` and still loads, with automation off and ranges wide open. |
 
@@ -149,6 +149,40 @@ projector's stats before they go in a set.**
 
 Each generative surface is drawn separately, so putting `cathedral` on two surfaces costs twice,
 and the Stage page draws it again on top of the projector's own copy.
+
+## Transitions
+
+Changing the sketch, or loading a preset, hands over on the projector through a transition in time with the music, set in the **Transitions** section of the control page. The old sketch stays up until the sync point (now, or the next beat, bar or 4-bar phrase, or landing on the next drop), then the two play together for the transition's length in beats.
+
+| Type | What it does |
+|---|---|
+| Auto (smart) | Picks one that suits the song section showbrain is in, never the same twice running: a flash cut, a stutter or a zoom into a PREDROP or DROP; a zoom, swirl, pixelate or tiles through a BUILD (1 bar); a dissolve, luma, crossfade or iris in a BREAKDOWN, INTRO or OUTRO (4 bars); a wipe, iris, tiles, slices, dissolve, pixelate or swirl in the groove. |
+| Cut | An instant change on the sync point. |
+| Crossfade | A straight fade. |
+| Wipe | A soft line sweeps across at one of 8 angles, lit in the show's colour. |
+| Iris | A glowing circle opens from the centre. |
+| Dissolve | The new sketch burns through the old in noise-shaped holes with a hot edge. |
+| Luma | The new sketch's bright parts appear first, then its darks. |
+| Tiles | Squares pop in at random, each growing from its centre. |
+| Glitch slices | Horizontal bands of the new sketch slide in from the sides. |
+| Zoom through | The old sketch zooms in and away while the new one flies in from the centre as a framed picture. |
+| Swirl | The old one twists away as the new one untwists in. |
+| Stutter | The two flicker on 16th notes, the new one more and more, until it holds. |
+| Flash cut | A white flash, with the cut on its peak. |
+| Pixelate | The old one breaks into big pixels and the new one resolves out of them. |
+| None | Instant, as before. |
+
+Length is automatic (each type's own) or 1 beat to 8 bars. **Presets morph too** makes loading a preset transition from the old values to the new ones in the same sketch. **Mix to the next one** switches through the current transition to what Shuffle would pick next: Next up if something is queued, otherwise a sketch from Shuffle's theme with one of its presets, only from what is ticked in (see Themes and Shuffle). It works with Shuffle off. **Shuffle's own changes go through transitions too**: it sends each one inside the last beat of the bar with the sync forced to the bar, so every projector starts it exactly on the downbeat however late the message arrives, and the transition is never longer than Shuffle's period (an instant change becomes a cut on the 1). The API is `GET/POST /api/transition` (`type`, `beats`, `sync`, `presets`), `POST /api/next`, and `POST /api/select` takes an optional `"transition": {...}` to override the settings once (e.g. `{"type": "cut"}`).
+
+How it's drawn: while a transition runs, each generative surface draws the outgoing sketch with its old values and then the incoming one on top, whose alpha is the transition's mask (in `render.js`, `COMMON`: `u_trole`, `u_tp`, `u_tmode`, and the `s5t_` functions). Either side can warp its own coordinates (zoom, swirl, pixelate, slices). There's no render-to-texture, so it runs on the projector's WebGL1 GPU, but for the transition's length the surface costs both sketches together: going between two heavy sketches (tropical, diamond, artpop, horizon) may stutter on the X3. Sketches need no changes.
+
+## Climaxes on the drop
+
+Timeline sketches have a best moment: eclipse's diamond ring into totality, atlantis's sea fully parted, burn's frame all fire, pendulum's bobs back in one line, geometry's full mandala, milking's full bucket, phyllotaxis's full bloom. Left alone, their cycles run on the beat count and the climax lands wherever it happens to. showbrain predicts the next drop from the track's analysis (`beats_to_drop`), so these sketches can aim for it: with **Land the climax on the drop** on (in their Beat group, on by default), the renderer eases the sketch's cycle, running it up to twice as fast or holding it, so the climax arrives on the drop's downbeat, getting there about a bar early. With no drop predicted (no rekordbox analysis, or none coming) the cycle runs on from wherever it is, so it never jumps. The kick and other beat animation stay on the real beat; only the cycle is moved.
+
+A sketch opts in with a `climax` entry in its JSON: `{"cycle": the param holding its cycle length in beats, "peak": where the climax is in the cycle (0..1, or an expression of its params such as "0.5 - hold / 2"), "lock": the on/off param, "what": a description}`, and runs its cycle on `u_cbeat` instead of `u_beat` (see `MapRenderer._cbeat`). Sketches also get `u_todrop` (beats to the predicted drop, -1 when none) and `dropArc()` in the shared header: 0 far from a drop, rising to 1 over the 16 beats before one and easing off over the 8 after, for anything that should build into the drop.
+
+Transitions can land on the drop too: set the Transitions sync to **Land on the next drop** and the change's cut (its end, or a flash cut's peak) falls on the drop's downbeat, shortened to fit if the drop is close; with no drop predicted it waits for the next bar. Auto does this by itself when the change comes in a BUILD, HOLD or PREDROP with a drop predicted within 16 bars.
 
 ## Writing a sketch
 

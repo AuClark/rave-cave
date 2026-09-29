@@ -135,7 +135,7 @@
 </head>
 <body>
 <div class="bar">
-  <a href="/" class="backlink" title="Back to the full controls">&#9664; FULL</a>
+  <a href="./" class="backlink" title="Back to the full controls">&#9664; FULL</a>
   <span class="logo">SEKTOR<b>5</b></span>
   <span id="beat"><i class="b1"></i><i></i><i></i><i></i></span>
   <span class="sp"></span>
@@ -297,13 +297,13 @@ function flip() {                           // mirror it inside its range
 function strobeOn() {
   const p = focusP(); if (!p) return;
   if (heldAuto) return;                     // already strobing (a key and a thumb at once)
-  heldAuto = { id: p.id, was: Object.assign({ on: false }, AU[p.id]) };
+  // Restored on the parameter it started on; with no automation before, that means off.
+  heldAuto = { id: p.id, auto: Object.assign({ on: false }, AU[p.id]) };
   setAuto(p.id, { on: true, shape: 4, duty: 0.18, rate: strobeRate,
                   lo: loOf(p), hi: hiOf(p), retrig: true, hz: false, phase: 0 });
 }
 function strobeOff() {
-  // Put back the parameter that was strobed, even if focus has moved on since.
-  if (heldAuto) setAuto(heldAuto.id, heldAuto.was);
+  if (heldAuto && spec(heldAuto.id)) setAuto(heldAuto.id, heldAuto.auto);
   heldAuto = null;
 }
 // Speed master: every parameter the sketch calls a rate, up or down an octave at a time.

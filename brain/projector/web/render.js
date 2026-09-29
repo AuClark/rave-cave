@@ -9,6 +9,8 @@
 // Content "gen" is a generative sketch from the visuals service (:8110): the live one (whatever the
 // Visuals page shows), or the surface's own "sketch" (+ "preset"), fetched and compiled once.
 // With several projectors, each surface and mask belongs to one; draw() renders one projector.
+// When the live sketch or its preset changes, the service can ask for a transition, synced to the
+// beat: surfaces showing the live sketch hand over through it (setSketch).
 // Sketches can also read the live track's waveform by beat: wave(beat) (see COMMON).
 
 "use strict";
@@ -35,7 +37,7 @@ class ShowClock {
       this.b = null;
       const b = now / 500;                                  // 120 BPM idle clock
       return { scene: SCENES.IDLE, beat: b, frac: b % 1, bwb: 1 + (Math.floor(b) % 4), bar: 0, hue: (now / 60000) % 1,
-               progress: 0, since: 0, energy: 0.3, sp: 0 };
+               progress: 0, since: 0, energy: 0.3, sp: 0, todrop: -1, drop: null };
     }
     const target = (s.beat || 0) + dtBeats, rate = s.bpm / 60;
     const dt = Math.min(0.1, Math.max(0, (now - this.last) / 1000));
@@ -50,7 +52,10 @@ class ShowClock {
     const scene = SCENES[s.scene] ?? SCENES.GROOVE;
     return { scene, beat, frac: ((beat % 1) + 1) % 1, bwb, bar: s.bar || 0, hue: s.hue || 0,
              progress: s.progress || 0, since: scene === SCENES.DROP ? (s.since_drop || 0) + dtBeats : 0,
-             energy: s.energy ?? 0.5, sp: s.section_progress || 0 };
+             energy: s.energy ?? 0.5, sp: s.section_progress || 0,
+             // The next drop showbrain predicts from the track's analysis (beats to it; -1 = none known).
+             todrop: s.beats_to_drop == null ? -1 : Math.max(s.beats_to_drop - dtBeats, -1),
+             drop: s.beats_to_drop == null ? null : Math.round((s.beat || 0) + s.beats_to_drop) };
   }
 }
 
@@ -139,6 +144,9 @@ precision mediump float;
 #endif
 uniform vec2 u_res; uniform mat3 u_Hinv; uniform float u_aspect;
 uniform float u_beat, u_frac, u_bwb, u_bar, u_hue, u_scene, u_progress, u_since, u_energy, u_sp;
+// u_todrop: beats to the next drop showbrain predicts (-1 = none known). u_cbeat: the beat a sketch's
+// climax cycle runs on: u_beat, shifted so the sketch's climax lands on the drop (see MapRenderer._cbeat).
+uniform float u_todrop, u_cbeat;
 uniform float u_opacity, u_bright, u_sel, u_time;
 uniform float u_radius, u_border, u_bbright, u_bsat, u_bpulse;
 uniform float u_px;   // one output pixel in surface units (surface height = 1), for anti-aliasing
@@ -218,7 +226,110 @@ float drive(float bd, float rate, float shape, float amt) {
   else                  v = hit * hash(vec2(n, bd));               // step
   return amt * clamp(v, 0.0, 1.0);
 }
+// 0 far from a drop, rising over the 16 beats before one to 1 on it, easing off over the 8 after.
+float dropArc() {
+  float up = u_todrop >= 0.0 ? 1.0 - clamp(u_todrop / 16.0, 0.0, 1.0) : 0.0;
+  float down = abs(u_scene - 7.0) < 0.5 ? exp(-u_since / 8.0) : 0.0;
+  return max(up * up, down);
+}
 vec3 content(vec2 uv);
+
+// ---- Transitions between sketches (see MapRenderer.draw). During one, a surface draws the
+// outgoing sketch (u_trole 2) and then the incoming one on top (u_trole 1); either can warp
+// its own content coordinates, and the incoming one's alpha is the transition's mask, so no
+// render-to-texture is needed. u_tp runs 0..1, u_tdur is the length in beats, u_tseed varies
+// each transition. Modes: 0 crossfade, 1 wipe, 2 iris, 3 dissolve, 4 luma, 5 tiles, 6 slices,
+// 7 zoom through, 8 swirl, 9 stutter, 10 flash, 11 pixelate. Names start s5t_ to keep clear
+// of sketches' own functions.
+uniform float u_trole, u_tp, u_tmode, u_tseed, u_tdur;
+float s5t_noise(vec2 p) {
+  vec2 i = floor(p), f = fract(p);
+  f = f * f * (3.0 - 2.0 * f);
+  return mix(mix(hash(i), hash(i + vec2(1.0, 0.0)), f.x), mix(hash(i + vec2(0.0, 1.0)), hash(i + vec2(1.0, 1.0)), f.x), f.y);
+}
+vec2 s5t_rot(vec2 v, float a) { float c = cos(a), s = sin(a); return vec2(c * v.x - s * v.y, s * v.x + c * v.y); }
+float s5t_ease(float p) { return p * p * (3.0 - 2.0 * p); }
+float s5t_slice(vec2 uv) {             // slices: this band's own progress
+  float band = floor(uv.y * 12.0);
+  return clamp((u_tp - hash(vec2(band, u_tseed)) * 0.6) / 0.4, 0.0, 1.0);
+}
+vec2 s5t_uv(vec2 uv) {
+  int m = int(u_tmode + 0.5);
+  bool inc = u_trole < 1.5;
+  float e = s5t_ease(u_tp);
+  vec2 A = vec2(u_aspect, 1.0), c = (uv - 0.5) * A;
+  if (m == 7) c *= inc ? mix(5.0, 1.0, e) : 1.0 / (1.0 + 5.0 * e * e);        // zoom through
+  else if (m == 8) {                                                          // swirl
+    float t = inc ? 1.0 - e : e;
+    c = s5t_rot(c, (inc ? -1.0 : 1.0) * t * t * 9.0 * max(0.0, 1.0 - length(c)));
+  } else if (m == 11) {                                                       // pixelate
+    float N = inc ? mix(5.0, 400.0, pow(smoothstep(0.5, 1.0, u_tp), 2.0)) : mix(400.0, 5.0, pow(smoothstep(0.0, 0.5, u_tp), 0.5));
+    c = (floor(c * N) + 0.5) / N;
+  } else if (m == 6 && inc) {                                                 // slices slide in
+    float band = floor(uv.y * 12.0), q = 1.0 - s5t_slice(uv);
+    c.x += (hash(vec2(band, u_tseed + 3.1)) > 0.5 ? 1.0 : -1.0) * q * q * u_aspect * 1.05;
+  }
+  return 0.5 + c / A;
+}
+// The incoming sketch's coverage (0..1); glow gets any light the transition adds at its edge.
+float s5t_mask(vec2 uv, vec2 cuv, vec3 col, inout vec3 glow) {
+  int m = int(u_tmode + 0.5);
+  float p = u_tp, e = s5t_ease(p);
+  vec2 q = (uv - 0.5) * vec2(u_aspect, 1.0);
+  vec3 gc = hsv(u_hue, 0.5, 1.0);
+  float inside = step(0.0, cuv.x) * step(cuv.x, 1.0) * step(0.0, cuv.y) * step(cuv.y, 1.0);
+  if (m == 1) {                                                               // wipe, at one of 8 angles
+    float ang = floor(hash(vec2(u_tseed, 1.7)) * 8.0) * 0.7853982;
+    vec2 d = vec2(cos(ang), sin(ang));
+    float s = dot(q, d) / (0.5 * (abs(d.x) * u_aspect + abs(d.y)));
+    float v = mix(-1.1, 1.1, e) - s;
+    glow += gc * exp(-abs(v) * 30.0) * 0.9 * sin(3.1416 * p);
+    return smoothstep(-0.02, 0.02, v);
+  }
+  if (m == 2) {                                                               // iris from the centre
+    float v = e * 1.1 - length(q) / (0.5 * length(vec2(u_aspect, 1.0)));
+    glow += gc * exp(-abs(v) * 25.0) * 0.9 * sin(3.1416 * p);
+    return smoothstep(-0.015, 0.015, v);
+  }
+  if (m == 3) {                                                               // noise dissolve, burning edge
+    float n = 0.65 * s5t_noise(q * 5.0 + u_tseed * 7.0) + 0.35 * s5t_noise(q * 13.0 - u_tseed);
+    float v = mix(-0.08, 1.08, e) - n;
+    glow += mix(vec3(1.0, 0.45, 0.1), vec3(1.0, 0.95, 0.8), exp(-abs(v) * 90.0)) * exp(-abs(v) * 35.0) * 1.2;
+    return smoothstep(-0.006, 0.006, v);
+  }
+  if (m == 4) {                                                               // luma: the bright parts first
+    float L = sqrt(dot(col, vec3(0.299, 0.587, 0.114)) / max(u_bright, 0.001));   // lifts dim sketches
+    float t = 1.0 - e * 1.25;
+    return smoothstep(t - 0.1, t + 0.1, L);
+  }
+  if (m == 5) {                                                               // tiles grow in at random
+    vec2 g = q * 6.0, id = floor(g), f = fract(g) - 0.5;
+    float t = s5t_ease(clamp((p - hash(id + u_tseed) * 0.65) / 0.35, 0.0, 1.0));
+    float v = t * 0.5 - max(abs(f.x), abs(f.y));
+    glow += gc * exp(-abs(v) * 60.0) * 0.6 * step(0.001, t) * step(t, 0.999);
+    return smoothstep(-0.02, 0.0, v) * step(0.001, t);
+  }
+  if (m == 6) return inside * step(0.001, s5t_slice(uv));                    // slices
+  if (m == 7) {                                                               // zoom through
+    vec2 ed = min(cuv, 1.0 - cuv) * vec2(u_aspect, 1.0);      // distance in from the incoming frame's edge
+    float fe = min(ed.x, ed.y), px = u_px * mix(5.0, 1.0, s5t_ease(p));
+    glow += gc * exp(-abs(fe) / (3.0 * px)) * 0.8 * (1.0 - p);
+    glow += gc * exp(-length(q) * 5.0) * sin(3.1416 * p) * 0.4;
+    return smoothstep(-px, px, fe) * smoothstep(0.0, 0.2, p);
+  }
+  if (m == 8 || m == 11) return smoothstep(0.35, 0.65, p);                   // swirl, pixelate
+  if (m == 9) {                                                               // stutter on 16ths
+    float slot = floor(p * max(u_tdur, 1.0) * 4.0);
+    return max(step(hash(vec2(slot, u_tseed)), p * 1.15 - 0.05), step(0.9, p));
+  }
+  if (m == 10) {                                                              // white flash, cut on the peak
+    float fl = exp(-pow((p - 0.5) / 0.14, 2.0));
+    glow += vec3(1.0) * fl * 1.5;
+    return max(step(0.5, p), fl);
+  }
+  return e;                                                                   // crossfade
+}
+
 void main() {
   vec2 p = vec2(gl_FragCoord.x / u_res.x, 1.0 - gl_FragCoord.y / u_res.y);
   vec3 q = u_Hinv * vec3(p, 1.0);
@@ -230,7 +341,15 @@ void main() {
   vec2 qd = abs(sp) - hs + rad;
   float sd = length(max(qd, 0.0)) + min(max(qd.x, qd.y), 0.0) - rad;
   float a = smoothstep(0.0, 1.5 * u_px, -sd) * u_opacity;
-  vec3 c = content(uv) * u_bright;
+  vec2 cuv = u_trole > 0.5 ? s5t_uv(uv) : uv;
+  vec3 c = content(cuv) * u_bright;
+  if (u_trole > 0.5 && u_trole < 1.5) {        // incoming: masked, with the transition's edge light
+    vec3 g = vec3(0.0);
+    float m = clamp(s5t_mask(uv, cuv, c, g), 0.0, 1.0);
+    g *= u_bright;
+    c = mix(g, c + g, m);
+    a *= max(m, clamp(dot(g, vec3(0.333)), 0.0, 1.0));
+  }
   if (u_border > 0.0) {
     float band = smoothstep(-u_border - 1.5 * u_px, -u_border, sd);
     vec3 bc = mix(vec3(1.0), hsv(u_hue, 1.0, 1.0), u_bsat) * u_bbright * mix(1.0, kick(), u_bpulse);
@@ -415,7 +534,9 @@ class MapRenderer {
   }
 
   // Compile the visuals service's sketch as content "gen". A broken sketch keeps the last good one.
-  setSketch(sk) {
+  // With trans ({mode, beats, sync, seed}), surfaces showing the live sketch keep the old one up
+  // until the next beat, bar or phrase (sync), then hand over through the transition (see draw).
+  setSketch(sk, trans) {
     // The sketch that was live may have been changed on the Visuals page: fetch it afresh next time.
     if (this.liveSketch && this.liveSketch !== sk.name)
       for (const k of Object.keys(this.sketches)) if (k.startsWith(this.liveSketch + "|")) delete this.sketches[k];
@@ -425,13 +546,53 @@ class MapRenderer {
       const spec = {};
       for (const g of sk.groups) for (const p of g.params)
         spec[p.id] = { min: p.min, max: p.max, step: p.step, kind: p.kind || "" };
-      this.genSpec = spec;
       const prog = this._program(COMMON + sk.glsl, ids.map(id => "p_" + id));
-      prog.ids = ids; prog.name = sk.name;
+      prog.ids = ids; prog.name = sk.name; prog.climax = sk.climax || null;
+      if (trans && this.progs.gen) this._beginTrans(trans);          // before genSpec changes: the outgoing keeps its own
+      this.genSpec = spec;
       this.progs.gen = prog; this.genError = null;
     } catch (e) {
       this.genError = String(e); console.error("sketch", sk.name, e);
     }
+  }
+
+  // New live values; with trans, the same sketch morphs from its old values (a preset change).
+  setParams(params, trans) {
+    if (trans && this.progs.gen) this._beginTrans(trans);
+    this.genParams = params;
+  }
+
+  // Keep what's showing now (the incoming side of a transition already running) as the outgoing,
+  // with its own automation still moving (a copy: the pages edit theirs in place), so an LFO'd
+  // value doesn't snap to its held value as the transition starts.
+  // A change while the last one is still waiting for its sync point keeps that one's outgoing.
+  _beginTrans(t) {
+    const waiting = this.trans && !(this.trans.p >= 0);
+    const out = waiting ? this.trans.out : { prog: this.progs.gen, params: this.genParams, spec: this.genSpec,
+                                             auto: JSON.parse(JSON.stringify(this.genAuto || {})), live: {} };
+    if (!waiting) Object.assign(out.live, this.genLive);
+    this.trans = { out, mode: t.mode ?? 0,
+                   beats: Math.max(0, t.beats ?? 4), sync: t.sync || "now", seed: t.seed ?? Math.random(), t0: null };
+  }
+
+  // The beat the transition starts on: now, or the next beat / bar / phrase (4 bars). Phrases need
+  // the track's timeline (bar > 0: beat 1 is its first downbeat); without one, the next bar.
+  _transStart(f) {
+    const b = f.beat, T = this.trans, sync = T.sync;
+    // Land on the drop: the transition's cut (its end, or a flash's peak) falls on the drop's downbeat.
+    // Too little time left and it's shortened to fit; no drop known and it waits for the next bar.
+    if (sync === "drop") {
+      if (f.drop !== null && f.todrop > 0) {
+        const land = T.mode === 10 ? 0.5 : 1;
+        if (f.drop - T.beats * land < b) T.beats = Math.max(0.25, (f.drop - b) / land);
+        return f.drop - T.beats * land;
+      }
+      return Math.floor(b) - (f.bwb - 1) + 4;
+    }
+    if (sync === "beat") return Math.floor(b) + 1;
+    if (sync === "phrase" && f.bar > 0) return Math.ceil((b - 1 + 0.001) / 16) * 16 + 1;
+    if (sync === "bar" || sync === "phrase") return Math.floor(b) - (f.bwb - 1) + 4;
+    return b;
   }
 
   // What a "gen" surface draws: the live sketch, or its own one (loaded on first use; nothing until then).
@@ -454,7 +615,7 @@ class MapRenderer {
       const { sketch: sk, values } = await r.json();
       const ids = sk.groups.flatMap(g => g.params.map(p => p.id));
       const prog = this._program(COMMON + sk.glsl, ids.map(id => "p_" + id));
-      prog.ids = ids; prog.name = sk.name;
+      prog.ids = ids; prog.name = sk.name; prog.climax = sk.climax || null;
       this.sketches[key] = { prog, values };
     } catch (e) {
       console.error("sketch", name, e);
@@ -478,7 +639,7 @@ class MapRenderer {
     for (const n of ["u_res", "u_Hinv", "u_aspect", "u_beat", "u_frac", "u_bwb", "u_bar", "u_hue", "u_scene", "u_progress",
                      "u_since", "u_energy", "u_sp", "u_opacity", "u_bright", "u_sel", "u_time", "u_tex",
                      "u_radius", "u_border", "u_bbright", "u_bsat", "u_bpulse", "u_px", "u_box",
-                     "u_wave", "u_wv", "u_wloop", "u_text", "u_textn", ...extra])
+                     "u_wave", "u_wv", "u_wloop", "u_text", "u_textn", "u_trole", "u_tp", "u_tmode", "u_tseed", "u_tdur", "u_todrop", "u_cbeat", ...extra])
       u[n] = gl.getUniformLocation(p, n);
     return { p, u, a: gl.getAttribLocation(p, "a") };
   }
@@ -526,6 +687,17 @@ class MapRenderer {
     this._updateTitle();
     gl.enable(gl.BLEND); gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
     const P = this.projectorId(opts.projector), mine = x => (x.projector || "main") === P;
+    // A transition of the live sketch, if one is pending or running: before its start the old one stays up.
+    const T = this.trans;
+    let tp = null;
+    if (T) {
+      if (T.t0 !== null && f.beat < T.last - 1)                 // the beat clock jumped back (new master, seek,
+        T.t0 = T.p >= 0 ? f.beat - T.p * T.beats : null;        // idle -> live): carry on from where it had got to
+      if (T.t0 === null) T.t0 = this._transStart(f);
+      tp = T.beats > 0 ? (f.beat - T.t0) / T.beats : (f.beat >= T.t0 ? 1 : -1);
+      T.last = f.beat; T.p = tp;
+      if (tp >= 1) { this.trans = null; tp = null; }
+    }
     for (const s of L.surfaces) {
       if (!mine(s)) continue;
       const test = L.test || opts.test;
@@ -535,36 +707,13 @@ class MapRenderer {
         if (!g) continue;                                       // its sketch is still loading
         pr = g.prog; vals = g.values;
       }
-      gl.useProgram(pr.p);
-      gl.enableVertexAttribArray(pr.a);
-      gl.vertexAttribPointer(pr.a, 2, gl.FLOAT, false, 0, 0);
-      const u = pr.u;
-      gl.uniform2f(u.u_res, W, H);
-      gl.uniformMatrix3fv(u.u_Hinv, false, colMajor(invert3(squareToQuad(s.corners))));
-      const xs = s.corners.map(c => c[0]), ys = s.corners.map(c => c[1]);
-      gl.uniform4f(u.u_box, 2 * Math.min(...xs) - 1, 1 - 2 * Math.max(...ys), 2 * Math.max(...xs) - 1, 1 - 2 * Math.min(...ys));
-      const [qw, qh] = quadSize(s.corners, W, H);
-      gl.uniform1f(u.u_aspect, qh > 1 ? qw / qh : 1);
-      gl.uniform1f(u.u_px, 1 / Math.max(qh, 1));
-      gl.uniform1f(u.u_beat, f.beat); gl.uniform1f(u.u_frac, f.frac); gl.uniform1f(u.u_bwb, f.bwb);
-      gl.uniform1f(u.u_bar, f.bar); gl.uniform1f(u.u_hue, (f.hue + (s.hue_shift || 0) + 1) % 1);
-      gl.uniform1f(u.u_scene, f.scene); gl.uniform1f(u.u_progress, f.progress); gl.uniform1f(u.u_since, f.since);
-      gl.uniform1f(u.u_energy, f.energy); gl.uniform1f(u.u_sp, f.sp);
-      gl.uniform1f(u.u_opacity, s.opacity ?? 1); gl.uniform1f(u.u_bright, L.brightness ?? 1);
-      gl.uniform1f(u.u_sel, L.edit && L.selected === s.id ? 1 : 0);
-      gl.uniform1f(u.u_time, now / 1000);
-      gl.uniform1f(u.u_radius, s.radius || 0); gl.uniform1f(u.u_border, s.border || 0);
-      gl.uniform1f(u.u_bbright, s.border_bright ?? 1); gl.uniform1f(u.u_bsat, s.border_sat ?? 0);
-      gl.uniform1f(u.u_bpulse, s.border_pulse ?? 0);
-      if (pr.ids) for (const id of pr.ids) gl.uniform1f(u["p_" + id], vals[id] ?? 0);
-      const wv = this.wave;
-      gl.activeTexture(gl.TEXTURE1); gl.bindTexture(gl.TEXTURE_2D, wv ? this.waveTex : this.tex); gl.uniform1i(u.u_wave, 1);
-      gl.uniform4f(u.u_wv, wv ? wv.w : 1, wv ? wv.h : 1, wv ? wv.spb : 0, wv ? wv.beats : 0);
-      gl.uniform1f(u.u_wloop, wv ? wv.loop : 0);
-      gl.activeTexture(gl.TEXTURE2); gl.bindTexture(gl.TEXTURE_2D, this.textTex); gl.uniform1i(u.u_text, 2);
-      gl.uniform1f(u.u_textn, this.textN);
-      gl.activeTexture(gl.TEXTURE0); gl.bindTexture(gl.TEXTURE_2D, this.tex); gl.uniform1i(u.u_tex, 0);
-      gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
+      if (tp !== null && pr === this.progs.gen && !s.sketch) {   // pinned surfaces don't transition
+        if (tp < 0) this._surface(T.out.prog, s, f, now, W, H, T.out.live, 0);
+        else {
+          this._surface(T.out.prog, s, f, now, W, H, T.out.live, 2, tp, T);
+          this._surface(pr, s, f, now, W, H, vals, 1, tp, T);
+        }
+      } else this._surface(pr, s, f, now, W, H, vals, 0);
     }
     // Masks (black) on the overlay, then edit handles.
     const o = this.o;
@@ -579,6 +728,91 @@ class MapRenderer {
     if (L.edit || opts.handles) this.drawHandles(opts);
   }
 
+  // The beat a sketch's climax cycle runs on. A sketch's JSON can declare "climax": {"cycle": the param
+  // holding its cycle in beats, "peak": where in the cycle its best moment is (0..1, a number or an
+  // expression of its params), "lock": the param that turns this on, "what": a description}. When
+  // showbrain predicts a drop, the cycle is eased (running faster, up to twice as fast, or slower, down
+  // to held) so its peak lands on the drop's downbeat, arriving about a bar early; with no drop known
+  // it runs on from wherever it is, so it never jumps.
+  _cbeat(pr, params, f) {
+    const c = pr.climax;
+    if (!c) return f.beat;
+    this._clx = this._clx || new WeakMap();                          // per program: dropped with it
+    const st = this._clx.get(pr) || { off: 0, last: f.beat };
+    const dt = Math.max(0, Math.min(4, f.beat - st.last));
+    st.last = f.beat;
+    const C = +params[c.cycle] || 0, on = c.lock ? (params[c.lock] ?? 1) > 0.5 : true;
+    if (C > 0 && on && f.drop !== null && f.todrop >= 0) {
+      const peak = this._peak(c.peak, params);
+      const target = Math.round(((peak * C - f.drop) % C + C) % C);   // whole beats, so steps stay on the beat
+      let d = ((target - st.off) % C + C) % C;
+      if (d > C / 2) d -= C;                                           // the shorter way round
+      // Pace it to arrive about a bar early: at least a quarter faster or slower, at most twice as fast (or held).
+      const rate = Math.min(1, Math.max(0.25, Math.abs(d) / Math.max(f.todrop - 4, 1)));
+      const step = rate * dt;
+      st.off = Math.abs(d) <= step ? target : st.off + Math.sign(d) * step;
+      st.off = ((st.off % C) + C) % C;
+    }
+    this._clx.set(pr, st);
+    return f.beat + st.off;
+  }
+
+  // A climax "peak": a number, or a small expression of the sketch's params ("floor(cycle*(1-slip))/cycle").
+  // Compiled once per expression (this runs every frame), reading the params as its argument.
+  _peak(expr, params) {
+    if (typeof expr === "number") return expr;
+    if (typeof expr !== "string" || !/^[\w\s.+\-*\/()?:<>=]+$/.test(expr)) return 0;
+    this._peaks = this._peaks || new Map();
+    let fn = this._peaks.get(expr);
+    if (fn === undefined) {
+      const js = expr.replace(/[A-Za-z_]\w*/g, id => id === "floor" ? "Math.floor" : `(+P[${JSON.stringify(id)}] || 0)`);
+      try { fn = Function("P", `"use strict"; return (${js});`); } catch (e) { fn = null; }
+      this._peaks.set(expr, fn);
+    }
+    if (!fn) return 0;
+    try { const v = fn(params); return Number.isFinite(v) ? ((v % 1) + 1) % 1 : 0; }
+    catch (e) { return 0; }
+  }
+
+  // Draw one surface with a program. role: 0 normal, 1 incoming, 2 outgoing (tp, T: the transition).
+  _surface(pr, s, f, now, W, H, params, role, tp = 0, T = null) {
+    const gl = this.gl, L = this.layout;
+    gl.useProgram(pr.p);
+    gl.enableVertexAttribArray(pr.a);
+    gl.vertexAttribPointer(pr.a, 2, gl.FLOAT, false, 0, 0);
+    const u = pr.u;
+    gl.uniform2f(u.u_res, W, H);
+    gl.uniformMatrix3fv(u.u_Hinv, false, colMajor(invert3(squareToQuad(s.corners))));
+    const xs = s.corners.map(c => c[0]), ys = s.corners.map(c => c[1]);
+    gl.uniform4f(u.u_box, 2 * Math.min(...xs) - 1, 1 - 2 * Math.max(...ys), 2 * Math.max(...xs) - 1, 1 - 2 * Math.min(...ys));
+    const [qw, qh] = quadSize(s.corners, W, H);
+    gl.uniform1f(u.u_aspect, qh > 1 ? qw / qh : 1);
+    gl.uniform1f(u.u_px, 1 / Math.max(qh, 1));
+    gl.uniform1f(u.u_beat, f.beat); gl.uniform1f(u.u_frac, f.frac); gl.uniform1f(u.u_bwb, f.bwb);
+    gl.uniform1f(u.u_bar, f.bar); gl.uniform1f(u.u_hue, (f.hue + (s.hue_shift || 0) + 1) % 1);
+    gl.uniform1f(u.u_scene, f.scene); gl.uniform1f(u.u_progress, f.progress); gl.uniform1f(u.u_since, f.since);
+    gl.uniform1f(u.u_energy, f.energy); gl.uniform1f(u.u_sp, f.sp);
+    gl.uniform1f(u.u_opacity, s.opacity ?? 1); gl.uniform1f(u.u_bright, L.brightness ?? 1);
+    gl.uniform1f(u.u_sel, L.edit && L.selected === s.id ? 1 : 0);
+    gl.uniform1f(u.u_time, now / 1000);
+    gl.uniform1f(u.u_radius, s.radius || 0); gl.uniform1f(u.u_border, s.border || 0);
+    gl.uniform1f(u.u_bbright, s.border_bright ?? 1); gl.uniform1f(u.u_bsat, s.border_sat ?? 0);
+    gl.uniform1f(u.u_bpulse, s.border_pulse ?? 0);
+    gl.uniform1f(u.u_trole, role); gl.uniform1f(u.u_tp, Math.min(Math.max(tp, 0), 1));
+    gl.uniform1f(u.u_tmode, T ? T.mode : 0); gl.uniform1f(u.u_tseed, T ? T.seed * 97 : 0);
+    gl.uniform1f(u.u_tdur, T ? T.beats : 0);
+    gl.uniform1f(u.u_todrop, f.todrop ?? -1); gl.uniform1f(u.u_cbeat, this._cbeat(pr, params, f));
+    if (pr.ids) for (const id of pr.ids) gl.uniform1f(u["p_" + id], params[id] ?? 0);
+    const wv = this.wave;
+    gl.activeTexture(gl.TEXTURE1); gl.bindTexture(gl.TEXTURE_2D, wv ? this.waveTex : this.tex); gl.uniform1i(u.u_wave, 1);
+    gl.uniform4f(u.u_wv, wv ? wv.w : 1, wv ? wv.h : 1, wv ? wv.spb : 0, wv ? wv.beats : 0);
+    gl.uniform1f(u.u_wloop, wv ? wv.loop : 0);
+    gl.activeTexture(gl.TEXTURE2); gl.bindTexture(gl.TEXTURE_2D, this.textTex); gl.uniform1i(u.u_text, 2);
+    gl.uniform1f(u.u_textn, this.textN);
+    gl.activeTexture(gl.TEXTURE0); gl.bindTexture(gl.TEXTURE_2D, this.tex); gl.uniform1i(u.u_tex, 0);
+    gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
+  }
+
   // Which projector this page draws: the one asked for, if the layout has it, else the first.
   projectorId(want) {
     const ids = ((this.layout && this.layout.projectors) || [{ id: "main" }]).map(p => p.id);
@@ -588,8 +822,13 @@ class MapRenderer {
   // The live parameter values for this frame: the held values, with automation moved on top.
   // Once per frame and shared by every surface, so a layout with six of them costs the same.
   _genFrame(f, now) {
-    const live = this.genLive, A = this.genAuto, S = this.genSpec;
-    for (const id in this.genParams) live[id] = this.genParams[id];
+    this._automate(this.genLive, this.genParams, this.genAuto, this.genSpec, f, now);
+    const T = this.trans;
+    if (T) this._automate(T.out.live, T.out.params, T.out.auto, T.out.spec, f, now);
+  }
+
+  _automate(live, params, A, S, f, now) {
+    for (const id in params) live[id] = params[id];
     // The beat counter shifted so downbeats are multiples of 4, same as barBeat() in the
     // shaders, so "retrigger on bar" fires on the 1 and not wherever the track happened to start.
     const bb = f.beat - ((((Math.floor(f.beat) - (f.bwb - 1)) % 4) + 4) % 4);
@@ -656,7 +895,7 @@ class MapRenderer {
 // Connect to an event stream (the projector host's by default); calls the handlers as messages arrive.
 // Each service says hello with a version of its page code; when that changes (a deploy),
 // the page reloads itself so nobody has to hard-refresh the projector. reload: false opts out.
-function connectEvents(renderer, { onLayout, onScreen, onScreens, onStatus, onSketch, onParams, onAuto, onText, onShuffle, url = "/api/events", state = true, reload = true } = {}) {
+function connectEvents(renderer, { onLayout, onScreen, onScreens, onStatus, onSketch, onParams, onAuto, onText, onTransition, onShuffle, url = "/api/events", state = true, reload = true } = {}) {
   let es, version = null;
   const open = () => {
     es = new EventSource(url);
@@ -672,8 +911,9 @@ function connectEvents(renderer, { onLayout, onScreen, onScreens, onStatus, onSk
       else if (m.t === "layout") onLayout ? onLayout(m.layout) : (renderer.layout = m.layout);
       else if (m.t === "screen" && onScreen) onScreen(m.screen);
       else if (m.t === "screens" && onScreens) onScreens(m.screens);
-      else if (m.t === "sketch") { renderer.setSketch(m.sketch); onSketch && onSketch(m.sketch); }
-      else if (m.t === "params") { renderer.genParams = m.params; onParams && onParams(m.params); }
+      else if (m.t === "sketch") { renderer.setSketch(m.sketch, m.trans); onSketch && onSketch(m.sketch); }
+      else if (m.t === "params") { renderer.setParams(m.params, m.trans); onParams && onParams(m.params); }
+      else if (m.t === "transition" && onTransition) onTransition(m.settings);
       else if (m.t === "auto") {
         renderer.genAuto = m.auto || {};
         renderer.genFreeze = !!m.freeze;

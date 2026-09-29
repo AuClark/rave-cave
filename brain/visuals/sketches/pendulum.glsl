@@ -5,6 +5,7 @@
 // 60 s at 126 BPM). Everything is closed-form: each trail lies on its bob's arc, and a pixel
 // on the arc finds when the bob last passed it by solving A cos(wt) = its angle. The
 // original's click ripple is a ripple from the centre on every beat.
+// Its cycle runs on u_cbeat, so its climax ("climax" in the JSON) can land on the drop.
 // Params are p_* uniforms; ranges and defaults are in pendulum.json.
 uniform float p_count, p_cycle, p_base, p_amp, p_trail, p_size, p_punch, p_wave, p_curve,
               p_frame, p_tint, p_hue, p_spread, p_sat, p_bright, p_bg, p_follow;
@@ -60,7 +61,7 @@ vec3 content(vec2 uv) {
 
   // Time within the cycle: every pendulum makes a whole number of swings per cycle, so
   // this keeps the phases exact however long the show runs.
-  float tc = mod(u_beat, p_cycle) / p_cycle;
+  float tc = mod(u_cbeat, p_cycle) / p_cycle;
   float T0 = 1.0 / p_base, Tn = 1.0 / (p_base + N - 1.0);
   float Lmax = T0 * T0, Lmin = Tn * Tn;        // physical length goes with period squared
 

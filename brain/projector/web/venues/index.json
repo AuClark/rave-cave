@@ -1,0 +1,9 @@
+{
+ "venues": [
+  {
+   "id": "outdoor-tarp",
+   "name": "Outdoor tarp stage",
+   "file": "venues/outdoor-tarp.json"
+  }
+ ]
+}

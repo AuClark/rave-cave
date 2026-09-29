@@ -111,6 +111,7 @@
       <div class="row"><span>Lasers</span><select id="laserLook" title="Laser show look (saved with the layout)"></select></div>
       <div class="row"><span>Section</span><select id="laserSec" title="Preview a section: the lasers play it on a 128 BPM clock, whatever the show is doing">
         <option value="">FOLLOW SHOW</option><option value="GROOVE">GROOVE</option><option value="BUILD">BUILD</option><option value="DROP">DROP</option><option value="BREAKDOWN">BREAKDOWN</option><option value="INTRO">INTRO</option></select></div>
+      <div class="row"><span>Daylight</span><input id="day" type="range" min="0" max="1" step="0.05" value="0" title="Night to dusk to day (saved with the layout)"></div>
       <div class="row"><span>Glow</span><div><button id="bloom" class="on" title="Glow (turn off on slow machines)">GLOW</button></div></div>
     </section>
     <section>
@@ -142,7 +143,7 @@
         <button id="bDup">DUPLICATE</button>
         <button id="bDel" class="warn">DELETE</button>
       </div>
-      <div class="note">X is left/right, Y is height, Z is towards the audience, in metres (0,0,0 is the front edge of the stage floor, centre).</div>
+      <div class="note">X is left/right, Y is height, Z is towards the audience, in metres (0,0,0 is the front edge of the stage floor, centre; in a venue, wherever the venue puts it).</div>
     </section>
     <section>
       <h2>Match real lights</h2>
@@ -154,6 +155,7 @@
     </section>
     <section>
       <h2>Layout</h2>
+      <div class="row"><span>Venue</span><select id="venueSel" title="The set the rig stands in: the built-in room, or a venue modelled elsewhere (venues/)"></select></div>
       <div class="btns" style="margin-top:0">
         <button id="bExport">EXPORT</button>
         <button id="bImport">IMPORT</button>
@@ -179,6 +181,7 @@ import { EffectComposer } from "three/addons/postprocessing/EffectComposer.js";
 import { RenderPass } from "three/addons/postprocessing/RenderPass.js";
 import { UnrealBloomPass } from "three/addons/postprocessing/UnrealBloomPass.js";
 import { OutputPass } from "three/addons/postprocessing/OutputPass.js";
+import { GLTFLoader } from "three/addons/loaders/GLTFLoader.js";
 import { LOOKS, laserFrame, strHash } from "./lasershow.js";
 
 const $ = s => document.querySelector(s);
@@ -227,12 +230,13 @@ scene.fog = new THREE.FogExp2(0x0a0a0a, 0.03);
 const camera = new THREE.PerspectiveCamera(50, 1, 0.05, 200);
 const orbit = new OrbitControls(camera, renderer.domElement);
 orbit.enableDamping = true; orbit.dampingFactor = 0.08; orbit.maxPolarAngle = Math.PI * 0.495;
-const CAMS = {
+const ROOM_CAMS = {
   audience: { pos: [0, 1.7, 7.5], look: [0, 1.5, -1.2] },
   dj:       { pos: [0, 1.75, -2.2], look: [0, 1.4, 4] },
   top:      { pos: [0, 10, 1.5], look: [0, 0, -0.6] },
   side:     { pos: [7.5, 2.4, 0.5], look: [0, 1.4, -1.2] },
 };
+let CAMS = ROOM_CAMS;                           // a venue brings its own
 function setCam(k) {
   const c = CAMS[k]; camera.position.set(...c.pos); orbit.target.set(...c.look); orbit.update();
   document.querySelectorAll("[data-cam]").forEach(b => b.classList.toggle("on", b.dataset.cam === k));
@@ -255,8 +259,15 @@ function resize() {
 }
 new ResizeObserver(resize).observe(view);
 
-// Room: floor, stage, back wall, truss, DJ booth with two XDJs and the mixer, and a DJ for scale.
-scene.add(new THREE.HemisphereLight(0x5a5a66, 0x151515, 1.6));
+// Room: floor, stage, back wall, truss, and the DJ booth with two XDJs and the mixer.
+// A venue (below) swaps the room for its own set; the floor stays.
+const hemi = new THREE.HemisphereLight(0x5a5a66, 0x151515, 1.6); scene.add(hemi);
+// Daylight: a low sun (with shadows, so the set's shapes read) and a sky that the haze fades into.
+const sun = new THREE.DirectionalLight(0xffc49a, 0); sun.castShadow = true;
+sun.shadow.mapSize.set(2048, 2048); sun.shadow.bias = -0.0004;
+Object.assign(sun.shadow.camera, { left: -14, right: 14, top: 14, bottom: -14, near: 1, far: 80 });
+scene.add(sun, sun.target);
+const room = new THREE.Group(); scene.add(room);
 const mat = (c, r = 0.85, m = 0) => new THREE.MeshStandardMaterial({ color: c, roughness: r, metalness: m });
 function box(w, h, d, m, x, y, z, parent = scene) {
   const b = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), m); b.position.set(x, y, z);
@@ -264,14 +275,14 @@ function box(w, h, d, m, x, y, z, parent = scene) {
 }
 const floor = new THREE.Mesh(new THREE.PlaneGeometry(40, 40), mat(0x1c1c1c, 0.95));
 floor.rotation.x = -Math.PI / 2; floor.receiveShadow = true; scene.add(floor);
-box(STAGE.w, STAGE.h, STAGE.d, mat(0x1d1d1d, 0.7), 0, STAGE.h / 2, -STAGE.d / 2);
-box(STAGE.w, 0.02, 0.02, mat(0xff5a1f, 0.4), 0, STAGE.h, 0.0);                       // stage edge
-const wall = box(9, 4.4, 0.1, mat(0x2a2a2a, 0.95), 0, 2.2, STAGE.wallZ - 0.05);
+box(STAGE.w, STAGE.h, STAGE.d, mat(0x1d1d1d, 0.7), 0, STAGE.h / 2, -STAGE.d / 2, room);
+box(STAGE.w, 0.02, 0.02, mat(0xff5a1f, 0.4), 0, STAGE.h, 0.0, room);                       // stage edge
+const wall = box(9, 4.4, 0.1, mat(0x2a2a2a, 0.95), 0, 2.2, STAGE.wallZ - 0.05, room);
 const metal = mat(0x6b6b6b, 0.35, 0.8);
-box(5.6, 0.1, 0.1, metal, 0, STAGE.trussY, STAGE.trussZ);
-box(5.6, 0.1, 0.1, metal, 0, STAGE.trussY - 0.3, STAGE.trussZ);
-for (const x of [-2.8, 2.8]) box(0.1, STAGE.trussY, 0.1, metal, x, STAGE.trussY / 2, STAGE.trussZ);
-const booth = new THREE.Group(); booth.position.set(0, STAGE.h, -1.4); scene.add(booth);
+box(5.6, 0.1, 0.1, metal, 0, STAGE.trussY, STAGE.trussZ, room);
+box(5.6, 0.1, 0.1, metal, 0, STAGE.trussY - 0.3, STAGE.trussZ, room);
+for (const x of [-2.8, 2.8]) box(0.1, STAGE.trussY, 0.1, metal, x, STAGE.trussY / 2, STAGE.trussZ, room);
+const booth = new THREE.Group(); booth.position.set(0, STAGE.h, -1.4); room.add(booth);
 box(1.9, 0.95, 0.7, mat(0x111111, 0.6), 0, 0.475, 0, booth);
 box(1.9, 0.9, 0.02, mat(0x202020, 0.5), 0, 0.46, 0.36, booth);
 const deckMat = mat(0x0c0c0c, 0.4, 0.2);
@@ -284,10 +295,64 @@ for (const x of [-0.55, 0.55]) {
   scr.rotation.x = -Math.PI / 2 + 0.3; scr.position.set(x, 1.06, -0.13); booth.add(scr);
 }
 box(0.3, 0.1, 0.38, deckMat, 0, 1.0, 0, booth);                                        // mixer
-const dj = new THREE.Group(); dj.position.set(0, STAGE.h, -2.0); scene.add(dj);
-const djMat = mat(0x0e0e0e, 0.9);
-const body = new THREE.Mesh(new THREE.CapsuleGeometry(0.2, 0.75, 4, 12), djMat); body.position.y = 1.05; body.castShadow = true; dj.add(body);
-const head = new THREE.Mesh(new THREE.SphereGeometry(0.12, 16, 12), djMat); head.position.y = 1.68; head.castShadow = true; dj.add(head);
+
+// ------------------------------------------------------------------ venues
+// A venue replaces the room with a set modelled elsewhere (a glTF file in venues/, e.g. exported
+// from Blender), with its own cameras, floor and light. It's saved with the layout; venues/index.json
+// lists the ones on offer, each with a starting rig (venues/<id>.json).
+let venue = null, venueSet = null, venueJogs = [], venueMeshes = new Map();
+const gltf = new GLTFLoader(), venueModels = new Map();
+function venueModel(url) {
+  if (!venueModels.has(url)) venueModels.set(url, gltf.loadAsync(url).then(g => g.scene).catch(e => { venueModels.delete(url); throw e; }));
+  return venueModels.get(url);
+}
+function prepVenue(set) {
+  // Shadows, so the projectors' images land on the set (and the set blocks them), and lights
+  // with no environment map: cap metalness or poles and trims render black. Emissive parts
+  // (LED strips, deck screens) stay unlit and bright.
+  set.traverse(o => {
+    if (!o.isMesh) return;
+    o.castShadow = o.receiveShadow = true;
+    const m = o.material;
+    if (o.geometry.attributes.color && m.emissive && m.emissive.getHex() && !(m.map || m.color.getHex())) {
+      o.material = new THREE.MeshBasicMaterial({ vertexColors: true, toneMapped: false }); o.castShadow = false;
+    } else if (m.isMeshStandardMaterial) m.metalness = Math.min(m.metalness, 0.6);
+  });
+}
+// Daylight 0 = night (the room as it always was), 1 = the venue's full day sky. Between, the sky
+// and sun come up together, so a dusk setting shows the set but leaves the lights to carry it.
+const NIGHT = { sky: "#0a0a0a", hemiSky: "#5a5a66", hemiGround: "#151515" };
+const DAY = { sky: "#7f9cc4", hemiSky: "#bcd0ee", hemiGround: "#3c4a2c", sun: [-8, 14, 12] };
+const dayLevel = () => calib.day ?? (venue && venue.light && venue.light.day) ?? 0;
+function applyDay() {
+  const d = dayLevel(), L = { ...DAY, ...(venue && venue.light) }, mix = (a, b) => new THREE.Color(a).lerp(new THREE.Color(b), d);
+  scene.background.copy(mix(NIGHT.sky, L.sky)); scene.fog.color.copy(scene.background);
+  hemi.color.copy(mix(NIGHT.hemiSky, L.hemiSky)); hemi.groundColor.copy(mix(NIGHT.hemiGround, L.hemiGround));
+  hemi.intensity = 1.6 + 0.8 * d;
+  sun.intensity = 2.2 * d * d; sun.position.set(...L.sun);
+  $("#day").value = d;
+}
+async function setVenue(v) {
+  venue = v && v.model ? v : null;
+  room.visible = !venue;
+  if (venueSet) { scene.remove(venueSet); venueSet = null; }
+  venueJogs = []; venueMeshes = new Map();
+  const fl = venue && venue.floor || {};
+  floor.scale.setScalar((fl.size || 40) / 40);
+  floor.material.color.set(fl.colour || 0x1c1c1c);
+  CAMS = venue && venue.cams ? { ...ROOM_CAMS, ...venue.cams } : ROOM_CAMS;
+  const on = document.querySelector("[data-cam].on"); setCam(on ? on.dataset.cam : "audience");
+  showVenue(); applyDay();
+  if (!venue) return;
+  const want = venue;
+  try {
+    const set = (await venueModel(new URL(venue.model, location.href).href)).clone();
+    if (want !== venue) return;                                            // switched again while loading
+    prepVenue(set); venueSet = set; scene.add(set);
+    set.traverse(o => { if (o.isMesh && !venueMeshes.has(o.name)) venueMeshes.set(o.name, o); });
+    set.traverse(o => { if (o.isMesh && /^Jog\d*(_\d+)?$/.test(o.name)) { o.material = o.material.clone(); venueJogs.push(o); } });
+  } catch (e) { console.warn("venue model", e); $("#saved").textContent = `Couldn't load the venue model (${venue.model})`; }
+}
 
 // ------------------------------------------------------------------ live show + projection
 // State (lighting engine, via the projector's feed) and the projection layout arrive over one
@@ -329,10 +394,7 @@ function connect() {
     if (m.t === "frames") addFrames(m.f);
     else if (m.t === "state") { show = m.s; showAt = performance.now(); if (m.s && m.s.frames) addFrames(m.s.frames); if (mapRenderer) mapRenderer.clock.update(m.s); if (visRenderer) visRenderer.clock.update(m.s); }
     else if (m.t === "layout") { if (mapRenderer) mapRenderer.layout = m.layout; }
-    else if (m.t === "stage" && !dragging && Date.now() - lastSaveAt > 1500 && m.stage && m.stage.fixtures) {
-      if (m.stage.calib) { calib = { ...calib, ...m.stage.calib }; showCalib(); }
-      setRig(m.stage.fixtures, false);
-    }
+    else if (m.t === "stage" && !dragging && Date.now() - lastSaveAt > 1500 && m.stage && m.stage.fixtures) setLayout(m.stage, false);
   };
 }
 
@@ -412,6 +474,7 @@ function livePixels(name) { const p = curPreview; return p && p[name] && p[name]
 // every frame from the live pixels (if linked to a real fixture) or the simulation.
 let rig = [], built = new Map(), selected = null, dragging = false, lastSaveAt = 0;
 let haze = 0.55;
+$("#day").oninput = e => { calib.day = +e.target.value; applyDay(); saveRig(); };
 $("#haze").oninput = e => { haze = +e.target.value; scene.fog.density = 0.012 + 0.04 * haze; };
 scene.fog.density = 0.012 + 0.04 * haze;
 
@@ -486,12 +549,13 @@ function build(fx) {
     g.add(holder);
     const base = bodyMesh(0.12, 0.03, 0.12); base.position.y = 0.015; g.add(base);
     parts.tex = tex; parts.texData = data; parts.n = n; parts.len = len; parts.hit = [shell, core, base];
+    if (fx.onto) holder.visible = base.visible = false;          // its LEDs are drawn on a part of the venue (mapStrip)
     parts.lights = [0.25, 0.75].map(k => { const l = new THREE.PointLight(0xffffff, 0, 3.5, 2); l.position.set(0, len * k, 0.08); holder.add(l); l.position.y -= len / 2; return l; });
   } else if (fx.type === "projector") {
     const b = bodyMesh(0.34, 0.14, 0.3, 0x202020); g.add(b);
     const lens = new THREE.Mesh(new THREE.CylinderGeometry(0.04, 0.04, 0.03, 20), new THREE.MeshBasicMaterial({ color: 0x9fb4ff }));
     lens.rotation.x = Math.PI / 2; lens.position.z = 0.16; g.add(lens);
-    const stand = bodyMesh(0.04, Math.max(0.01, fx.pos[1] - STAGE.h), 0.04, 0x333333); stand.position.y = -(fx.pos[1] - STAGE.h) / 2; g.add(stand);
+    if (!venue) { const stand = bodyMesh(0.04, Math.max(0.01, fx.pos[1] - STAGE.h), 0.04, 0x333333); stand.position.y = -(fx.pos[1] - STAGE.h) / 2; g.add(stand); }   // a venue models its own mounts
     // The image is projected through the spotlight's square shadow frustum; open the round cone wide
     // enough to contain that square, so the picture lands as a rectangle with sharp edges.
     const spot = new THREE.SpotLight(0xffffff, 0, 14, Math.min(1.4, THREE.MathUtils.degToRad(fx.angle || T.angle) / 2 * 1.45), 0, 1.2);
@@ -534,9 +598,15 @@ function build(fx) {
     spot.target = aim; spot.position.z = 0.12; g.add(spot);
     const beam = beamMesh(ang, isStrobe ? 4 : 7); beam.position.z = 0.12; g.add(beam);
     parts.spot = spot; parts.beam = beam; parts.face = face; parts.hit = [b];
+    if (fx.inside) {
+      // A light inside part of the venue (a pyramid lit from within): the venue part glows with
+      // it and spills a little light around it, instead of throwing a beam.
+      b.visible = face.visible = beam.visible = false; spot.visible = false;
+      parts.glowLight = new THREE.PointLight(0xffffff, 0, 5, 2); g.add(parts.glowLight);
+    }
   }
   // Clamp for hanging fixtures: a little yoke up to the truss when they hang from it.
-  if (fx.type !== "tube" && fx.type !== "projector" && Math.abs(fx.pos[1] - (STAGE.trussY - 0.15)) < 0.4) {
+  if (!venue && fx.type !== "tube" && fx.type !== "projector" && Math.abs(fx.pos[1] - (STAGE.trussY - 0.15)) < 0.4) {
     const clamp = bodyMesh(0.05, STAGE.trussY - fx.pos[1], 0.05, 0x444444); clamp.position.y = (STAGE.trussY - fx.pos[1]) / 2; g.add(clamp);
   }
   // Aim handle, shown when selected.
@@ -554,6 +624,7 @@ function place(fx, p) {
   else p.group.lookAt(p.aim.position);
 }
 function destroy(p) {
+  if (p.stripHalo) { p.stripHalo.removeFromParent(); p.stripHalo.geometry.dispose(); }
   scene.remove(p.group, p.aim, p.handle);
   p.group.traverse(o => { if (o.geometry) o.geometry.dispose(); if (o.material && o.material.dispose) o.material.dispose(); if (o.shadow && o.shadow.map) o.shadow.map.dispose(); });
 }
@@ -572,6 +643,37 @@ function rebuild(fx) {
   if (selected === fx.id) select(fx.id);
 }
 
+// An LED strip that's part of the venue (the arch's ring): the fixture's LEDs are laid along the
+// strip, from one end to the other, so it lights from the show like a tube. The strip is taken to
+// run around an arc (its bounding box gives the centre and radius), from its left foot to its right.
+function mapStrip(fx, p) {
+  const m = venueMeshes.get(fx.onto); if (!m) return;                    // venue still loading
+  const g = m.geometry, pos = g.attributes.position, box = new THREE.Box3().setFromBufferAttribute(pos);
+  const r = (box.max.x - box.min.x) / 2, cx = (box.min.x + box.max.x) / 2, cy = box.max.y - r;
+  const foot = Math.atan2(Math.sqrt(Math.max(0, r * r - (box.min.y - cy) ** 2)), box.min.y - cy);   // angle from the top to a foot
+  const uv = new Float32Array(pos.count * 2);
+  for (let i = 0; i < pos.count; i++) {
+    const a = Math.atan2(pos.getX(i) - cx, pos.getY(i) - cy);
+    uv[i * 2] = 0.5; uv[i * 2 + 1] = Math.min(1, Math.max(0, (a + foot) / (2 * foot)));
+  }
+  g.setAttribute("uv", new THREE.BufferAttribute(uv, 2));
+  m.material = new THREE.MeshBasicMaterial({ map: p.tex, toneMapped: false });
+  m.userData.fid = fx.id; p.hit.push(m); p.stripMesh = m;
+  // a soft halo along the strip, as on the tubes, so a thin strip still reads from the floor
+  const zc = (box.min.z + box.max.z) / 2, arc = new THREE.Curve();
+  arc.getPoint = (t, out = new THREE.Vector3()) => { const a = -foot + 2 * foot * t; return out.set(cx + r * Math.sin(a), cy + r * Math.cos(a), zc); };
+  const hg = new THREE.TubeGeometry(arc, 160, 0.05, 10, false), huv = hg.attributes.uv;
+  for (let i = 0; i < huv.count; i++) huv.setXY(i, 0.5, huv.getX(i));    // along the tube -> along the LEDs
+  const halo = new THREE.Mesh(hg, new THREE.MeshBasicMaterial({ map: p.tex, transparent: true, opacity: 0.3, blending: THREE.AdditiveBlending,
+    depthWrite: false, toneMapped: false, side: THREE.DoubleSide }));
+  m.add(halo); p.stripHalo = halo;
+  // spill from the strip's shoulders rather than the fixture's own spot
+  const world = new THREE.Vector3();
+  p.lights.forEach((l, k) => {
+    m.localToWorld(world.set(cx + (k ? 1 : -1) * r * 0.7, cy + r * 0.7, (box.min.z + box.max.z) / 2));
+    p.group.add(l); l.position.copy(p.group.worldToLocal(world)); l.distance = 6;   // out of the hidden holder
+  });
+}
 // ------------------------------------------------------------------ lasers
 // The look is saved with the layout; the section preview is just for this viewer.
 let laserSec = "", laserIdx = 0, laserCount = 0, laserCue = "", trackSeed = 0;
@@ -661,6 +763,7 @@ function update(now) {
         sumR += cTmp.r; sumG += cTmp.g; sumB += cTmp.b;
       }
       p.tex.needsUpdate = true;
+      if (fx.onto && !p.stripMesh) mapStrip(fx, p);
       const avg = new THREE.Color(sumR / n, sumG / n, sumB / n), lvl = Math.max(avg.r, avg.g, avg.b);
       for (const l of p.lights) { l.color.copy(avg).multiplyScalar(1 / Math.max(0.001, lvl)); l.intensity = 12 * Math.min(1, lvl); }
     } else if (fx.type === "projector") {
@@ -701,6 +804,15 @@ function update(now) {
         p.aim.position.set(a.x + Math.sin(f.beat * Math.PI / 4) * r, a.y, a.z + Math.cos(f.beat * Math.PI / 4) * r * 0.5);
         p.group.lookAt(p.aim.position);
       }
+      if (fx.inside) {
+        const m = venueMeshes.get(fx.inside);
+        if (m) {
+          if (!m.userData.glowMat) { m.material = m.userData.glowMat = m.material.clone(); m.castShadow = false; }   // its own, not shared with other parts
+          m.material.emissive.copy(col).multiplyScalar(lvl * 1.4);
+        }
+        p.glowLight.color.copy(col); p.glowLight.intensity = lvl * 14;
+        continue;
+      }
       p.spot.color.copy(col); p.spot.intensity = lvl * (fx.type === "strobe" ? 900 : 260);
       p.face.material.color.copy(col).multiplyScalar(lvl * 2);
       p.beam.material.uniforms.color.value.copy(col);
@@ -708,7 +820,7 @@ function update(now) {
     }
   }
   // Deck jog rings glow with the beat of the live deck (for a bit of life on the booth).
-  jogs.forEach((j, i) => j.material.emissive.copy(hsl(f.hue)).multiplyScalar(show && show.live === i + 1 ? 0.25 + 0.5 * kick : 0.05));
+  (venueSet ? venueJogs : jogs).forEach((j, i) => j.material.emissive.copy(hsl(f.hue)).multiplyScalar(show && show.live === i + 1 ? 0.25 + 0.5 * kick : 0.05));
   // Only draw the projection sources something is using.
   const uses = new Set(rig.filter(fx => fx.type === "projector").map(fx => fx.source));
   if (mapRenderer && uses.has("projector")) { try { mapRenderer.draw(now); projTex.needsUpdate = true; } catch (e) { /* layout not in yet */ } }
@@ -840,7 +952,7 @@ addEventListener("keydown", e => {
   else if (e.key.toLowerCase() === "a") $("#gAim").click();
 });
 
-function showCalib() { $("#laserLook").value = LOOKS[calib.laser] ? calib.laser : "auto"; $("#cLed").value = calib.led; $("#cWash").value = calib.wash; $("#cGamma").value = String(calib.gamma); $("#cProj").value = calib.proj ?? 1; }
+function showCalib() { applyDay(); $("#laserLook").value = LOOKS[calib.laser] ? calib.laser : "auto"; $("#cLed").value = calib.led; $("#cWash").value = calib.wash; $("#cGamma").value = String(calib.gamma); $("#cProj").value = calib.proj ?? 1; }
 $("#cProj").oninput = e => { calib.proj = +e.target.value; saveRig(); };
 $("#pBright").oninput = e => { const fx = cur(); if (fx) { fx.brightness = +e.target.value; $("#vBright").textContent = Math.round(fx.brightness * 100) + "%"; saveRig(); } };
 $("#cLed").oninput = e => { calib.led = +e.target.value; saveRig(); };
@@ -852,7 +964,7 @@ let saveTimer = null, serverOk = true;
 function saveRig() {
   clearTimeout(saveTimer);
   saveTimer = setTimeout(async () => {
-    const body = JSON.stringify({ version: 1, fixtures: rig, calib });
+    const body = JSON.stringify({ version: 1, venue, fixtures: rig, calib });
     try { localStorage.setItem("stageRig", body); } catch (e) {}
     try {
       const r = await fetch(`${PROJ}/api/stage`, { method: "POST", body });
@@ -864,21 +976,44 @@ function saveRig() {
 async function loadRig() {
   try {
     const r = await fetch(`${PROJ}/api/stage`);
-    if (r.ok) { const d = await r.json(); if (d.fixtures && d.fixtures.length) { if (d.calib) calib = { ...calib, ...d.calib }; return d.fixtures; } }
+    if (r.ok) { const d = await r.json(); if (d.fixtures && d.fixtures.length) return d; }
   } catch (e) {}
-  try { const d = JSON.parse(localStorage.getItem("stageRig") || "null"); if (d && d.fixtures) { if (d.calib) calib = { ...calib, ...d.calib }; return d.fixtures; } } catch (e) {}
-  return DEFAULT_RIG();
+  try { const d = JSON.parse(localStorage.getItem("stageRig") || "null"); if (d && d.fixtures) return d; } catch (e) {}
+  return { fixtures: DEFAULT_RIG() };
 }
-$("#bReset").onclick = () => { if (confirm("Replace this layout with your current rig (tubes, projectors, lasers, strobe, wash)?")) setRig(DEFAULT_RIG()); };
+// A whole layout: its venue first (fixtures build differently in one; the model loads in the
+// background), then the rig.
+function setLayout(d, save = true) {
+  if (d.calib) { calib = { ...calib, ...d.calib }; showCalib(); }
+  if (JSON.stringify(d.venue || null) !== JSON.stringify(venue)) setVenue(d.venue || null);
+  setRig(d.fixtures, save);
+}
+$("#bReset").onclick = () => { if (confirm("Replace this layout with your current rig (tubes, projectors, lasers, strobe, wash) in the Sektor5 room?")) setLayout({ venue: null, fixtures: DEFAULT_RIG() }); };
+// Venues on offer (venues/index.json); picking one loads it with its starting rig.
+let venues = [];
+function showVenue() {
+  const sel = $("#venueSel"), id = venue ? venue.id || venue.model : "";
+  const opts = [["", "Sektor5 room (built-in)"], ...venues.map(v => [v.id, v.name])];
+  if (id && !venues.find(v => v.id === id)) opts.push([id, venue.name || id]);
+  sel.innerHTML = opts.map(([v, l]) => `<option value="${esc(v)}"${v === id ? " selected" : ""}>${esc(l)}</option>`).join("");
+}
+fetch("venues/index.json").then(r => r.ok ? r.json() : { venues: [] }).then(d => { venues = d.venues || []; showVenue(); }).catch(() => {});
+$("#venueSel").onchange = async e => {
+  const id = e.target.value, v = venues.find(x => x.id === id);
+  if (!confirm(`Load ${v ? v.name : "the Sektor5 room"} with its rig? This replaces the current layout (EXPORT it first to keep it).`)) { showVenue(); return; }
+  if (!v) return setLayout({ venue: null, fixtures: DEFAULT_RIG() });
+  try { const r = await fetch(v.file); if (!r.ok) throw new Error(r.status); setLayout(await r.json()); }
+  catch (err) { alert(`Couldn't load ${v.name}: ${err.message}`); showVenue(); }
+};
 $("#bExport").onclick = () => {
   const a = document.createElement("a");
-  a.href = URL.createObjectURL(new Blob([JSON.stringify({ version: 1, fixtures: rig, calib }, null, 1)], { type: "application/json" }));
+  a.href = URL.createObjectURL(new Blob([JSON.stringify({ version: 1, venue, fixtures: rig, calib }, null, 1)], { type: "application/json" }));
   a.download = "sektor5-stage.json"; a.click(); URL.revokeObjectURL(a.href);
 };
 $("#bImport").onclick = () => $("#file").click();
 $("#file").onchange = async e => {
   const f = e.target.files[0]; if (!f) return;
-  try { const d = JSON.parse(await f.text()); if (!Array.isArray(d.fixtures)) throw new Error("no fixtures"); setRig(d.fixtures); }
+  try { const d = JSON.parse(await f.text()); if (!Array.isArray(d.fixtures)) throw new Error("no fixtures"); setLayout(d); }
   catch (err) { alert("That file isn't a stage layout: " + err.message); }
   e.target.value = "";
 };
@@ -897,7 +1032,7 @@ function frame(now) {
   requestAnimationFrame(frame);
 }
 resize();
-setRig(await loadRig(), false);
+setLayout(await loadRig(), false);
 showCalib();
 await loadRenderJs();
 connect();

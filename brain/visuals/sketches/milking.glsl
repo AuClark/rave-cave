@@ -4,6 +4,7 @@
 // squirt per beat, into a bucket that fills over a cycle of beats; the saucer's rim
 // lights chase and its tractor beam flickers on the kick. Params are p_* uniforms;
 // ranges and defaults are in milking.json.
+// Its cycle runs on u_cbeat, so its climax ("climax" in the JSON) can land on the drop.
 uniform float p_dance, p_size, p_fill, p_beam, p_lights, p_line, p_stars, p_moon,
               p_punch, p_follow, p_hue, p_bright;
 
@@ -163,7 +164,7 @@ vec3 content(vec2 uv) {
   float bucket = max(abs(bq.x) - hw, abs(bq.y) - 0.03);
   ink(col, bucket, vec3(0.72, 0.74, 0.78));
   paint(col, sdC(bq, vec2(-0.044, 0.03), vec2(0.044, 0.03), 0.004), vec3(0.45, 0.47, 0.5));
-  float lvl = fract(b / max(p_fill, 1.0));
+  float lvl = fract(u_cbeat / max(p_fill, 1.0));
   paint(col, max(bucket + g_lw, bq.y - (-0.028 + 0.052 * lvl)), vec3(0.97, 0.97, 0.94));
   paint(col, sdC(bq, vec2(-0.03, 0.01), vec2(-0.03, -0.02), 0.003), vec3(0.85));
 
