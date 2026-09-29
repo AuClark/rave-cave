@@ -408,6 +408,7 @@
       <div class="sharebar"><div id="sh1" style="background:var(--accent2)"></div><div id="sh2" style="background:var(--accent)"></div></div>
       <div class="midi" id="midi"></div>
       <div class="midi" id="mixaudio"></div>
+      <div class="midi" id="mixstereo" title="Left/right: how alike (1 = mono), how wide (side vs mid; near 0 dB = wide, under -30 dB = mono), which side is louder"></div>
     </section>
     <section class="panel" data-title="Show engine">
       <h2>Show engine</h2>
@@ -1706,6 +1707,9 @@ function renderMixer(m) {
   $("#mixaudio").innerHTML = (a ? `bass ${a.low_db} · mid ${a.mid_db} · high ${a.high_db} dB${a.bass_out ? ' · <b style="color:var(--warn)">BASS OUT</b>' : ""}` : "")
     + (r ? (r.on ? `${a ? "  ·  " : ""}<b style="color:var(--bad)">● REC ${hms(r.secs)}</b> ${esc(r.file)} · ${r.tracks} tracks`
                  : `${a ? "  ·  " : ""}${r.error ? esc(r.error) : r.enabled ? "recorder ready (starts when music plays)" : "recorder off"}`) : "");
+  const stx = (m && m.stereo) || {}, sv = v => v ? `${v.corr.toFixed(2)} · ${v.width_db} dB wide${Math.abs(v.bal_db) >= 1 ? ` · ${v.bal_db > 0 ? "L" : "R"} +${Math.abs(v.bal_db)}` : ""}` : "silent";
+  $("#mixstereo").innerHTML = m && m.stereo ? `stereo (L/R alike · width · balance): ch1 ${sv(stx.ch1)} &nbsp;|&nbsp; ch2 ${sv(stx.ch2)} &nbsp;|&nbsp; master ${sv(stx.master)}` +
+    (stx.master ? ` &nbsp;|&nbsp; master highs ${sv(stx.master.highs)}` : "") : "";
 }
 function renderShow(sh) {
   if (!sh) { $("#shScene").textContent = "offline"; $("#shScene").className = "showscene"; return; }
