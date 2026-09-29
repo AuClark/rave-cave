@@ -37,7 +37,7 @@ class ShowClock {
       this.b = null;
       const b = now / 500;                                  // 120 BPM idle clock
       return { scene: SCENES.IDLE, beat: b, frac: b % 1, bwb: 1 + (Math.floor(b) % 4), bar: 0, hue: (now / 60000) % 1,
-               progress: 0, since: 0, energy: 0.3, sp: 0 };
+               progress: 0, since: 0, energy: 0.3, sp: 0, todrop: -1, drop: null };
     }
     const target = (s.beat || 0) + dtBeats, rate = s.bpm / 60;
     const dt = Math.min(0.1, Math.max(0, (now - this.last) / 1000));
@@ -52,7 +52,10 @@ class ShowClock {
     const scene = SCENES[s.scene] ?? SCENES.GROOVE;
     return { scene, beat, frac: ((beat % 1) + 1) % 1, bwb, bar: s.bar || 0, hue: s.hue || 0,
              progress: s.progress || 0, since: scene === SCENES.DROP ? (s.since_drop || 0) + dtBeats : 0,
-             energy: s.energy ?? 0.5, sp: s.section_progress || 0 };
+             energy: s.energy ?? 0.5, sp: s.section_progress || 0,
+             // The next drop showbrain predicts from the track's analysis (beats to it; -1 = none known).
+             todrop: s.beats_to_drop == null ? -1 : Math.max(s.beats_to_drop - dtBeats, -1),
+             drop: s.beats_to_drop == null ? null : Math.round((s.beat || 0) + s.beats_to_drop) };
   }
 }
 
@@ -141,6 +144,9 @@ precision mediump float;
 #endif
 uniform vec2 u_res; uniform mat3 u_Hinv; uniform float u_aspect;
 uniform float u_beat, u_frac, u_bwb, u_bar, u_hue, u_scene, u_progress, u_since, u_energy, u_sp;
+// u_todrop: beats to the next drop showbrain predicts (-1 = none known). u_cbeat: the beat a sketch's
+// climax cycle runs on: u_beat, shifted so the sketch's climax lands on the drop (see MapRenderer._cbeat).
+uniform float u_todrop, u_cbeat;
 uniform float u_opacity, u_bright, u_sel, u_time;
 uniform float u_radius, u_border, u_bbright, u_bsat, u_bpulse;
 uniform float u_px;   // one output pixel in surface units (surface height = 1), for anti-aliasing
@@ -219,6 +225,12 @@ float drive(float bd, float rate, float shape, float amt) {
   else if (shape < 4.5) v = hit * step(ph, 0.5);                   // gate
   else                  v = hit * hash(vec2(n, bd));               // step
   return amt * clamp(v, 0.0, 1.0);
+}
+// 0 far from a drop, rising over the 16 beats before one to 1 on it, easing off over the 8 after.
+float dropArc() {
+  float up = u_todrop >= 0.0 ? 1.0 - clamp(u_todrop / 16.0, 0.0, 1.0) : 0.0;
+  float down = abs(u_scene - 7.0) < 0.5 ? exp(-u_since / 8.0) : 0.0;
+  return max(up * up, down);
 }
 vec3 content(vec2 uv);
 
@@ -535,7 +547,7 @@ class MapRenderer {
       for (const g of sk.groups) for (const p of g.params)
         spec[p.id] = { min: p.min, max: p.max, step: p.step, kind: p.kind || "" };
       const prog = this._program(COMMON + sk.glsl, ids.map(id => "p_" + id));
-      prog.ids = ids; prog.name = sk.name;
+      prog.ids = ids; prog.name = sk.name; prog.climax = sk.climax || null;
       if (trans && this.progs.gen) this._beginTrans(trans);          // before genSpec changes: the outgoing keeps its own
       this.genSpec = spec;
       this.progs.gen = prog; this.genError = null;
@@ -566,7 +578,17 @@ class MapRenderer {
   // The beat the transition starts on: now, or the next beat / bar / phrase (4 bars). Phrases need
   // the track's timeline (bar > 0: beat 1 is its first downbeat); without one, the next bar.
   _transStart(f) {
-    const b = f.beat, sync = this.trans.sync;
+    const b = f.beat, T = this.trans, sync = T.sync;
+    // Land on the drop: the transition's cut (its end, or a flash's peak) falls on the drop's downbeat.
+    // Too little time left and it's shortened to fit; no drop known and it waits for the next bar.
+    if (sync === "drop") {
+      if (f.drop !== null && f.todrop > 0) {
+        const land = T.mode === 10 ? 0.5 : 1;
+        if (f.drop - T.beats * land < b) T.beats = Math.max(0.25, (f.drop - b) / land);
+        return f.drop - T.beats * land;
+      }
+      return Math.floor(b) - (f.bwb - 1) + 4;
+    }
     if (sync === "beat") return Math.floor(b) + 1;
     if (sync === "phrase" && f.bar > 0) return Math.ceil((b - 1 + 0.001) / 16) * 16 + 1;
     if (sync === "bar" || sync === "phrase") return Math.floor(b) - (f.bwb - 1) + 4;
@@ -593,7 +615,7 @@ class MapRenderer {
       const { sketch: sk, values } = await r.json();
       const ids = sk.groups.flatMap(g => g.params.map(p => p.id));
       const prog = this._program(COMMON + sk.glsl, ids.map(id => "p_" + id));
-      prog.ids = ids; prog.name = sk.name;
+      prog.ids = ids; prog.name = sk.name; prog.climax = sk.climax || null;
       this.sketches[key] = { prog, values };
     } catch (e) {
       console.error("sketch", name, e);
@@ -617,7 +639,7 @@ class MapRenderer {
     for (const n of ["u_res", "u_Hinv", "u_aspect", "u_beat", "u_frac", "u_bwb", "u_bar", "u_hue", "u_scene", "u_progress",
                      "u_since", "u_energy", "u_sp", "u_opacity", "u_bright", "u_sel", "u_time", "u_tex",
                      "u_radius", "u_border", "u_bbright", "u_bsat", "u_bpulse", "u_px", "u_box",
-                     "u_wave", "u_wv", "u_wloop", "u_text", "u_textn", "u_trole", "u_tp", "u_tmode", "u_tseed", "u_tdur", ...extra])
+                     "u_wave", "u_wv", "u_wloop", "u_text", "u_textn", "u_trole", "u_tp", "u_tmode", "u_tseed", "u_tdur", "u_todrop", "u_cbeat", ...extra])
       u[n] = gl.getUniformLocation(p, n);
     return { p, u, a: gl.getAttribLocation(p, "a") };
   }
@@ -706,6 +728,52 @@ class MapRenderer {
     if (L.edit || opts.handles) this.drawHandles(opts);
   }
 
+  // The beat a sketch's climax cycle runs on. A sketch's JSON can declare "climax": {"cycle": the param
+  // holding its cycle in beats, "peak": where in the cycle its best moment is (0..1, a number or an
+  // expression of its params), "lock": the param that turns this on, "what": a description}. When
+  // showbrain predicts a drop, the cycle is eased (running faster, up to twice as fast, or slower, down
+  // to held) so its peak lands on the drop's downbeat, arriving about a bar early; with no drop known
+  // it runs on from wherever it is, so it never jumps.
+  _cbeat(pr, params, f) {
+    const c = pr.climax;
+    if (!c) return f.beat;
+    this._clx = this._clx || new WeakMap();                          // per program: dropped with it
+    const st = this._clx.get(pr) || { off: 0, last: f.beat };
+    const dt = Math.max(0, Math.min(4, f.beat - st.last));
+    st.last = f.beat;
+    const C = +params[c.cycle] || 0, on = c.lock ? (params[c.lock] ?? 1) > 0.5 : true;
+    if (C > 0 && on && f.drop !== null && f.todrop >= 0) {
+      const peak = this._peak(c.peak, params);
+      const target = Math.round(((peak * C - f.drop) % C + C) % C);   // whole beats, so steps stay on the beat
+      let d = ((target - st.off) % C + C) % C;
+      if (d > C / 2) d -= C;                                           // the shorter way round
+      // Pace it to arrive about a bar early: at least a quarter faster or slower, at most twice as fast (or held).
+      const rate = Math.min(1, Math.max(0.25, Math.abs(d) / Math.max(f.todrop - 4, 1)));
+      const step = rate * dt;
+      st.off = Math.abs(d) <= step ? target : st.off + Math.sign(d) * step;
+      st.off = ((st.off % C) + C) % C;
+    }
+    this._clx.set(pr, st);
+    return f.beat + st.off;
+  }
+
+  // A climax "peak": a number, or a small expression of the sketch's params ("floor(cycle*(1-slip))/cycle").
+  // Compiled once per expression (this runs every frame), reading the params as its argument.
+  _peak(expr, params) {
+    if (typeof expr === "number") return expr;
+    if (typeof expr !== "string" || !/^[\w\s.+\-*\/()?:<>=]+$/.test(expr)) return 0;
+    this._peaks = this._peaks || new Map();
+    let fn = this._peaks.get(expr);
+    if (fn === undefined) {
+      const js = expr.replace(/[A-Za-z_]\w*/g, id => id === "floor" ? "Math.floor" : `(+P[${JSON.stringify(id)}] || 0)`);
+      try { fn = Function("P", `"use strict"; return (${js});`); } catch (e) { fn = null; }
+      this._peaks.set(expr, fn);
+    }
+    if (!fn) return 0;
+    try { const v = fn(params); return Number.isFinite(v) ? ((v % 1) + 1) % 1 : 0; }
+    catch (e) { return 0; }
+  }
+
   // Draw one surface with a program. role: 0 normal, 1 incoming, 2 outgoing (tp, T: the transition).
   _surface(pr, s, f, now, W, H, params, role, tp = 0, T = null) {
     const gl = this.gl, L = this.layout;
@@ -733,6 +801,7 @@ class MapRenderer {
     gl.uniform1f(u.u_trole, role); gl.uniform1f(u.u_tp, Math.min(Math.max(tp, 0), 1));
     gl.uniform1f(u.u_tmode, T ? T.mode : 0); gl.uniform1f(u.u_tseed, T ? T.seed * 97 : 0);
     gl.uniform1f(u.u_tdur, T ? T.beats : 0);
+    gl.uniform1f(u.u_todrop, f.todrop ?? -1); gl.uniform1f(u.u_cbeat, this._cbeat(pr, params, f));
     if (pr.ids) for (const id of pr.ids) gl.uniform1f(u["p_" + id], params[id] ?? 0);
     const wv = this.wave;
     gl.activeTexture(gl.TEXTURE1); gl.bindTexture(gl.TEXTURE_2D, wv ? this.waveTex : this.tex); gl.uniform1i(u.u_wave, 1);

@@ -5,6 +5,7 @@
 // pulses on the kick and throws rays up between the walls; dolphins leap across the gap
 // giving thumbs up that pump on the kick. Params are p_* uniforms; ranges and defaults
 // are in atlantis.json.
+// Its cycle runs on u_cbeat, so its climax ("climax" in the JSON) can land on the drop.
 uniform float p_cycle, p_open, p_section, p_dolphins, p_thumbs, p_glow, p_rays, p_punch,
               p_size, p_line, p_hue, p_follow, p_bright;
 
@@ -96,7 +97,7 @@ vec3 content(vec2 uv) {
   // How far the sea is parted: over a cycle (part, hold, crash), by hand, or by section.
   float open = p_open;
   if (p_cycle > 0.0) {
-    float s = fract(b / p_cycle);
+    float s = fract(u_cbeat / p_cycle);
     open = smoothstep(0.0, 0.35, s) * (1.0 - smoothstep(0.88, 0.98, s));
   }
   if (p_section > 0.5) open = smoothstep(0.0, 0.85, u_sp);

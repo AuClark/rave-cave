@@ -7,6 +7,7 @@
 // sprocket holes redrawn as holes (the original's were flat dashes); the
 // burn cycle is in beats, or the burn can spread through the song section (the film
 // burns away over a BUILD); the frontier flares on the kick; fbm octaves are a control.
+// Its cycle runs on u_cbeat, so its climax ("climax" in the JSON) can land on the drop.
 // Params are p_* uniforms; ranges and defaults are in burn.json.
 uniform float p_run, p_grow, p_cycle, p_section, p_speed, p_ember, p_edge, p_sparks, p_sprockets, p_grain,
               p_punch, p_scale, p_octaves, p_hue, p_follow, p_bright;
@@ -78,9 +79,9 @@ vec3 content(vec2 uv0) {
 
   // Burn cycle: in beats, or following the song section.
   float cycleDuration = max(p_cycle, 1.0);
-  float cycleT = mod(u_beat, cycleDuration);
+  float cycleT = mod(u_cbeat, cycleDuration);
   float cyclePhase = cycleT / cycleDuration;
-  float cycleIndex = floor(u_beat / cycleDuration);
+  float cycleIndex = floor(u_cbeat / cycleDuration);
   if (p_section > 0.5) { cyclePhase = clamp(u_sp, 0.0, 1.0) * 0.85; cycleT = cyclePhase * cycleDuration; }
   // The original's threshold falls over the cycle, and film burns where the noise is
   // below it, so its fire actually shrinks (its comments meant the opposite). Spread

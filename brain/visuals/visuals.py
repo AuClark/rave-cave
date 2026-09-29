@@ -21,7 +21,8 @@ change to the projector and to the control page.
   /api/select       POST {"sketch": NAME} to switch sketch
   /api/presets      GET preset names for the active sketch (?sketch=NAME for another one)
   /api/presets/NAME GET a preset; POST saves current values as NAME; POST .../NAME/load
-  /api/transition   GET the transition settings (and the types); POST {"type", "beats", "sync",
+  /api/transition   GET the transition settings (and the types); POST {"type", "beats", "sync"
+                    (now, beat, bar, phrase, or drop: land on the next predicted drop),
                     "presets"} to change them. Switching sketch (and loading a preset, if
                     "presets") hands over through a transition, synced to the beat.
   /api/next         POST: mix to another sketch (random, with one of its presets) through a transition
@@ -230,12 +231,21 @@ def clean_trans(d):
             raise ValueError("beats must be a number")
         out["beats"] = max(0.0, min(64.0, b))
     if "sync" in d:
-        if d["sync"] not in ("now", "beat", "bar", "phrase"):
+        if d["sync"] not in ("now", "beat", "bar", "phrase", "drop"):
             raise ValueError(f"unknown sync {d['sync']!r}")
         out["sync"] = d["sync"]
     if "presets" in d:
         out["presets"] = bool(d["presets"])
     return out
+
+
+def beats_to_drop_now():
+    """Beats to the next drop showbrain predicts from the track's analysis, or None."""
+    try:
+        v = (json.loads(last_state) or {}).get("beats_to_drop")
+        return float(v) if v is not None else None
+    except (ValueError, TypeError):
+        return None
 
 
 def make_trans(override=None):
@@ -256,6 +266,10 @@ def make_trans(override=None):
         kind = random.choice(choices)
         if not beats:
             beats = auto_beats or TRANS_BEATS[kind]
+        # Heading into a drop showbrain can see coming: land the change on it.
+        btd = beats_to_drop_now()
+        if scene in ("BUILD", "HOLD", "PREDROP") and btd is not None and 0 < btd <= 64:
+            t["sync"] = "drop"
     if not beats:
         beats = TRANS_BEATS.get(kind, 4)
     last_type = kind
