@@ -1,10 +1,10 @@
 {
- "day": 8,
- "aliens": 1,
- "style": 4,
- "swap": 8,
- "cband": 2,
- "cloop": 4,
- "cshape": 3,
- "camt": 1
+ "night": 1,
+ "style": 1,
+ "climb": 4,
+ "hill": 1.2,
+ "hue": 0.0,
+ "camt": 1,
+ "cloop": 3,
+ "size": 0.9
 }

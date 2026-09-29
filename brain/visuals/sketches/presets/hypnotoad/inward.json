@@ -1,0 +1,21 @@
+{
+ "hue": 0.86,
+ "palette": 3,
+ "sat": 0.95,
+ "bands": 11,
+ "wave": 0.6,
+ "bandspin": -0.5,
+ "glow": 1.0,
+ "mode": 2,
+ "scale": 0.14,
+ "detail": 7,
+ "width": 0.7,
+ "spin": -0.015,
+ "pupil": 0.56,
+ "irisc": 1,
+ "size": 1.05,
+ "bob": 0.7,
+ "halo": 0.45,
+ "pstep": 1,
+ "glide": 0.6
+}

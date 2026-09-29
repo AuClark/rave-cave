@@ -113,11 +113,13 @@ const VJ = (() => {
       const bb = barBeat(f);
       // A hair of slack, so a tap landing right on the line fires on that line and not a whole
       // bar later; a tap a fraction early is what a human hitting the 1 actually does.
-      let at = Math.ceil((bb + 0.08) / this.grid) * this.grid;
+      const at = this._next(bb);
       if (tag) this.pending = this.pending.filter(q => q.tag !== tag);   // one pending per slot
       this.pending.push({ at, fn, tag });
       return at - bb;
     }
+
+    _next(bb) { return Math.ceil((bb + 0.08) / (this.grid || 1)) * (this.grid || 1); }
 
     cancel(tag) { this.pending = this.pending.filter(q => q.tag !== tag); }
     waiting(tag) { return this.pending.some(q => q.tag === tag); }
@@ -127,7 +129,11 @@ const VJ = (() => {
       const f = this.frameOf();
       if (!f) return 0;
       const bb = barBeat(f);
-      let due = this.pending.filter(q => q.at <= bb);
+      // The beat counter goes backwards when a new track is loaded. A pad queued for beat 300
+      // would then wait out the whole new track, so anything now further off than one grid
+      // step is put on the next boundary of the new count instead.
+      for (const q of this.pending) if (q.at - bb > (this.grid || 1) + 0.1) q.at = this._next(bb);
+      const due = this.pending.filter(q => q.at <= bb);
       if (due.length) {
         this.pending = this.pending.filter(q => q.at > bb);
         for (const q of due) q.fn();

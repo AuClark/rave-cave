@@ -120,6 +120,13 @@
   .mtr .mk2 { position: absolute; top: 7px; width: 14px; height: 30px; margin-left: -7px; border: 2px solid var(--accent); display: none; }
   .mac.auto .mtr .mk2 { display: block; }
   .hint { color: var(--dim); font-size: 12px; padding: 12px 14px; }
+  [hidden] { display: none !important; }
+  /* Next up, queued on the full controls: what Shuffle plays next, and a way to clear it. */
+  .nextup { display: flex; align-items: center; gap: 10px; margin: 0 10px 10px; padding: 10px 12px;
+            border: 1px solid var(--accent); background: rgba(255, 90, 31, .08); font-size: 14px; }
+  .nextup .lbl { color: var(--accent); font-size: 10px; font-weight: 600; letter-spacing: .16em; text-transform: uppercase; }
+  .nextup b { flex: 1; min-width: 0; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .nextup button { padding: 8px 12px; }
   .hint b { color: var(--text); }
 </style>
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -145,6 +152,12 @@
   <div class="grid three" id="fx"></div>
   <div class="sect">Hold — push the track's grip on the picture</div>
   <div class="grid three" id="holds"></div>
+  <div id="shufSect">
+  <div class="sect">Shuffle — a new sketch from <b id="shTheme">—</b>, on the 1</div>
+  <div class="nextup" id="nextUp" hidden><span class="lbl">Next</span><b id="nextName"></b>
+    <button id="bNextClear" title="Clear it: Shuffle picks for itself">✕</button></div>
+  <div class="grid three" id="shufPads"></div>
+  </div>
   <div class="sect">Presets</div>
   <div class="grid" id="presets"></div>
   <div class="sect">Desk</div>
@@ -154,6 +167,7 @@
 <div id="sheet"><div class="panelbox">
   <div class="shhead"><h2 id="shTitle">More</h2><span class="sp"></span><button id="shClose">CLOSE</button></div>
   <div class="shrow"><h3>Sketch</h3><select id="skSel"></select></div>
+  <div class="shrow" id="shEveryRow"><h3>Shuffle every</h3><div class="chips" id="shEvery"></div></div>
   <div class="shrow"><h3>Words (for sketches that draw type)</h3>
     <input id="textIn" type="text" placeholder="WAKE UP|OBEY|DANCE"></div>
   <div class="shrow"><h3>Launch on</h3><div class="chips" id="qChips"></div></div>
@@ -168,7 +182,8 @@
     comes round; tap it again to cancel. Effects and Hold pads always act at once — they are played,
     not launched.</p>
   <p class="hint">On a laptop: <b>Q W E</b> energy, <b>Z</b> sweep up, <b>X</b> sweep down, <b>C</b> strobe,
-    <b>V</b> flash, <b>B</b> flip, <b>1</b>–<b>8</b> presets, <b>space</b> freeze, <b>esc</b> panic.
+    <b>V</b> flash, <b>B</b> flip, <b>1</b>–<b>8</b> presets, <b>space</b> freeze, <b>esc</b> panic,
+    <b>S</b> shuffle, <b>N</b> skip.
     Hold the key for the held ones.</p>
 </div></div>
 
@@ -208,6 +223,7 @@ connectEvents(R, {
   onParams: p => { if (!dragging) { V = p; paintMacros(); } else R.genParams = V; },
   onAuto: (a, frz) => { AU = a; FREEZE = !!frz; $("bFreeze").classList.toggle("on", FREEZE); paintMacros(); },
   onText: t => { if (document.activeElement !== $("textIn")) $("textIn").value = t || ""; },
+  onShuffle: sh => { SHUF = sh; paintShuffle(); if (sh.preset) { live = sh.preset; paintPresets(); } },
 });
 
 // ---------- talking to the service
@@ -263,7 +279,8 @@ function sweep(dir) {                       // dir +1 up, -1 down; held
            beats: sweepBeats, back: from };
 }
 function sweepOff() {                       // let go and it glides back where it came from
-  const p = focusP(); if (!p || !ramp || !R.lastFrame) { ramp = null; return; }
+  // The parameter the sweep started on, not whatever has focus by the time it is let go.
+  const p = ramp && spec(ramp.id); if (!p || ramp.back === null || !R.lastFrame) { ramp = null; return; }
   ramp = { id: p.id, from: V[p.id] ?? p.default, to: ramp.back, t0: R.lastFrame.beat,
            beats: sweepBeats, back: null };
 }
@@ -279,13 +296,14 @@ function flip() {                           // mirror it inside its range
 }
 function strobeOn() {
   const p = focusP(); if (!p) return;
-  heldAuto = Object.assign({}, AU[p.id]);
+  if (heldAuto) return;                     // already strobing (a key and a thumb at once)
+  heldAuto = { id: p.id, was: Object.assign({ on: false }, AU[p.id]) };
   setAuto(p.id, { on: true, shape: 4, duty: 0.18, rate: strobeRate,
                   lo: loOf(p), hi: hiOf(p), retrig: true, hz: false, phase: 0 });
 }
 function strobeOff() {
-  const p = focusP();
-  if (p && heldAuto) setAuto(p.id, heldAuto);
+  // Put back the parameter that was strobed, even if focus has moved on since.
+  if (heldAuto) setAuto(heldAuto.id, heldAuto.was);
   heldAuto = null;
 }
 // Speed master: every parameter the sketch calls a rate, up or down an octave at a time.
@@ -304,9 +322,10 @@ function panic() {
   ramp = null; strobeOff();
 }
 
-const ENERGIES = [["Calm", 0.22, "e1"], ["Groove", 0.55, "e2"], ["Drop", 0.92, "e3"]];
-$("energy").innerHTML = ENERGIES.map(([n, e, c], i) =>
-  `<button class="pad big ${c}" id="en${i}"><span class="nm">${n}</span><span class="sub">new look</span></button>`).join("");
+// Same names, colours and keys as the Visuals page's New look row.
+const ENERGIES = [["Calm", 0.22, "e1", "breakdown"], ["Groove", 0.55, "e2", "in the mix"], ["Drop", 0.92, "e3", "full on"]];
+$("energy").innerHTML = ENERGIES.map(([n, e, c, sub], i) =>
+  `<button class="pad big ${c}" id="en${i}"><span class="nm">${n}</span><span class="sub">${sub}</span></button>`).join("");
 ENERGIES.forEach(([n, e], i) => {
   const el = $("en" + i);
   el.onclick = () => tap(el, () => {
@@ -358,6 +377,38 @@ $("fx").innerHTML = FX.map(f =>
   `<button class="pad" id="${f.id}"><span class="nm">${f.nm}</span><span class="sub">${f.sub}</span></button>`).join("");
 for (const f of FX) bindPlay($(f.id), f);
 
+// Shuffle runs on the visuals service, not here: these pads only steer it, so it carries on when the
+// phone locks. Skip lands on the next 1 by itself, so it bypasses Launch on.
+let THEMES = [], TITLES = {}, SHUF = { on: false, theme: "all", every: 8, left: null };
+const postShuffle = d => fetch("/api/shuffle", { method: "POST", body: JSON.stringify(d) }).catch(() => {});
+const themeName = () => SHUF.theme === "all" ? "All" : ((THEMES.find(t => t.id === SHUF.theme) || {}).name || SHUF.theme);
+$("bNextClear").onclick = () => { SHUF.queue = null; paintShuffle(); postShuffle({ queue: null }); };
+const SHUFP = [
+  { id: "shOn", nm: "Shuffle", sub: "latch", down: () => { SHUF.on = !SHUF.on; paintShuffle(); postShuffle({ on: SHUF.on }); },
+    latch: () => !!SHUF.on },
+  { id: "shSkip", nm: "Skip", sub: "on the 1", down: () => postShuffle({ skip: true }) },
+  { id: "shTh", nm: "All", sub: "theme", down: () => {
+      const ids = ["all", ...THEMES.map(t => t.id)];
+      SHUF.theme = ids[(ids.indexOf(SHUF.theme) + 1) % ids.length]; paintShuffle(); postShuffle({ theme: SHUF.theme });
+    } },
+];
+$("shufPads").innerHTML = SHUFP.map(f =>
+  `<button class="pad" id="${f.id}"><span class="nm">${f.nm}</span><span class="sub">${f.sub}</span></button>`).join("");
+for (const f of SHUFP) bindPlay($(f.id), f);
+function paintShuffle() {
+  const bars = n => n + (n === 1 ? " bar" : " bars");
+  $("shTheme").textContent = themeName();
+  $("shTh").querySelector(".nm").textContent = themeName();
+  $("shOn").querySelector(".sub").textContent = SHUF.on ? `next in ${bars(SHUF.left || SHUF.every)}` : `off · every ${bars(SHUF.every)}`;
+  const q = SHUF.queue;
+  $("nextUp").hidden = !q;
+  if (q) $("nextName").textContent = (TITLES[q.sketch] || q.sketch) + (q.preset ? " · " + q.preset : "") +
+    (SHUF.on ? "" : " — on the next 1");
+  $("shEvery").innerHTML = [1, 2, 4, 8, 16, 32].map(n =>
+    `<button data-n="${n}" class="${n === SHUF.every ? "on" : ""}">${bars(n)}</button>`).join("");
+  $("shEvery").querySelectorAll("button").forEach(b => b.onclick = () => { SHUF.every = +b.dataset.n; paintShuffle(); postShuffle({ every: SHUF.every }); });
+}
+
 const DESK = [
   { id: "dkSlow", nm: "÷2", sub: "speed", down: () => speed(0.5) },
   { id: "dkFast", nm: "×2", sub: "speed", down: () => speed(2) },
@@ -398,7 +449,15 @@ function paintPresets() {
 
 async function loadLists() {
   const s = await (await fetch("/api/sketches")).json();
-  $("skSel").innerHTML = s.sketches.map(n => `<option ${n === s.active ? "selected" : ""}>${n}</option>`).join("");
+  // Grouped by theme, the same as the tiles on the full controls. A visuals service from before
+  // themes sends only the names: list them all, and hide Shuffle, which it doesn't have either.
+  const legacy = !Array.isArray(s.themes);
+  THEMES = legacy ? [] : s.themes; TITLES = s.titles || {};
+  $("shufSect").hidden = legacy; $("shEveryRow").hidden = legacy;
+  const opt = n => `<option value="${n}" ${n === s.active ? "selected" : ""}>${TITLES[n] || n}</option>`;
+  $("skSel").innerHTML = legacy ? (s.sketches || []).map(opt).join("")
+    : THEMES.map(t => `<optgroup label="${t.name}">` + t.sketches.map(opt).join("") + "</optgroup>").join("");
+  paintShuffle();
   const p = await (await fetch("/api/presets")).json();
   PRESETS = p.presets; paintPresets();
 }
@@ -424,7 +483,8 @@ function defaultFocus() {
 }
 function paintFocus() {
   const p = focusP();
-  $("focusName").textContent = p ? p.label : "—";
+  // Labels carry their units in brackets ("Spin (cycles per beat ...)"); a header only wants the name.
+  $("focusName").textContent = p ? p.label.replace(/\s*\(.*$/, "") : "—";
   $("focusHint").textContent = p ? (VJ.isRate(p) ? "a speed" : "") : "pick one in MORE";
   $("focusSel").innerHTML = params().map(p2 =>
     `<option value="${p2.id}" ${p2.id === FOCUS ? "selected" : ""}>${p2.label}</option>`).join("");
@@ -530,14 +590,17 @@ resize();
 
   // A sweep in beat time: it takes the same number of beats whatever the tempo, and it is the
   // beat clock that drives it, so it stays with the music if the track speeds up mid-move.
-  if (ramp && f0) {
+  // A held sweep that has arrived stays put (and stops posting) until it is let go, so the
+  // release still has somewhere to glide back to.
+  if (ramp && f0 && !ramp.done) {
     const p = spec(ramp.id);
     if (!p) ramp = null;
     else {
-      const t = Math.min(1, (f0.beat - ramp.t0) / Math.max(0.05, ramp.beats));
+      // A new track restarts the beat count; if it went backwards, the sweep is finished.
+      const t = f0.beat < ramp.t0 ? 1 : Math.min(1, (f0.beat - ramp.t0) / Math.max(0.05, ramp.beats));
       const e = t * t * (3 - 2 * t);                        // ease, so it does not start with a jerk
       set({ [p.id]: VJ.quant(p, ramp.from + (ramp.to - ramp.from) * e) });
-      if (t >= 1) ramp = null;
+      if (t >= 1) { if (ramp.back === null) ramp = null; else ramp.done = true; }
     }
   }
 
@@ -552,7 +615,7 @@ resize();
       loadPreset(n); live = n; paintPresets();
     }
   }
-  for (const f of [...FX, ...DESK]) {
+  for (const f of [...FX, ...DESK, ...SHUFP]) {
     if (!f.latch) continue;
     const el = $(f.id);
     if (el) el.classList.toggle("act", !!f.latch());
@@ -593,6 +656,8 @@ addEventListener("keydown", e => {
   if (k === "e") return $("en2").click();
   if (k === " ") { e.preventDefault(); return $("bFreeze").click(); }
   if (k === "escape") return panic();
+  if (k === "s") return SHUFP[0].down();
+  if (k === "n") return SHUFP[1].down();
   if (k >= "1" && k <= "8") { const el = $("ps" + (+k - 1)); return el && el.click(); }
   const f = FX.find(x => x.key === k);
   if (f) { e.preventDefault(); KEYPAD[k] = f; f._down(); }

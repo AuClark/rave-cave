@@ -2,9 +2,10 @@
  "off": 0.34,
  "offspin": 0.008,
  "rings": 3.6,
- "reps": 2,
- "height": 0.74,
+ "reps": 3,
+ "height": 0.78,
  "zoom": 0.0625,
+ "lurch": 0.0625,
  "spin": 0.006,
  "twist": 0,
  "counter": 0,
@@ -16,7 +17,10 @@
  "chroma": 0,
  "trail": 0,
  "glow": 0,
- "mono": 1,
- "fog": 0.5,
- "vign": 0.15
+ "fog": 0.4,
+ "core": 0.5,
+ "pulse": 0.6,
+ "hats": 0.6,
+ "vign": 0.15,
+ "mono": 1
 }

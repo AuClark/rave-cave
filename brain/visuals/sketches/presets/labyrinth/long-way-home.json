@@ -1,0 +1,23 @@
+{
+ "world": 1,
+ "pace": 0.25,
+ "bars": 2,
+ "lurch": 0.3,
+ "bob": 0.35,
+ "sway": 0.5,
+ "branch": 0.65,
+ "height": 1.8,
+ "hope": 1.35,
+ "thread": 0.8,
+ "motes": 0.6,
+ "fog": 0.8,
+ "sky": 0.0,
+ "reveal": 3,
+ "every": 3,
+ "kinds": 2,
+ "trip": 0.5,
+ "hue": 0.1,
+ "sat": 0.8,
+ "aamt": 0.45,
+ "follow": 0
+}

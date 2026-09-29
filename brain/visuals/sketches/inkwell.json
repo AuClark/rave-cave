@@ -1,63 +1,65 @@
 {
   "title": "Inkwell",
-  "about": "Rubber hose cartoons, after Fleischer's Out of the Inkwell, arranged down a tunnel. The pen is thin and hard: bold comes from contrast -- near-black ink against fills at full saturation on a dark card -- not from thickness. Arms, stems, spouts and handles are hoses that bend in a curve instead of hinging at a joint. The shapes are used as masks: each is filled with a log-polar tunnel of its own, drawn in the subject's local coordinates so the pattern travels and squashes with the shape, and with the faces off (the default) the interiors are what carry the picture. The layout is the same trick one level up -- log(r) against the angle, repeated on both -- so the cast recedes forever, with Spin and Zoom one term each, in cycles per beat. Faces and props are decided per cell rather than globally: sliders set how strong they are and how many of the cast have one, so a row of five can be two with eyes, one of those with a mouth, and a couple carrying something. Faces are off by default and C Change can bring them in across a build. Every prop is a piece of business -- steam off the teapot, a leaf off the tree, a bee round the flower, a hat that will not stay on. Colour is a small palette, quantised, rather than a continuous rainbow, which is what stops work like this looking like a screensaver, and the interior pattern chooses between guilloche, halftone, op rings and the spiral. Sixteen subjects -- face, bird, tree, lamp, trolley, teapot, flower, fish, umbrella, toadstool, cactus, snail, ice cream, alarm clock, rocket, balloon -- and they dance: a hop, a squash on the landing, a rock from the feet and a shimmy across, each one a step behind the last. Reactivity is the standard three slots, see docs/reactive.md.",
+  "about": "Rubber hose cartoons after Fleischer, early Disney and Cuphead, climbing up out of an ink pool down a log-polar tunnel (or dancing in a row along a stage): teapots, trees, clocks, bombs and a dozen others, each with pie-cut eyes, a grin that opens on the kick, noodle arms in white gloves and noodle legs down to big shoes, the feet planted and the body bobbing and squashing over them on every beat. The ink is thick and boils four times a beat, the bodies are masks filled with checkers, candy stripes, polka dots or op rings drawn in their own coordinates, and the colour is one of eight designed palettes (inkwell, sunday comic, silent, neon, two-strip, hellfire, seaside, acid) with halftone shading and film on top. Kick: the bounce, squash, eyes and mouths; hats: noodling hoses, wiggling fingers and blinks; chords: the fills swell and the cast changes. Reactivity is the standard three slots, see docs/reactive.md.",
   "groups": [
     {"name": "Cast", "params": [
-      {"id": "layout", "label": "Layout (0 row, 1 tunnel)",       "min": 0,   "max": 1,   "step": 1,     "default": 1},
-      {"id": "cast",   "label": "How many across or around",      "min": 1,   "max": 8,   "step": 1,     "default": 6},
-      {"id": "swap",   "label": "Bars per subject",               "min": 0.5, "max": 16,  "step": 0.5,   "default": 4},
-      {"id": "size",   "label": "Size in the cell (past 1 they clip)", "min": 0.4, "max": 1.3, "step": 0.01,  "default": 0.8},
-      {"id": "bounce", "label": "Bounce and squash",              "min": 0,   "max": 1.5, "step": 0.01,  "default": 0.8},
-      {"id": "dance",  "label": "Dance (rock and shimmy)",         "min": 0,   "max": 1.5, "step": 0.01,  "default": 0.7}
+      {"id": "layout", "label": "Layout (0 row, 1 tunnel)", "min": 0, "max": 1, "step": 1, "default": 1},
+      {"id": "cast", "label": "How many across or around", "min": 1, "max": 8, "step": 1, "default": 6},
+      {"id": "swap", "label": "Bars per subject", "min": 0.5, "max": 16, "step": 0.5, "default": 4},
+      {"id": "size", "label": "Size in the cell (past 1 they clip)", "min": 0.4, "max": 1.3, "step": 0.01, "default": 0.86},
+      {"id": "bounce", "label": "Bounce and squash", "min": 0, "max": 1.5, "step": 0.01, "default": 0.9},
+      {"id": "dance", "label": "Dance (rock and shimmy)", "min": 0, "max": 1.5, "step": 0.01, "default": 0.8},
+      {"id": "limbs", "label": "How many have arms, legs and gloves", "min": 0, "max": 1, "step": 0.01, "default": 1.0}
     ]},
     {"name": "Movement", "params": [
-      {"id": "spin", "kind": "rate",   "label": "Spin (cycles per beat)",         "min": -0.3, "max": 0.3, "step": 0.002, "default": 0.02},
-      {"id": "zoom", "kind": "rate",   "label": "Zoom down the tunnel (rings per beat)", "min": -1, "max": 1, "step": 0.005, "default": 0.12}
+      {"id": "spin", "kind": "rate", "label": "Spin (cycles per beat)", "min": -0.3, "max": 0.3, "step": 0.002, "default": 0.02},
+      {"id": "zoom", "kind": "rate", "label": "Zoom (rings per beat, minus climbs out of the ink)", "min": -1, "max": 1, "step": 0.005, "default": -0.12}
     ]},
     {"name": "Pen", "params": [
-      {"id": "ink", "energy": 0,    "label": "Line weight",                    "min": 0.3, "max": 3,   "step": 0.05,  "default": 1.0},
-      {"id": "boil",   "label": "Boil (the line redrawn)",        "min": 0,   "max": 1,   "step": 0.01,  "default": 0.18},
-      {"id": "noodle", "label": "Noodle in the hoses",            "min": 0,   "max": 1.5, "step": 0.01,  "default": 0.7}
+      {"id": "ink", "energy": 0, "label": "Line weight", "min": 0.4, "max": 2.2, "step": 0.05, "default": 1.0},
+      {"id": "boil", "label": "Boil (the line redrawn)", "min": 0, "max": 1, "step": 0.01, "default": 0.35},
+      {"id": "noodle", "label": "Noodle in the hoses", "min": 0, "max": 1.5, "step": 0.01, "default": 0.8}
     ]},
     {"name": "Fill", "params": [
-      {"id": "pat",    "label": "Pattern inside the shapes",      "min": 0,   "max": 1,   "step": 0.01,  "default": 0.6},
-      {"id": "patmode", "energy": 0, "label": "Pattern (0 guilloche, 1 halftone, 2 op rings, 3 spiral)", "min": 0, "max": 3, "step": 1, "default": 0},
-      {"id": "patscale", "label": "Rings across the shape",       "min": 0.4, "max": 8,   "step": 0.05,  "default": 2.4},
-      {"id": "patspin", "kind": "rate", "label": "Pattern travel (cycles per beat)", "min": -0.6, "max": 0.6, "step": 0.005, "default": 0.08}
+      {"id": "pat", "label": "Pattern inside the shapes", "min": 0, "max": 1, "step": 0.01, "default": 0.8},
+      {"id": "patmode", "energy": 0, "label": "Pattern (0 checkers, 1 candy stripes, 2 polka dots, 3 op rings)", "min": 0, "max": 3, "step": 1, "default": 0},
+      {"id": "patscale", "label": "Pattern scale", "min": 1, "max": 8, "step": 0.05, "default": 3.2},
+      {"id": "patspin", "kind": "rate", "label": "Pattern travel (cycles per beat)", "min": -0.5, "max": 0.5, "step": 0.005, "default": 0.25},
+      {"id": "shade", "label": "Halftone shading", "min": 0, "max": 1, "step": 0.01, "default": 0.5}
     ]},
     {"name": "Faces and props", "params": [
-      {"id": "face",     "label": "Faces",                        "min": 0,   "max": 1,   "step": 0.01,  "default": 0},
-      {"id": "faceodds", "label": "How many of them have one",    "min": 0,   "max": 1,   "step": 0.01,  "default": 0.45},
-      {"id": "facec",    "label": "C Change brings the faces in", "min": 0,   "max": 1,   "step": 0.01,  "default": 0},
-      {"id": "prop",     "label": "Props (steam, a leaf, a bee)", "min": 0,   "max": 1,   "step": 0.01,  "default": 0.8},
-      {"id": "propodds", "label": "How many of them carry one",   "min": 0,   "max": 1,   "step": 0.01,  "default": 0.55}
+      {"id": "face", "label": "Faces", "min": 0, "max": 1, "step": 0.01, "default": 1.0},
+      {"id": "faceodds", "label": "How many of them have one", "min": 0, "max": 1, "step": 0.01, "default": 0.9},
+      {"id": "facec", "label": "C Change brings the faces in", "min": 0, "max": 1, "step": 0.01, "default": 0},
+      {"id": "prop", "label": "Props (a hat, steam, a bee, a note)", "min": 0, "max": 1, "step": 0.01, "default": 1.0},
+      {"id": "propodds", "label": "How many of them carry one", "min": 0, "max": 1, "step": 0.01, "default": 0.5}
     ]},
     {"name": "Scene", "params": [
-      {"id": "kal",    "label": "Kaleidoscope hue turn (keep it small)", "min": 0, "max": 0.5, "step": 0.005, "default": 0.08},
-      {"id": "rosette", "label": "Rosette behind the cast",       "min": 0,   "max": 1,   "step": 0.01,  "default": 0.4},
-      {"id": "bg",     "label": "Background brightness",          "min": 0,   "max": 1,   "step": 0.01,  "default": 0.30},
-      {"id": "film",   "label": "Film (grain, scratches, edge)",  "min": 0,   "max": 1,   "step": 0.01,  "default": 0.15}
+      {"id": "kal", "label": "Hue turn across the wedges (keep it small)", "min": 0, "max": 0.3, "step": 0.005, "default": 0.0},
+      {"id": "rosette", "label": "Rings and wedges behind the cast", "min": 0, "max": 1, "step": 0.01, "default": 0.6},
+      {"id": "bg", "label": "Background brightness (0.5 as designed)", "min": 0, "max": 1, "step": 0.01, "default": 0.5},
+      {"id": "film", "label": "Film (grain, scratches, edge)", "min": 0, "max": 1, "step": 0.01, "default": 0.3}
     ]},
     {"name": "Reactivity", "params": [
-      {"id": "aband",  "label": "A Hit · band (0 off, 1 kick, 2 chords, 3 hats, 4 all, 5 energy)", "min": 0, "max": 5, "step": 1, "default": 1},
-      {"id": "aloop",  "label": "A Hit · loop (0 ½beat, 1 beat, 2 bar, 3 2bar, 4 4bar, 5 8bar, 6 16bar)", "min": 0, "max": 6, "step": 1, "default": 1},
+      {"id": "aband", "label": "A Hit · band (0 off, 1 kick, 2 chords, 3 hats, 4 all, 5 energy)", "min": 0, "max": 5, "step": 1, "default": 1},
+      {"id": "aloop", "label": "A Hit · loop (0 ½beat, 1 beat, 2 bar, 3 2bar, 4 4bar, 5 8bar, 6 16bar)", "min": 0, "max": 6, "step": 1, "default": 1},
       {"id": "ashape", "label": "A Hit · shape (0 follow, 1 punch, 2 ramp, 3 swell, 4 gate, 5 step)", "min": 0, "max": 5, "step": 1, "default": 1},
-      {"id": "aamt",   "label": "A Hit · amount",                 "min": 0, "max": 1, "step": 0.01, "default": 0.7},
-      {"id": "bband",  "label": "B Move · band",                  "min": 0, "max": 5, "step": 1, "default": 3},
-      {"id": "bloop",  "label": "B Move · loop",                  "min": 0, "max": 6, "step": 1, "default": 0},
-      {"id": "bshape", "label": "B Move · shape",                 "min": 0, "max": 5, "step": 1, "default": 0},
-      {"id": "bamt",   "label": "B Move · amount",                "min": 0, "max": 1, "step": 0.01, "default": 0.4},
-      {"id": "cband",  "label": "C Change · band",                "min": 0, "max": 5, "step": 1, "default": 2},
-      {"id": "cloop",  "label": "C Change · loop",                "min": 0, "max": 6, "step": 1, "default": 5},
-      {"id": "cshape", "label": "C Change · shape",               "min": 0, "max": 5, "step": 1, "default": 3},
-      {"id": "camt",   "label": "C Change · amount",              "min": 0, "max": 1, "step": 0.01, "default": 0.5}
+      {"id": "aamt", "label": "A Hit · amount", "min": 0, "max": 1, "step": 0.01, "default": 0.7},
+      {"id": "bband", "label": "B Move · band", "min": 0, "max": 5, "step": 1, "default": 3},
+      {"id": "bloop", "label": "B Move · loop", "min": 0, "max": 6, "step": 1, "default": 0},
+      {"id": "bshape", "label": "B Move · shape", "min": 0, "max": 5, "step": 1, "default": 0},
+      {"id": "bamt", "label": "B Move · amount", "min": 0, "max": 1, "step": 0.01, "default": 0.4},
+      {"id": "cband", "label": "C Change · band", "min": 0, "max": 5, "step": 1, "default": 2},
+      {"id": "cloop", "label": "C Change · loop", "min": 0, "max": 6, "step": 1, "default": 5},
+      {"id": "cshape", "label": "C Change · shape", "min": 0, "max": 5, "step": 1, "default": 3},
+      {"id": "camt", "label": "C Change · amount", "min": 0, "max": 1, "step": 0.01, "default": 0.5}
     ]},
     {"name": "Colour", "params": [
-      {"id": "hue",    "label": "Hue",                            "min": 0, "max": 1, "step": 0.005, "default": 0.08},
-      {"id": "palette", "energy": 0, "label": "Hues in the palette",           "min": 2, "max": 8, "step": 1,     "default": 4},
-      {"id": "spread", "label": "Hue spread across the cast",     "min": 0, "max": 1, "step": 0.01,  "default": 0.5},
-      {"id": "sat",    "label": "Saturation",                     "min": 0, "max": 1, "step": 0.01,  "default": 1.0},
-      {"id": "follow", "label": "Follow show hue",                "min": 0, "max": 1, "step": 1,     "default": 0}
+      {"id": "hue", "label": "Hue turn of the palette", "min": 0, "max": 1, "step": 0.005, "default": 0.0},
+      {"id": "palette", "energy": 0, "label": "Palette (0 inkwell, 1 sunday comic, 2 silent, 3 neon, 4 two-strip, 5 hellfire, 6 seaside, 7 acid)", "min": 0, "max": 7, "step": 1, "default": 0},
+      {"id": "spread", "label": "How often a cast member shuffles its colours", "min": 0, "max": 1, "step": 0.01, "default": 0.6},
+      {"id": "sat", "label": "Saturation", "min": 0, "max": 1, "step": 0.01, "default": 1.0},
+      {"id": "follow", "label": "Follow show hue", "min": 0, "max": 1, "step": 1, "default": 0}
     ]}
   ]
 }

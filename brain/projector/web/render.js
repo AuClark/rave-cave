@@ -596,7 +596,8 @@ class MapRenderer {
     const inBar = bb - 4 * Math.floor(bb / 4);
     const t = now / 1000;
     // Freeze holds the clock the automation reads rather than switching it off, so every value
-    // stays exactly where it was and carries on from there when it is let go.
+    // stays exactly where it was. Letting go goes back to the live beat, which can be a jump:
+    // that keeps every page's answer a function of the beat alone (docs/visuals-live.md).
     if (this.genFreeze) { if (!this._frz) this._frz = { beat: f.beat, inBar, t }; }
     else this._frz = null;
     const F = this._frz;
@@ -655,7 +656,7 @@ class MapRenderer {
 // Connect to an event stream (the projector host's by default); calls the handlers as messages arrive.
 // Each service says hello with a version of its page code; when that changes (a deploy),
 // the page reloads itself so nobody has to hard-refresh the projector. reload: false opts out.
-function connectEvents(renderer, { onLayout, onScreen, onScreens, onStatus, onSketch, onParams, onAuto, onText, url = "/api/events", state = true, reload = true } = {}) {
+function connectEvents(renderer, { onLayout, onScreen, onScreens, onStatus, onSketch, onParams, onAuto, onText, onShuffle, url = "/api/events", state = true, reload = true } = {}) {
   let es, version = null;
   const open = () => {
     es = new EventSource(url);
@@ -680,6 +681,7 @@ function connectEvents(renderer, { onLayout, onScreen, onScreens, onStatus, onSk
       }
       else if (m.t === "wave") renderer.setWave(m.wave);
       else if (m.t === "text") { renderer.setText(m.text); onText && onText(m.text); }
+      else if (m.t === "shuffle") onShuffle && onShuffle(m.shuffle);
     };
   };
   open();

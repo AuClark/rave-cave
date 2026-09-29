@@ -1,8 +1,7 @@
 {
- "steps": 32,
- "detail": 3,
+ "steps": 28,
+ "detail": 2,
  "far": 7,
- "fog": 0.28,
- "glow": 0.35,
- "form": 1.05
+ "fog": 0.18,
+ "glow": 0.8
 }

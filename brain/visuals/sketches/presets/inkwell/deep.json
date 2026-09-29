@@ -1,22 +1,7 @@
 {
- "layout": 1,
- "cast": 8,
- "size": 0.7,
- "swap": 8,
- "spin": 0.006,
- "zoom": 0.05,
- "pat": 0.5,
- "patscale": 1.6,
- "patspin": 0.03,
- "bg": 0.34,
- "kal": 0.05,
- "hue": 0.25,
- "spread": 0.35,
- "bounce": 0.5,
- "rosette": 0.3,
- "patmode": 1,
- "palette": 3,
- "prop": 0.6,
- "propodds": 0.4,
- "faceodds": 0.25
+ "layout": 1, "cast": 8, "size": 0.78, "swap": 8, "spin": 0.008, "zoom": -0.06,
+ "palette": 3, "patmode": 3, "pat": 0.85, "patscale": 3.4, "patspin": 0.15, "shade": 0.3,
+ "face": 1, "faceodds": 0.8, "limbs": 1, "prop": 0.8, "propodds": 0.4,
+ "bounce": 0.6, "dance": 0.6, "ink": 1.0, "boil": 0.25, "noodle": 0.6,
+ "rosette": 0.7, "bg": 0.45, "film": 0.2, "kal": 0.04, "hue": 0, "spread": 0.7, "sat": 1
 }

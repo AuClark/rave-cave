@@ -1,20 +1,7 @@
 {
- "layout": 0,
- "cast": 3,
- "face": 1.0,
- "sat": 0.1,
- "bg": 0.62,
- "film": 0.95,
- "boil": 0.55,
- "ink": 1.2,
- "pat": 0.35,
- "patscale": 1.8,
- "kal": 0.01,
- "dance": 0.5,
- "rosette": 0.25,
- "patmode": 1,
- "palette": 2,
- "faceodds": 0.8,
- "prop": 0.8,
- "propodds": 0.6
+ "layout": 0, "cast": 3, "size": 1.0, "swap": 8,
+ "palette": 2, "patmode": 1, "pat": 0.6, "patscale": 2.6, "patspin": 0.1, "shade": 0.6,
+ "face": 1, "faceodds": 1, "limbs": 1, "prop": 1, "propodds": 0.7,
+ "bounce": 0.8, "dance": 0.6, "ink": 1.2, "boil": 0.7, "noodle": 0.9,
+ "rosette": 0.6, "bg": 0.5, "film": 0.95, "kal": 0, "hue": 0, "spread": 0.6, "sat": 0
 }
