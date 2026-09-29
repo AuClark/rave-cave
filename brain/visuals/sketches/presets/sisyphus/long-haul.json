@@ -1,0 +1,9 @@
+{
+ "climb": 64,
+ "day": 128,
+ "style": 3,
+ "boil": 0.15,
+ "hill": 0.4,
+ "aamt": 0.5,
+ "cloop": 6
+}

@@ -5,7 +5,7 @@
     {"name": "Scene", "params": [
       {"id": "mode",   "label": "Mode (0 radar, 1 tractor beam, 2 crop circle)", "min": 0, "max": 2, "step": 1, "default": 0},
       {"id": "size",   "label": "Size",                  "min": 0.3,   "max": 2.5,  "step": 0.01,  "default": 1},
-      {"id": "speed",  "label": "Speed (sweep turns per 4 beats / beam rings / rotation)", "min": -2, "max": 4, "step": 0.05, "default": 1},
+      {"id": "speed", "kind": "rate",  "label": "Speed (sweep turns per 4 beats / beam rings / rotation)", "min": -2, "max": 4, "step": 0.05, "default": 1},
       {"id": "rings",  "label": "Rings",                 "min": 0,     "max": 12,   "step": 1,     "default": 4},
       {"id": "count",  "label": "Blips / saucer lights / satellites", "min": 1, "max": 16, "step": 1, "default": 8}
     ]},

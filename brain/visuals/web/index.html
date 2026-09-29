@@ -22,9 +22,6 @@
   .card { background: var(--card); border: 1px solid var(--line); border-radius: 10px; padding: 10px 12px; margin-bottom: 10px; }
   .card h3 { margin: 0 0 6px; font-size: 12px; text-transform: uppercase; letter-spacing: .1em; color: var(--dim); display: flex; }
   .card h3 button { margin-left: auto; font-size: 11px; padding: 2px 8px; }
-  .p { display: grid; grid-template-columns: 1fr auto; align-items: center; margin: 4px 0 2px; }
-  .p span { color: var(--dim); font-variant-numeric: tabular-nums; font-size: 12px; }
-  input[type=range] { width: 100%; accent-color: var(--acc); margin: 0 0 4px; }
   .row { display: flex; gap: 6px; margin: 6px 0; }
   button, select, input[type=text] { font: inherit; color: var(--text); background: #1b1e2e; border: 1px solid var(--line); border-radius: 8px; padding: 7px 10px; }
   button:active { background: #262a40; }
@@ -117,6 +114,67 @@
   .panel.tabbed .card > h3 button { font-size: 11px; margin-bottom: 10px; }
   .panel.tabbed > .card, .panel.tabbed > #groups > .card { border-right: 0; }
   @media (max-width: 760px) { .hero > .s5sect { margin: 0; } }
+
+  /* ------------------------------------------------------------------ performance controls
+     Built for a tablet on a table by the decks: big targets, instant response, and the state of
+     every parameter readable at a glance (where it can go, where it is, whether it is moving). */
+  .pp { padding: 6px 0 10px; border-left: 3px solid transparent; padding-left: 9px; margin-left: -12px; }
+  .pp.sel { border-left-color: var(--accent); background: #303030; }
+  .pl { display: flex; align-items: center; gap: 8px; margin: 0 0 6px; }
+  .pl label { flex: 1; font-size: 13px; cursor: pointer; }
+  .pl .pv { color: var(--dim); font-variant-numeric: tabular-nums; font-size: 12px; min-width: 4.5em; text-align: right; }
+  .pl .ab { padding: 3px 9px; font-size: 11px; letter-spacing: .1em; min-width: 34px; }
+  .pl .ab.on { background: var(--accent); border-color: var(--accent); color: #fff; }
+
+  /* The track: a 34px grab strip. The band is where the value is allowed to go, the two nibs
+     drag its ends, the bar is the held value and the ring is where automation has moved it. */
+  .tr { position: relative; height: 34px; cursor: pointer; touch-action: none; -webkit-user-select: none; user-select: none; }
+  .tr::before { content: ""; position: absolute; left: 0; right: 0; top: 15px; height: 4px; background: #1b1b1b; border: 1px solid #444; }
+  .tr .band { position: absolute; top: 15px; height: 4px; background: #5a3a2a; border-top: 1px solid #7a4a30; border-bottom: 1px solid #7a4a30; }
+  .tr .bar { position: absolute; top: 8px; width: 3px; height: 18px; background: var(--text); margin-left: -1px; }
+  .tr .mk { position: absolute; top: 5px; width: 12px; height: 24px; margin-left: -6px; border: 2px solid var(--accent); display: none; }
+  .pp.auto .tr .mk { display: block; }
+  .tr .nib { position: absolute; top: 19px; width: 0; height: 0; margin-left: -6px;
+             border-left: 6px solid transparent; border-right: 6px solid transparent; border-top: 8px solid #9a6a4a; }
+  .tr .nib.hi { border-top-color: #9a6a4a; }
+  .pp.sel .tr .bar { background: var(--accent); }
+
+  /* Automation, revealed for the selected parameter only: there is no room for eight rows of it. */
+  .au { display: none; gap: 6px; flex-wrap: wrap; align-items: center; margin: 8px 0 2px; }
+  .pp.sel .au { display: flex; }
+  .au select, .au button { padding: 5px 8px; font-size: 12px; }
+  .au .lbl { color: var(--dim); font-size: 11px; letter-spacing: .1em; text-transform: uppercase; }
+  .au input[type=range] { width: 88px; }
+  .au .rng { color: var(--dim); font-size: 11px; font-variant-numeric: tabular-nums; }
+
+  /* Beat pulse in the top bar: a dot a bar wide, the downbeat filled. */
+  #beat { display: inline-flex; gap: 4px; align-items: center; }
+  #beat i { width: 9px; height: 9px; border: 1px solid var(--line2); display: block; }
+  #beat i.on { background: var(--accent); border-color: var(--accent); }
+  #beat i.b1 { border-color: var(--text); }
+
+  #keys { position: fixed; inset: 0; background: rgba(20,20,20,.94); z-index: 100; display: none; padding: 40px;
+          overflow: auto; }
+  #keys.show { display: block; }
+  #keys table { border-collapse: collapse; margin: 0 auto; max-width: 620px; }
+  #keys td { padding: 7px 14px; border-bottom: 1px solid var(--line); font-size: 14px; }
+  #keys td:first-child { color: var(--accent); font-weight: 600; white-space: nowrap; letter-spacing: .08em; }
+  #keys h2 { text-align: center; font-weight: 500; letter-spacing: .2em; font-size: 14px; color: var(--dim); }
+
+  /* What the parts of a track mean, said once rather than guessed at. */
+  .legend { display: flex; flex-wrap: wrap; gap: 6px 16px; margin: 10px 0 8px; color: var(--dim); font-size: 11.5px; }
+  .legend span { display: flex; align-items: center; gap: 6px; }
+  .legend .lg { display: block; width: 16px; height: 10px; }
+  .legend .lg.bar { width: 3px; height: 14px; background: var(--text); }
+  .legend .lg.band { height: 4px; background: #5a3a2a; border-top: 1px solid #7a4a30; border-bottom: 1px solid #7a4a30; }
+  .legend .lg.mk { width: 12px; height: 14px; border: 2px solid var(--accent); }
+  .padlink { display: inline-block; padding: 7px 10px; border: 1px solid var(--line2); text-decoration: none;
+             color: var(--text); font-weight: 600; font-size: 11px; letter-spacing: .1em; }
+  .padlink:hover { border-color: var(--accent); }
+  #shout { color: var(--accent); font-size: 11px; font-weight: 600; letter-spacing: .16em; text-transform: uppercase;
+           opacity: 0; transition: opacity .25s; min-width: 7em; }
+  .row button b { font-weight: 700; color: var(--accent); margin-left: 5px; }
+  button.on .row b, .row button.on b { color: #fff; }
 </style>
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;500;600&display=swap" rel="stylesheet">
@@ -132,6 +190,11 @@
     <div id="previewWrap"><canvas id="gl"></canvas><canvas id="ov"></canvas></div>
     <div class="herobar">
       <span id="conn" class="pill">connecting</span>
+      <span id="beat" title="Beat and bar"><i class="b1"></i><i></i><i></i><i></i></span>
+      <span id="shout"></span>
+      <button id="bFreeze" title="Freeze all automation (Space)">Freeze</button>
+      <button id="bKeys" title="Keyboard shortcuts (?)">?</button>
+      <a href="pad.html" class="padlink">LAUNCHPAD →</a>
       <span class="hint">Every change goes live on any projector surface set to <b>generative</b>
         (<a id="editLink" data-port="8100" data-path="/edit">mapping editor</a>, content → generative).</span>
     </div>
@@ -142,9 +205,24 @@
       <select id="sketch" class="big" title="The live sketch"></select>
       <p class="hint" id="about"></p>
       <p id="err"></p>
+      <div class="row"><button id="bCalm" class="grow" title="Q — a calm look, nothing hectic">Calm <b>Q</b></button>
+        <button id="bGroove" class="grow" title="W — a groove">Groove <b>W</b></button>
+        <button id="bDrop" class="grow" title="E — full on, for the drop">Drop <b>E</b></button></div>
       <div class="row"><button id="bRand" class="grow">Randomise</button><button id="bNudge" class="grow">Nudge</button><button id="bReset" class="grow">Reset</button></div>
+      <div class="row"><input id="textIn" type="text" class="grow" placeholder="Words, separated by |  (wormhole, subliminal)"><button id="bText">Set</button></div>
+      <p class="hint" id="textHint">Up to eight words. Sketches that draw type read them straight off — the page draws them once and hands them over.</p>
       <div class="row"><input id="presetName" type="text" class="grow" placeholder="New preset, e.g. hex-bloom"><button id="bSave">Save</button></div>
       <div class="row"><select id="presetList" class="grow"></select><button id="bLoad">Load</button></div>
+      <p class="hint"><b>Calm / Groove / Drop</b> are the same dice at three energies: they aim the
+        speeds, counts and reaction amounts low, middle or high. All of them, and Randomise, stay
+        inside each parameter's own range. Ranges and automation are saved with the preset.</p>
+      <div class="legend">
+        <span><i class="lg bar"></i>the value</span>
+        <span><i class="lg band"></i>how far it may move — drag the ▲ arrows</span>
+        <span><i class="lg mk"></i>automation, moving on its own</span>
+      </div>
+      <p class="hint">Drag the line to set the value, the arrows under it to set the range.
+        <b>Shift</b>-drag for fine, double-click to reset it, wheel to nudge. <b>?</b> lists the keys.</p>
     </div>
     <div class="card" id="transCard">
       <h3>Transitions</h3>
@@ -170,10 +248,13 @@
     <div id="groups"></div>
   </section>
 </main>
+<div id="keys"><h2>Keyboard</h2><table id="keysTable"></table></div>
 <script src="render.js"></script>
+<script src="vj.js"></script>
 <script>
 const $ = id => document.getElementById(id);
-let SK = null, V = {}, dragging = 0, pushTimer = null, lastPush = 0, pending = {};
+let SK = null, V = {}, AU = {}, FREEZE = false, dragging = 0, pushTimer = null, lastPush = 0, pending = {};
+let sel = null, undoV = null, lastPreset = "", momentary = null;
 
 // Preview: the projector's own renderer, one full-frame surface showing the sketch.
 const R = new MapRenderer($("gl"), $("ov"));
@@ -184,12 +265,13 @@ function resize() {
   R.resize(Math.round(r.width * d), Math.round(r.height * d));
 }
 addEventListener("resize", resize); resize();
-(function frame(now) { R.draw(now); requestAnimationFrame(frame); })(performance.now());
 
 connectEvents(R, {
   onStatus: ok => { $("conn").textContent = ok ? "live" : "reconnecting"; $("conn").className = "pill" + (ok ? " ok" : ""); },
   onSketch: sk => { SK = sk; build(); refreshSketches(); refreshPresets(); },
   onParams: p => { if (!dragging) { V = p; sync(); } else R.genParams = V; },
+  onAuto: (a, frz) => { AU = a; FREEZE = !!frz; $("bFreeze").classList.toggle("on", FREEZE); if (!dragging) syncAuto(); },
+  onText: t => { if (document.activeElement !== $("textIn")) $("textIn").value = t || ""; },
   onTransition: st => showTrans(st),
 });
 
@@ -205,46 +287,247 @@ function set(changes) {
   };
   if (performance.now() - lastPush > 40) send(); else pushTimer = setTimeout(send, 40);
 }
+// Automation changes are rare (a tap, not a drag), so they go straight out.
+function setAuto(id, patch) {
+  AU[id] = Object.assign({}, AU[id], patch);
+  R.genAuto = AU;
+  fetch("/api/auto", { method: "POST", body: JSON.stringify({ [id]: AU[id] }) }).catch(() => {});
+  syncAuto();
+}
+function setFreeze(on) {
+  FREEZE = on; R.genFreeze = on;
+  $("bFreeze").classList.toggle("on", on);
+  fetch("/api/auto", { method: "POST", body: JSON.stringify({ _freeze: on }) }).catch(() => {});
+}
+
+// Note values, the energy rules and the quantised launcher live in vj.js, shared with the
+// Launchpad (pad.html) so the two cannot drift apart.
+const { NOTES, RNOTES, HZ, near, snapRate } = VJ;
 
 // ---------- UI built from the sketch's schema
 const params = () => SK.groups.flatMap(g => g.params);
-const fmt = (p, v) => p.step >= 1 ? String(Math.round(v)) : v.toFixed(Math.min(4, Math.max(2, -Math.floor(Math.log10(p.step)))));
-const rnd = p => { const v = p.min + Math.random() * (p.max - p.min); return Math.round(v / p.step) * p.step; };
+const spec = id => params().find(p => p.id === id);
+const isRate = VJ.isRate;
+const fmt = (p, v) => isRate(p) ? snapRate(v).label
+  : p.step >= 1 ? String(Math.round(v)) : v.toFixed(Math.min(4, Math.max(2, -Math.floor(Math.log10(p.step)))));
+const quant = VJ.quant;
+const auOf = id => AU[id] || {};
+// Randomise and Nudge both stay inside the parameter's own range, never outside it.
+const loOf = p => { const a = auOf(p.id); return a.lo === undefined ? p.min : a.lo; };
+const hiOf = p => { const a = auOf(p.id); return a.hi === undefined ? p.max : a.hi; };
+const rnd = p => quant(p, loOf(p) + Math.random() * (hiOf(p) - loOf(p)));
+const frac = (p, v) => (v - p.min) / ((p.max - p.min) || 1);
 
 function build() {
   $("about").textContent = SK.about || "";
   $("err").textContent = R.genError || "";
-  $("groups").innerHTML = SK.groups.map((g, gi) => `<div class="card"><h3>${g.name}<button data-g="${gi}">random</button></h3>` +
-    g.params.map(p => `<div class="p"><label for="r_${p.id}">${p.label}</label><span id="v_${p.id}"></span></div>
-      <input type="range" id="r_${p.id}" min="${p.min}" max="${p.max}" step="${p.step}">`).join("") + "</div>").join("");
+  $("groups").innerHTML = SK.groups.map((g, gi) =>
+    `<div class="card"><h3>${g.name}<button data-g="${gi}">random</button></h3>` +
+    g.params.map(p => `<div class="pp" id="pp_${p.id}" data-id="${p.id}">
+        <div class="pl"><label>${p.label}</label><span class="pv" id="v_${p.id}"></span>
+          <button class="ab" id="a_${p.id}" title="Automate this one (A)">A</button></div>
+        <div class="tr" id="t_${p.id}" title="Drag the line for the value, the arrows below for its range. Shift = fine, double-click = default, wheel = nudge."><div class="band"></div><div class="mk"></div>
+          <div class="nib lo"></div><div class="nib hi"></div><div class="bar"></div></div>
+        <div class="au" id="au_${p.id}">
+          <span class="lbl">rate</span><select id="ar_${p.id}"></select>
+          <select id="as_${p.id}">
+            <option>sine</option><option>triangle</option><option>saw up</option><option>saw down</option>
+            <option>square</option><option>step</option><option>smooth</option></select>
+          <span class="lbl">phase</span><input type="range" id="ap_${p.id}" min="0" max="0.99" step="0.01">
+          <button id="at_${p.id}" title="Restart the shape on every bar">bar</button>
+          <button id="ah_${p.id}" title="Free-running in Hz instead of locked to the beat">Hz</button>
+          <span class="rng" id="rg_${p.id}"></span>
+          <button id="af_${p.id}" title="Set the range to the full parameter">full</button>
+        </div>
+      </div>`).join("") + "</div>").join("");
+
   for (const p of params()) {
-    const el = $("r_" + p.id);
-    el.oninput = () => { set({ [p.id]: +el.value }); $("v_" + p.id).textContent = fmt(p, +el.value); };
-    el.onpointerdown = () => dragging++;
-    el.onpointerup = el.onpointercancel = () => (dragging = Math.max(0, dragging - 1));
+    track(p);
+    $("a_" + p.id).onclick = e => { e.stopPropagation(); select(p.id); setAuto(p.id, { on: !auOf(p.id).on }); };
+    $("pp_" + p.id).addEventListener("pointerdown", () => select(p.id));
+    const ar = $("ar_" + p.id);
+    ar.onchange = () => setAuto(p.id, { rate: +ar.value });
+    $("as_" + p.id).onchange = e => setAuto(p.id, { shape: e.target.selectedIndex });
+    $("ap_" + p.id).oninput = e => setAuto(p.id, { phase: +e.target.value });
+    $("at_" + p.id).onclick = () => setAuto(p.id, { retrig: !auOf(p.id).retrig });
+    $("ah_" + p.id).onclick = () => { const hz = !auOf(p.id).hz; setAuto(p.id, { hz, rate: hz ? 0.5 : 0.25 }); };
+    $("af_" + p.id).onclick = () => setAuto(p.id, { lo: p.min, hi: p.max });
   }
   document.querySelectorAll("button[data-g]").forEach(b => b.onclick = () =>
-    set(Object.fromEntries(SK.groups[+b.dataset.g].params.filter(p => p.id !== "follow").map(p => [p.id, rnd(p)]))) || sync());
-  sync();
+    set(Object.fromEntries(SK.groups[+b.dataset.g].params.filter(p => !skipRnd(p)).map(p => [p.id, rnd(p)]))) || sync());
+  // The markup was just replaced, so the highlight has to be put back on deliberately.
+  const keep = (sel && spec(sel)) ? sel : (params()[0] || {}).id;
+  sel = null; select(keep);
+  sync(); syncAuto();
 }
-function sync() {
+
+// One track carries three things to drag: the value, and the two ends of its range. Whichever
+// is nearest the finger wins, with the value given a wide berth so normal use never catches a nib.
+function track(p) {
+  const el = $("t_" + p.id);
+  let grab = null, startX = 0, startVal = 0;
+  const xToVal = x => {
+    const r = el.getBoundingClientRect();
+    return p.min + Math.max(0, Math.min(1, (x - r.left) / r.width)) * (p.max - p.min);
+  };
+  el.addEventListener("pointerdown", e => {
+    el.setPointerCapture(e.pointerId);
+    const r = el.getBoundingClientRect(), f = (e.clientX - r.left) / r.width;
+    const low = (e.clientY - r.top) / r.height > 0.60;        // the nibs live down here
+    const d = low ? [["lo", Math.abs(f - frac(p, loOf(p)))], ["hi", Math.abs(f - frac(p, hiOf(p)))]]
+                  : [["v", 0]];
+    grab = d.sort((a, b) => a[1] - b[1])[0][0];
+    startX = e.clientX;
+    startVal = grab === "v" ? (V[p.id] ?? p.default) : grab === "lo" ? loOf(p) : hiOf(p);
+    dragging++;
+    move(e);
+  });
+  const move = e => {
+    if (!grab) return;
+    // Shift is the fine gear: the drag is scaled down about where it started.
+    const v = e.shiftKey ? startVal + (e.clientX - startX) / el.getBoundingClientRect().width * (p.max - p.min) * 0.15
+                         : xToVal(e.clientX);
+    if (grab === "v") { set({ [p.id]: quant(p, v) }); paint(p); }
+    else {
+      const other = grab === "lo" ? hiOf(p) : loOf(p);
+      const q = Math.max(p.min, Math.min(p.max, v));
+      setAuto(p.id, grab === "lo" ? { lo: Math.min(q, other), hi: Math.max(q, other) }
+                                  : { hi: Math.max(q, other), lo: Math.min(q, other) });
+    }
+  };
+  el.addEventListener("pointermove", move);
+  const up = e => { if (grab) { grab = null; dragging = Math.max(0, dragging - 1); } };
+  el.addEventListener("pointerup", up);
+  el.addEventListener("pointercancel", up);
+  el.addEventListener("dblclick", () => { set({ [p.id]: p.default }); paint(p); });
+  el.addEventListener("wheel", e => {
+    e.preventDefault();
+    nudge(p, Math.sign(-e.deltaY) * (e.shiftKey ? 0.25 : 1));
+  }, { passive: false });
+}
+
+function nudge(p, dir) {
+  if (isRate(p)) {
+    // One note value at a time, not one step: the steps between note values are not even.
+    const cur = snapRate(V[p.id] ?? p.default);
+    const i = RNOTES.findIndex(n => n.cpb === cur.cpb);
+    const j = Math.max(0, Math.min(RNOTES.length - 1, i + Math.sign(dir)));
+    set({ [p.id]: quant(p, RNOTES[j].cpb) });
+  } else {
+    set({ [p.id]: quant(p, (V[p.id] ?? p.default) + dir * p.step) });
+  }
+  paint(p);
+}
+
+function select(id) {
+  if (sel === id) return;
+  sel = id;
+  document.querySelectorAll(".pp").forEach(e => e.classList.toggle("sel", e.dataset.id === id));
+}
+
+function paint(p) {
+  const v = V[p.id] ?? p.default, a = auOf(p.id);
+  $("v_" + p.id).textContent = fmt(p, v);
+  const tr = $("t_" + p.id), pc = x => (frac(p, x) * 100).toFixed(2) + "%";
+  tr.querySelector(".bar").style.left = pc(v);
+  const b = tr.querySelector(".band");
+  b.style.left = pc(loOf(p)); b.style.width = ((frac(p, hiOf(p)) - frac(p, loOf(p))) * 100).toFixed(2) + "%";
+  tr.querySelector(".nib.lo").style.left = pc(loOf(p));
+  tr.querySelector(".nib.hi").style.left = pc(hiOf(p));
+  const rg = $("rg_" + p.id);
+  if (rg) rg.textContent = fmt(p, loOf(p)) + " – " + fmt(p, hiOf(p));
+}
+
+function sync() { if (SK) for (const p of params()) paint(p); }
+
+function syncAuto() {
   if (!SK) return;
   for (const p of params()) {
-    const v = V[p.id] ?? p.default;
-    $("r_" + p.id).value = v; $("v_" + p.id).textContent = fmt(p, v);
+    const a = auOf(p.id), hz = !!a.hz;
+    $("pp_" + p.id).classList.toggle("auto", !!a.on);
+    $("a_" + p.id).classList.toggle("on", !!a.on);
+    $("at_" + p.id).classList.toggle("on", !!a.retrig);
+    $("ah_" + p.id).classList.toggle("on", hz);
+    const ar = $("ar_" + p.id), list = hz ? HZ.map(v => ({ cpb: v, label: v + " Hz" })) : NOTES;
+    const want = near(list, a.rate ?? 0.25).cpb;
+    if (ar.dataset.hz !== String(hz)) {
+      ar.dataset.hz = String(hz);
+      ar.innerHTML = list.map(n => `<option value="${n.cpb}">${n.label}</option>`).join("");
+    }
+    ar.value = String(want);
+    $("as_" + p.id).selectedIndex = a.shape | 0;
+    $("ap_" + p.id).value = a.phase ?? 0;
+    paint(p);
   }
 }
 
-$("bRand").onclick = () => { set(Object.fromEntries(params().filter(p => p.id !== "follow").map(p => [p.id, rnd(p)]))); sync(); };
+// The moving marker, the beat pulse, and the preview, all on the same frame.
+const beatDots = [...$("beat").children];
+(function frame(now) {
+  R.draw(now);
+  if (SK) {
+    const live = R.genLive || {};
+    for (const p of params()) {
+      const a = auOf(p.id);
+      if (!a.on) continue;
+      const mk = $("t_" + p.id).querySelector(".mk");
+      mk.style.left = (frac(p, live[p.id] ?? p.min) * 100).toFixed(2) + "%";
+    }
+    const f = R.lastFrame;
+    if (f) beatDots.forEach((d, i) => d.classList.toggle("on", i === Math.round(f.bwb) - 1 && 1 - f.frac > 0.35));
+  }
+  requestAnimationFrame(frame);
+})(performance.now());
+
+// ---------- Q / W / E: one randomiser at three energies
+// "Energy" here means how busy the picture is -- how fast things move, how many of them there
+// are, how hard the track drives them. Q is something you can leave up through a breakdown,
+// W is a groove, E is for the drop.
+//
+// Which way a parameter pushes comes from the sketch where it says so ("energy": 1 means more
+// of this is busier, -1 calmer, 0 neither); otherwise it is a known mover, a known settler, or
+// simply randomised. A speed's energy is how fast it goes, not which way, so its magnitude is
+// aimed and the direction left to chance. Nothing ever leaves the range on the slider, and
+// anything the sketch marks "kind": "quality" is left alone -- those set the frame rate, not
+// the look, and a dice roll on them is how you end up at nine frames a second.
+const skipRnd = VJ.skip;
+
+function energise(e, label) {
+  undoV = Object.assign({}, V);
+  set(VJ.energyValues(params(), loOf, hiOf, e));
+  sync(); flash(label);
+}
+let flashTimer = null;
+function flash(msg) {
+  const el = $("shout");
+  el.textContent = msg; el.style.opacity = "1";
+  clearTimeout(flashTimer);
+  flashTimer = setTimeout(() => (el.style.opacity = "0"), 900);
+}
+$("bCalm").onclick = () => energise(0.22, "calm");
+$("bGroove").onclick = () => energise(0.55, "groove");
+$("bDrop").onclick = () => energise(0.92, "drop");
+
+$("bRand").onclick = () => randomise();
+function randomise() {
+  undoV = Object.assign({}, V);
+  set(Object.fromEntries(params().filter(p => !skipRnd(p)).map(p => [p.id, rnd(p)])));
+  sync(); flash("randomised");
+}
 $("bNudge").onclick = () => {
-  set(Object.fromEntries(params().filter(p => p.id !== "follow").map(p => {
-    const v = (V[p.id] ?? p.default) + (Math.random() - 0.5) * 0.15 * (p.max - p.min);
-    return [p.id, Math.min(p.max, Math.max(p.min, Math.round(v / p.step) * p.step))];
+  set(Object.fromEntries(params().filter(p => !skipRnd(p)).map(p => {
+    const lo = loOf(p), hi = hiOf(p);
+    const v = (V[p.id] ?? p.default) + (Math.random() - 0.5) * 0.15 * (hi - lo);
+    return [p.id, Math.max(lo, Math.min(hi, quant(p, v)))];
   }))); sync();
 };
 $("bReset").onclick = () => { set(Object.fromEntries(params().map(p => [p.id, p.default]))); sync(); };
+$("bFreeze").onclick = () => setFreeze(!FREEZE);
+$("bKeys").onclick = () => $("keys").classList.toggle("show");
+$("keys").onclick = () => $("keys").classList.remove("show");
 
 // ---------- sketches and presets
+let PRESETS = [];
 async function refreshSketches() {
   const r = await (await fetch("/api/sketches")).json();
   $("sketch").innerHTML = r.sketches.map(n => `<option ${n === r.active ? "selected" : ""}>${n}</option>`).join("");
@@ -255,14 +538,91 @@ $("sketch").onchange = async e => {
 };
 async function refreshPresets() {
   const r = await (await fetch("/api/presets")).json();
-  $("presetList").innerHTML = r.presets.map(n => `<option>${n}</option>`).join("") || "<option value=''>(none saved)</option>";
+  PRESETS = r.presets;
+  $("presetList").innerHTML = PRESETS.map(n => `<option>${n}</option>`).join("") || "<option value=''>(none saved)</option>";
 }
+// The words sketches can draw. Sent on Enter or on the button; the renderer draws them to a
+// texture on arrival, so nothing here has to know how type works.
+function sendText() {
+  fetch("/api/text", { method: "POST", body: JSON.stringify({ text: $("textIn").value }) }).catch(() => {});
+}
+$("bText").onclick = sendText;
+$("textIn").onkeydown = e => { if (e.key === "Enter") { sendText(); e.preventDefault(); } };
+
 $("bSave").onclick = async () => {
   const n = $("presetName").value.trim(); if (!n) return;
   const r = await fetch(`/api/presets/${encodeURIComponent(n)}`, { method: "POST" });
   if (!r.ok) alert((await r.json()).error); refreshPresets();
 };
-$("bLoad").onclick = () => { const n = $("presetList").value; if (n) fetch(`/api/presets/${encodeURIComponent(n)}/load`, { method: "POST" }); };
+function loadPreset(n) {
+  if (!n) return;
+  lastPreset = n; $("presetList").value = n;
+  fetch(`/api/presets/${encodeURIComponent(n)}/load`, { method: "POST" });
+}
+$("bLoad").onclick = () => loadPreset($("presetList").value);
+function stepPreset(d) {
+  if (!PRESETS.length) return;
+  const i = Math.max(0, PRESETS.indexOf(lastPreset || $("presetList").value));
+  loadPreset(PRESETS[(i + d + PRESETS.length) % PRESETS.length]);
+}
+
+// ---------- keyboard, deck style
+const KEYS = [
+  ["Q  ·  W  ·  E", "New look: calm  ·  groove  ·  full on for the drop"],
+  ["← / →", "Previous / next preset"],
+  ["1 – 9", "Jump to preset slot"],
+  ["↑ / ↓", "Select the parameter above / below"],
+  ["[ / ]  ·  wheel", "Nudge the selected parameter (Shift for fine)"],
+  ["R  ·  Shift+R", "Randomise inside every range  ·  undo it"],
+  ["A", "Automation on or off for the selected parameter"],
+  ["Space", "Freeze or unfreeze all automation"],
+  ["M (hold)", "Selected parameter to its maximum while held"],
+  ["Esc", "Panic: back to the loaded preset"],
+  ["?", "This list"],
+];
+$("keysTable").innerHTML = KEYS.map(([k, d]) => `<tr><td>${k}</td><td>${d}</td></tr>`).join("");
+
+const typing = e => {
+  const t = e.target;
+  if (t.tagName === "TEXTAREA" || t.tagName === "SELECT") return true;
+  return t.tagName === "INPUT" && !/^(range|checkbox|button)$/.test(t.type);
+};
+addEventListener("keydown", e => {
+  if (typing(e) || !SK) return;
+  const ps = params(), i = Math.max(0, ps.findIndex(p => p.id === sel)), p = ps[i];
+  const k = e.key;
+  if (k === "?") { $("keys").classList.toggle("show"); return; }
+  if (k === "Escape") { $("keys").classList.remove("show"); if (lastPreset) loadPreset(lastPreset); else $("bReset").onclick(); return; }
+  if (k === "ArrowLeft") { stepPreset(-1); e.preventDefault(); return; }
+  if (k === "ArrowRight") { stepPreset(1); e.preventDefault(); return; }
+  if (k === "ArrowUp") { select(ps[(i - 1 + ps.length) % ps.length].id); e.preventDefault(); return; }
+  if (k === "ArrowDown") { select(ps[(i + 1) % ps.length].id); e.preventDefault(); return; }
+  if (k === "[") { nudge(p, e.shiftKey ? -0.25 : -1); return; }
+  if (k === "]") { nudge(p, e.shiftKey ? 0.25 : 1); return; }
+  if (k === "q" || k === "Q") { energise(0.22, "calm"); return; }
+  if (k === "w" || k === "W") { energise(0.55, "groove"); return; }
+  if (k === "e" || k === "E") { energise(0.92, "drop"); return; }
+  if (k === "r" || k === "R") {
+    if (e.shiftKey) { if (undoV) { set(Object.assign({}, undoV)); sync(); } } else randomise();
+    return;
+  }
+  if (k === "a" || k === "A") { setAuto(p.id, { on: !auOf(p.id).on }); return; }
+  if (k === " ") { setFreeze(!FREEZE); e.preventDefault(); return; }
+  if ((k === "m" || k === "M") && !momentary) {
+    momentary = { id: p.id, was: V[p.id] ?? p.default };
+    set({ [p.id]: hiOf(p) }); paint(p);
+    return;
+  }
+  if (k >= "1" && k <= "9") { const n = PRESETS[+k - 1]; if (n) loadPreset(n); return; }
+});
+addEventListener("keyup", e => {
+  if ((e.key === "m" || e.key === "M") && momentary) {
+    const p = spec(momentary.id);
+    set({ [momentary.id]: momentary.was });
+    if (p) paint(p);
+    momentary = null;
+  }
+});
 
 // ---------- transitions
 const T_LABEL = { auto: "Auto (smart)", cut: "Cut", none: "None (instant)", crossfade: "Crossfade", wipe: "Wipe", iris: "Iris",

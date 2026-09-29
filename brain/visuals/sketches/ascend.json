@@ -15,13 +15,13 @@
     ]},
     {"name": "Bands", "params": [
       {"id": "bands",  "label": "Bands",                 "min": 0,     "max": 40,   "step": 1,     "default": 8},
-      {"id": "speed",  "label": "Rise (cycles/beat)",    "min": -2,    "max": 2,    "step": 0.01,  "default": 0.25},
+      {"id": "speed", "kind": "rate",  "label": "Rise (cycles/beat)",    "min": -2,    "max": 2,    "step": 0.01,  "default": 0.25},
       {"id": "bwidth", "label": "Band width",            "min": 0.02,  "max": 0.9,  "step": 0.01,  "default": 0.12}
     ]},
     {"name": "Glyphs", "params": [
       {"id": "glyphs", "label": "Glyphs",                "min": 0,     "max": 1,    "step": 0.01,  "default": 0.7},
       {"id": "rows",   "label": "Rows",                  "min": 3,     "max": 40,   "step": 1,     "default": 14},
-      {"id": "gspeed", "label": "Scroll (rows/beat)",    "min": -2,    "max": 2,    "step": 0.01,  "default": 0.125},
+      {"id": "gspeed", "kind": "rate", "label": "Scroll (rows/beat)",    "min": -2,    "max": 2,    "step": 0.01,  "default": 0.125},
       {"id": "gwidth", "label": "Stroke",                "min": 0.02,  "max": 0.2,  "step": 0.005, "default": 0.08}
     ]},
     {"name": "Colour", "params": [

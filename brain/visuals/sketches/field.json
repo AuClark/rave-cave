@@ -11,7 +11,7 @@
     ]},
     {"name": "Movement", "params": [
       {"id": "wander",  "label": "Wander",          "min": 0,    "max": 1,    "step": 0.01,  "default": 0.45},
-      {"id": "wspeed",  "label": "Wander speed (cycles/beat)", "min": 0, "max": 1, "step": 0.005, "default": 0.12},
+      {"id": "wspeed", "kind": "rate",  "label": "Wander speed (cycles/beat)", "min": 0, "max": 1, "step": 0.005, "default": 0.12},
       {"id": "flow",    "label": "Drift (cells/beat)", "min": -1, "max": 1,   "step": 0.01,  "default": 0.1},
       {"id": "angle",   "label": "Drift direction", "min": 0,    "max": 1,    "step": 0.005, "default": 0.0},
       {"id": "beat",    "label": "Beat punch",      "min": 0,    "max": 1,    "step": 0.01,  "default": 0.4}
@@ -19,7 +19,7 @@
     {"name": "Wave", "params": [
       {"id": "wave",    "label": "Wave amount",     "min": 0,    "max": 1,    "step": 0.01,  "default": 0.7},
       {"id": "wfreq",   "label": "Wave frequency",  "min": 0,    "max": 6,    "step": 0.05,  "default": 1.5},
-      {"id": "wspd",    "label": "Wave speed (cycles/beat)", "min": -1, "max": 1, "step": 0.01, "default": 0.25},
+      {"id": "wspd", "kind": "rate",    "label": "Wave speed (cycles/beat)", "min": -1, "max": 1, "step": 0.01, "default": 0.25},
       {"id": "wangle",  "label": "Wave direction",  "min": 0,    "max": 1,    "step": 0.005, "default": 0.125}
     ]},
     {"name": "Links", "params": [

@@ -1,0 +1,22 @@
+{
+ "off": 0.34,
+ "offspin": 0.008,
+ "rings": 3.6,
+ "reps": 2,
+ "height": 0.74,
+ "zoom": 0.0625,
+ "spin": 0.006,
+ "twist": 0,
+ "counter": 0,
+ "mirror": 1,
+ "seam": 1.2,
+ "weight": 0.5,
+ "edge": 0,
+ "hectic": 0.55,
+ "chroma": 0,
+ "trail": 0,
+ "glow": 0,
+ "mono": 1,
+ "fog": 0.5,
+ "vign": 0.15
+}

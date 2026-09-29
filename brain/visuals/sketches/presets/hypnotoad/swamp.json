@@ -1,0 +1,7 @@
+{
+ "hue": 0.30, "palette": 4, "sat": 0.8,
+ "bands": 7, "wave": 1.0, "bandspin": 0.125, "glow": 0.5,
+ "mode": 0, "scale": 0.15, "detail": 4, "width": 1.1, "spin": -0.008,
+ "rings": 3, "ringspin": 0.25,
+ "size": 0.9, "bob": 0.6, "patches": 1.3
+}

@@ -1,0 +1,7 @@
+{
+ "hue": 0.06, "palette": 2, "sat": 0.9,
+ "bands": 4, "wave": 0.3, "bandspin": 0.08, "glow": 0.35,
+ "mode": 0, "scale": 0.2, "detail": 2, "width": 0.5, "spin": 0.006,
+ "eyesize": 1.35, "pupil": 0.28, "rings": 8, "ringspin": 1.5,
+ "size": 1.15, "bob": 0.45, "blink": 0.2
+}

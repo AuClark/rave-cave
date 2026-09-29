@@ -1,0 +1,605 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=1">
+<meta name="theme-color" content="#242424">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<title>Sektor5 · Launchpad</title>
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA2NCA2NCI+PHJlY3Qgd2lkdGg9IjY0IiBoZWlnaHQ9IjY0IiByeD0iMTIiIGZpbGw9IiMyNDI0MjQiLz48cGF0aCB0cmFuc2Zvcm09InRyYW5zbGF0ZSgxNC41IDcpIHNjYWxlKC41KSIgZD0iTTAsMCBMNzAsMCBMNzAsMjEgTDIxLDIxIEwyMSw0MCBMNTcsNDAgTDcwLDUzIEw3MCw4NyBMNTcsMTAwIEwwLDEwMCBMMCw3OSBMNDksNzkgTDQ5LDYxIEwwLDYxIFoiIGZpbGw9IiNGRjVBMUYiLz48L3N2Zz4=">
+<style>
+  /* Same tokens as every other page: charcoal, hairline grid, one orange accent, Montserrat. */
+  :root { --bg:#242424; --panel:#2b2b2b; --line:#3e3e3e; --line2:#555; --text:#f2f2f2; --dim:#9a9a9a;
+          --accent:#ff5a1f; --good:#7ccf8a; --warn:#f2b84b; --bad:#ef5b5b; --well:#1f1f1f;
+          --font:"Montserrat", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif; }
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body { height: 100%; }
+  body { margin: 0; background: var(--bg); color: var(--text); font: 14px/1.35 var(--font);
+         letter-spacing: .01em; overscroll-behavior: none; -webkit-user-select: none; user-select: none;
+         display: flex; flex-direction: column; padding-bottom: env(safe-area-inset-bottom); }
+  button { font: inherit; font-family: var(--font); color: var(--text); background: transparent;
+           border: 1px solid var(--line2); border-radius: 0; font-weight: 600; letter-spacing: .08em; }
+  button:disabled { opacity: .35; }
+  a { color: var(--accent); }
+
+  /* ---- top strip: where you are, what the beat is doing, and the two global switches ---- */
+  /* The strip must fit the narrowest phone: a flex row that cannot wrap widens the whole body
+     and everything below it looks cropped. Wrap it, and drop the wordmark when it is tight. */
+  .bar { display: flex; align-items: center; gap: 8px; padding: 8px 10px; border-bottom: 1px solid var(--line);
+         background: var(--bg); flex: none; flex-wrap: wrap; }
+  .bar .logo { font-weight: 600; font-size: 12px; letter-spacing: .2em; }
+  .bar .logo b { color: var(--accent); }
+  .sp { flex: 1; }
+  #beat { display: inline-flex; gap: 3px; }
+  #beat i { width: 8px; height: 8px; border: 1px solid var(--line2); display: block; }
+  #beat i.on { background: var(--accent); border-color: var(--accent); }
+  #beat i.b1 { border-color: var(--text); }
+  .bar button { padding: 7px 10px; font-size: 11px; letter-spacing: .1em; }
+  .bar button.on { background: var(--accent); border-color: var(--accent); color: #fff; }
+  /* The way back out of the pad: always in the strip, never hidden, left where a back goes. */
+  .backlink { padding: 7px 10px; border: 1px solid var(--line2); color: var(--text); text-decoration: none;
+              font-weight: 600; font-size: 11px; letter-spacing: .1em; white-space: nowrap; }
+  .backlink:hover { border-color: var(--accent); }
+  #conn { font-size: 10px; letter-spacing: .14em; color: var(--bad); border: 1px solid var(--bad); padding: 3px 6px; }
+  #conn.ok { color: var(--good); border-color: var(--good); }
+
+  /* ---- the preview, small: enough to see what you are about to launch ---- */
+  #pv { position: relative; width: 100%; aspect-ratio: 16/9; background: #000; flex: none;
+        border-bottom: 1px solid var(--line); max-height: 30vh; }
+  #pv canvas { position: absolute; inset: 0; width: 100%; height: 100%; }
+  body.nopv #pv { display: none; }
+  @media (max-width: 430px) {
+    .bar .logo { display: none; }
+    .bar button { padding: 7px 8px; font-size: 10px; letter-spacing: .06em; }
+    #conn { display: none; }
+  }
+
+  /* ---- the pad ---- */
+  .padwrap { flex: 1; overflow-y: auto; -webkit-overflow-scrolling: touch; }
+  .sect { padding: 10px 10px 4px; color: var(--dim); font-size: 10px; letter-spacing: .18em; text-transform: uppercase; }
+  /* min-width: 0 or a long label stops the column shrinking to its share and the last one
+     falls off the side of a narrow phone -- grid items default to min-width: auto. */
+  .grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; padding: 0 10px 10px; }
+  .grid > * { min-width: 0; }
+  .grid.three { grid-template-columns: repeat(3, 1fr); }
+  .grid.four { grid-template-columns: repeat(4, 1fr); }
+
+  /* A pad: square-ish, big enough for a thumb, and it says what it is doing. */
+  .pad { position: relative; overflow: hidden; min-height: 76px; display: flex; flex-direction: column;
+         align-items: flex-start; justify-content: flex-end; gap: 2px; padding: 10px;
+         border: 1px solid var(--line2); background: var(--panel); text-align: left; }
+  .pad .nm { font-size: 14px; font-weight: 600; letter-spacing: .04em; overflow-wrap: anywhere; min-width: 0; }
+  .pad .sub { font-size: 10px; letter-spacing: .14em; color: var(--dim); text-transform: uppercase; }
+  .pad:active { background: #3a3a3a; }
+  .pad.live { border-color: var(--accent); }
+  .pad.live .nm { color: var(--accent); }
+  /* Queued: the pad fills up from the left as the bar comes round, then fires. */
+  .pad .fill { position: absolute; inset: 0; background: var(--accent); opacity: .22; width: 0; transition: none; }
+  .pad.armed { border-color: var(--accent); }
+  .pad.armed .sub { color: var(--accent); }
+  .pad.big { min-height: 92px; }
+  .pad.e1 { border-color: #4a6f8a; } .pad.e2 { border-color: #8a7a3a; } .pad.e3 { border-color: var(--accent); }
+  .pad.hold { background: #332; }
+  .pad.act { background: var(--accent); border-color: var(--accent); }
+  .pad.act .nm, .pad.act .sub { color: #fff; }
+  .sect b { color: var(--accent); font-weight: 600; }
+  .sect #focusHint { color: #6b6b6b; letter-spacing: .1em; }
+
+  /* ---- the drawer: everything that is not a pad ---- */
+  #sheet { position: fixed; inset: 0; background: rgba(20,20,20,.55); display: none; z-index: 50; }
+  #sheet.show { display: block; }
+  #sheet .panelbox { position: absolute; left: 0; right: 0; bottom: 0; max-height: 86%; overflow-y: auto;
+                     background: var(--bg); border-top: 1px solid var(--line2);
+                     padding: 0 0 calc(14px + env(safe-area-inset-bottom)); }
+  .shhead { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; padding: 12px 14px; border-bottom: 1px solid var(--line);
+            position: sticky; top: 0; background: var(--bg); }
+  .shhead h2 { margin: 0; font-size: 12px; font-weight: 500; letter-spacing: .18em; color: var(--dim); text-transform: uppercase; }
+  .shrow { padding: 12px 14px; border-bottom: 1px solid var(--line); }
+  .shrow, .chips { min-width: 0; }
+  .chips button { max-width: 100%; overflow-wrap: anywhere; }
+  .shrow h3 { margin: 0 0 8px; font-size: 10px; font-weight: 500; letter-spacing: .18em; color: var(--dim); text-transform: uppercase; }
+  .chips { display: flex; flex-wrap: wrap; gap: 6px; }
+  .chips button { padding: 9px 12px; font-size: 12px; letter-spacing: .06em; }
+  .chips button.on { background: var(--accent); border-color: var(--accent); color: #fff; }
+  input[type=text] { width: 100%; font: inherit; font-family: var(--font); background: var(--well);
+                     color: var(--text); border: 1px solid var(--line2); border-radius: 0;
+                     padding: 11px 12px; font-size: 15px; }
+  select { width: 100%; font: inherit; font-family: var(--font); background: var(--well); color: var(--text);
+           border: 1px solid var(--line2); border-radius: 0; padding: 11px 12px; font-size: 15px; }
+
+  /* Macro sliders: big, and they show the range the value is allowed into, same as the full page. */
+  .mac { padding: 8px 0 12px; }
+  .mac .top { display: flex; align-items: baseline; gap: 8px; }
+  .mac .top label { flex: 1; font-size: 13px; }
+  .mac .top span { color: var(--dim); font-size: 12px; font-variant-numeric: tabular-nums; }
+  .mtr { position: relative; height: 44px; touch-action: none; }
+  .mtr::before { content: ""; position: absolute; left: 0; right: 0; top: 20px; height: 4px; background: #1b1b1b; border: 1px solid #444; }
+  .mtr .band { position: absolute; top: 20px; height: 4px; background: #5a3a2a; border-top: 1px solid #7a4a30; border-bottom: 1px solid #7a4a30; }
+  .mtr .bar2 { position: absolute; top: 10px; width: 4px; height: 24px; background: var(--text); margin-left: -2px; }
+  .mtr .mk2 { position: absolute; top: 7px; width: 14px; height: 30px; margin-left: -7px; border: 2px solid var(--accent); display: none; }
+  .mac.auto .mtr .mk2 { display: block; }
+  .hint { color: var(--dim); font-size: 12px; padding: 12px 14px; }
+  .hint b { color: var(--text); }
+</style>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600&display=swap" rel="stylesheet">
+<script src="/s5auth.js"></script>
+</head>
+<body>
+<div class="bar">
+  <a href="./" class="backlink" title="Back to the full controls">&#9664; FULL</a>
+  <span class="logo">SEKTOR<b>5</b></span>
+  <span id="beat"><i class="b1"></i><i></i><i></i><i></i></span>
+  <span class="sp"></span>
+  <span id="conn">···</span>
+  <button id="bQ" title="When a pad fires">1 BAR</button>
+  <button id="bFreeze">FREEZE</button>
+  <button id="bMore">MORE</button>
+</div>
+<div id="pv"><canvas id="gl"></canvas><canvas id="ov"></canvas></div>
+<div class="padwrap">
+  <div class="sect">Energy — a new look at this level</div>
+  <div class="grid three" id="energy"></div>
+  <div class="sect">Effects — on <b id="focusName">—</b> <span id="focusHint"></span></div>
+  <div class="grid three" id="fx"></div>
+  <div class="sect">Hold — push the track's grip on the picture</div>
+  <div class="grid three" id="holds"></div>
+  <div class="sect">Presets</div>
+  <div class="grid" id="presets"></div>
+  <div class="sect">Desk</div>
+  <div class="grid four" id="desk"></div>
+</div>
+
+<div id="sheet"><div class="panelbox">
+  <div class="shhead"><h2 id="shTitle">More</h2><span class="sp"></span><button id="shClose">CLOSE</button></div>
+  <div class="shrow"><h3>Sketch</h3><select id="skSel"></select></div>
+  <div class="shrow"><h3>Words (for sketches that draw type)</h3>
+    <input id="textIn" type="text" placeholder="WAKE UP|OBEY|DANCE"></div>
+  <div class="shrow"><h3>Launch on</h3><div class="chips" id="qChips"></div></div>
+  <div class="shrow"><h3>Effects act on</h3><select id="focusSel"></select></div>
+  <div class="shrow"><h3>Strobe rate</h3><div class="chips" id="strChips"></div></div>
+  <div class="shrow"><h3>Sweep time</h3><div class="chips" id="swChips"></div></div>
+  <div class="shrow"><h3>Chase — step through the presets</h3><div class="chips" id="chChips"></div></div>
+  <div class="shrow"><h3>Macros</h3><div class="chips" id="grpChips"></div><div id="macros"></div></div>
+  <div class="shrow"><h3>Preview</h3><div class="chips"><button id="bPv">Show preview</button></div></div>
+  <p class="hint"><b>Launch on</b> decides when a pad takes effect: <b>now</b>, or on the next beat or bar,
+    so a change always lands in time however sloppily you hit it. A queued pad fills up as the bar
+    comes round; tap it again to cancel. Effects and Hold pads always act at once — they are played,
+    not launched.</p>
+  <p class="hint">On a laptop: <b>Q W E</b> energy, <b>Z</b> sweep up, <b>X</b> sweep down, <b>C</b> strobe,
+    <b>V</b> flash, <b>B</b> flip, <b>1</b>–<b>8</b> presets, <b>space</b> freeze, <b>esc</b> panic.
+    Hold the key for the held ones.</p>
+</div></div>
+
+<script src="render.js"></script>
+<script src="vj.js"></script>
+<script>
+const $ = id => document.getElementById(id);
+let SK = null, V = {}, AU = {}, FREEZE = false, PRESETS = [], live = "", grpIdx = 0, dragging = 0;
+// Effects state. FOCUS is the one parameter the effect pads play; strobe and sweep are in note
+// values like everything else. `ramp` is a sweep in progress, in beat time.
+let FOCUS = "", strobeRate = 2, sweepBeats = 4, chaseBars = 0, chaseCell = null;
+let ramp = null, heldAuto = null, panicTo = null;
+
+const R = new MapRenderer($("gl"), $("ov"));
+R.layout = { lead_ms: 60, brightness: 1, masks: [], surfaces: [
+  { id: "p", content: "gen", opacity: 1, hue_shift: 0, corners: [[0, 0], [1, 0], [1, 1], [0, 1]] }] };
+function resize() {
+  const r = $("pv").getBoundingClientRect(), d = Math.min(2, devicePixelRatio || 1);
+  R.resize(Math.max(2, Math.round(r.width * d)), Math.max(2, Math.round(r.height * d)));
+}
+addEventListener("resize", resize);
+
+const L = new VJ.Launcher(() => R.lastFrame);
+L.grid = +(localStorage.getItem("s5pad.grid") ?? 4);
+strobeRate = +(localStorage.getItem("s5pad.str") ?? 2);
+sweepBeats = +(localStorage.getItem("s5pad.sw") ?? 4);
+chaseBars = +(localStorage.getItem("s5pad.ch") ?? 0);
+
+connectEvents(R, {
+  onStatus: ok => { $("conn").textContent = ok ? "LIVE" : "···"; $("conn").className = ok ? "ok" : ""; },
+  onSketch: sk => {
+    SK = sk;
+    const want = localStorage.getItem("s5pad.focus");
+    FOCUS = (want && spec(want)) ? want : defaultFocus();
+    buildMacros(); paintFocus(); loadLists();
+  },
+  onParams: p => { if (!dragging) { V = p; paintMacros(); } else R.genParams = V; },
+  onAuto: (a, frz) => { AU = a; FREEZE = !!frz; $("bFreeze").classList.toggle("on", FREEZE); paintMacros(); },
+  onText: t => { if (document.activeElement !== $("textIn")) $("textIn").value = t || ""; },
+});
+
+// ---------- talking to the service
+let pushAt = 0, pend = {}, pushT = null;
+function set(changes) {
+  Object.assign(V, changes); Object.assign(pend, changes);
+  R.genParams = V;
+  clearTimeout(pushT);
+  const go = () => { pushAt = performance.now(); const b = JSON.stringify(pend); pend = {};
+                     fetch("/api/params", { method: "POST", body: b }).catch(() => {}); };
+  if (performance.now() - pushAt > 40) go(); else pushT = setTimeout(go, 40);
+}
+const loadPreset = n => fetch(`/api/presets/${encodeURIComponent(n)}/load`, { method: "POST" }).catch(() => {});
+const params = () => SK ? SK.groups.flatMap(g => g.params) : [];
+const loOf = p => { const a = AU[p.id] || {}; return a.lo === undefined ? p.min : a.lo; };
+const hiOf = p => { const a = AU[p.id] || {}; return a.hi === undefined ? p.max : a.hi; };
+
+// ---------- the pads
+// Every pad goes through the same launcher, so "launch on" applies to all of them equally.
+function tap(el, fn, label) {
+  if (L.waiting(el.id)) { L.cancel(el.id); el.classList.remove("armed"); el.querySelector(".fill").style.width = "0"; return; }
+  const wait = L.launch(fn, el.id);
+  if (wait === null) { pop(el); return; }
+  el.classList.add("armed");
+  const sub = el.querySelector(".sub");
+  if (sub) sub.dataset.was = sub.dataset.was || sub.textContent;
+}
+function pop(el) { el.classList.add("live"); setTimeout(() => el.classList.remove("live"), 180); }
+
+// ---------- effects: a lighting desk's gestures, on whichever parameter has focus
+// Two kinds, split by what they need to be accurate about:
+//
+//   Sweeps and flashes are slow -- a fader move, a bump with a fall-off. The page walks them in
+//   beat time and posts the value as it goes; at 25 a second a four-beat sweep is 50 steps, which
+//   is smoother than the eye. They also write straight into the preview so it never lags a drag.
+//
+//   A strobe is not slow. At 1/16 it is sixteen edges a second and no amount of posting will keep
+//   that clean, so it is handed to the renderer instead: automation, square shape, low duty, which
+//   is worked out per frame from the beat on the projector itself. Letting go puts back whatever
+//   automation the parameter had before.
+const spec = id => params().find(p => p.id === id);
+function setAuto(id, patch) {
+  AU[id] = Object.assign({}, AU[id], patch);
+  R.genAuto = AU;
+  fetch("/api/auto", { method: "POST", body: JSON.stringify({ [id]: AU[id] }) }).catch(() => {});
+}
+function focusP() { return spec(FOCUS); }
+
+function sweep(dir) {                       // dir +1 up, -1 down; held
+  const p = focusP(); if (!p || !R.lastFrame) return;
+  const from = V[p.id] ?? p.default;
+  ramp = { id: p.id, from, to: dir > 0 ? hiOf(p) : loOf(p), t0: R.lastFrame.beat,
+           beats: sweepBeats, back: from };
+}
+function sweepOff() {                       // let go and it glides back where it came from (the parameter it started on)
+  const p = ramp && spec(ramp.id); if (!p || !R.lastFrame) { ramp = null; return; }
+  ramp = { id: p.id, from: V[p.id] ?? p.default, to: ramp.back, t0: R.lastFrame.beat,
+           beats: sweepBeats, back: null };
+}
+function flash() {                          // a bump: straight to the top, fall off over a beat
+  const p = focusP(); if (!p || !R.lastFrame) return;
+  const back = V[p.id] ?? p.default;
+  set({ [p.id]: VJ.quant(p, hiOf(p)) });
+  ramp = { id: p.id, from: hiOf(p), to: back, t0: R.lastFrame.beat, beats: 1, back: null };
+}
+function flip() {                           // mirror it inside its range
+  const p = focusP(); if (!p) return;
+  set({ [p.id]: VJ.quant(p, loOf(p) + hiOf(p) - (V[p.id] ?? p.default)) });
+}
+function strobeOn() {
+  const p = focusP(); if (!p) return;
+  heldAuto = { id: p.id, auto: Object.assign({}, AU[p.id]) };   // restored on the one it started on
+  setAuto(p.id, { on: true, shape: 4, duty: 0.18, rate: strobeRate,
+                  lo: loOf(p), hi: hiOf(p), retrig: true, hz: false, phase: 0 });
+}
+function strobeOff() {
+  if (heldAuto && spec(heldAuto.id)) setAuto(heldAuto.id, heldAuto.auto);
+  heldAuto = null;
+}
+// Speed master: every parameter the sketch calls a rate, up or down an octave at a time.
+function speed(mult) {
+  const out = {};
+  for (const p of params()) {
+    if (!VJ.isRate(p)) continue;
+    const v = (V[p.id] ?? p.default) * mult;
+    out[p.id] = VJ.quant(p, Math.max(loOf(p), Math.min(hiOf(p), v)));
+  }
+  if (Object.keys(out).length) set(out);
+}
+function panic() {
+  if (panicTo) loadPreset(panicTo);
+  else if (SK) set(Object.fromEntries(params().map(p => [p.id, p.default])));
+  ramp = null; strobeOff();
+}
+
+const ENERGIES = [["Calm", 0.22, "e1"], ["Groove", 0.55, "e2"], ["Drop", 0.92, "e3"]];
+$("energy").innerHTML = ENERGIES.map(([n, e, c], i) =>
+  `<button class="pad big ${c}" id="en${i}"><span class="nm">${n}</span><span class="sub">new look</span></button>`).join("");
+ENERGIES.forEach(([n, e], i) => {
+  const el = $("en" + i);
+  el.onclick = () => tap(el, () => {
+    set(VJ.energyValues(params(), loOf, hiOf, e));
+    live = ""; paintPresets(); pop(el);
+  });
+});
+
+// Hold pads: a momentary push, like an effect button on a mixer. Down takes it to the top of its
+// range, up puts it back exactly where it was.
+const HOLDS = [
+  { id: "hA", nm: "Hit", ids: ["aamt"] },
+  { id: "hB", nm: "Move", ids: ["bamt", "spin", "speed", "flow", "wspeed"] },
+  { id: "hC", nm: "Change", ids: ["camt"] },
+];
+$("holds").innerHTML = HOLDS.map(h =>
+  `<button class="pad" id="${h.id}"><span class="nm">${h.nm}</span><span class="sub">hold</span></button>`).join("");
+for (const h of HOLDS) {
+  const el = $(h.id);
+  let was = null;
+  const targets = () => params().filter(p => h.ids.includes(p.id));
+  const down = e => {
+    e.preventDefault();
+    const t = targets(); if (!t.length) return;
+    was = {}; const up = {};
+    for (const p of t) { was[p.id] = V[p.id] ?? p.default; up[p.id] = hiOf(p); }
+    set(up); el.classList.add("hold");
+  };
+  const off = () => { if (was) { set(was); was = null; } el.classList.remove("hold"); };
+  el.addEventListener("pointerdown", down);
+  el.addEventListener("pointerup", off);
+  el.addEventListener("pointercancel", off);
+  el.addEventListener("pointerleave", off);
+}
+
+// Effects are played, not launched: they act the instant they are touched, because a strobe
+// that waits for the bar is not a strobe.
+const FX = [
+  { id: "fxUp", nm: "Sweep ↑", sub: "hold", down: () => sweep(1), up: sweepOff, key: "z" },
+  { id: "fxDn", nm: "Sweep ↓", sub: "hold", down: () => sweep(-1), up: sweepOff, key: "x" },
+  { id: "fxSt", nm: "Strobe", sub: "hold", down: strobeOn, up: strobeOff, key: "c" },
+  { id: "fxFl", nm: "Flash", sub: "tap", down: flash, key: "v" },
+  { id: "fxFp", nm: "Flip", sub: "tap", down: flip, key: "b" },
+  { id: "fxAu", nm: "Auto", sub: "latch", down: () => {
+      const p = focusP(); if (p) setAuto(p.id, { on: !(AU[p.id] || {}).on, shape: 0, rate: 0.25 });
+    }, latch: () => { const p = focusP(); return p && (AU[p.id] || {}).on; } },
+];
+$("fx").innerHTML = FX.map(f =>
+  `<button class="pad" id="${f.id}"><span class="nm">${f.nm}</span><span class="sub">${f.sub}</span></button>`).join("");
+for (const f of FX) bindPlay($(f.id), f);
+
+const DESK = [
+  { id: "dkSlow", nm: "÷2", sub: "speed", down: () => speed(0.5) },
+  { id: "dkFast", nm: "×2", sub: "speed", down: () => speed(2) },
+  { id: "dkChase", nm: "Chase", sub: "latch", down: () => { chaseBars = chaseBars ? 0 : 4; chaseCell = null; paintChips(); },
+    latch: () => !!chaseBars },
+  { id: "dkPanic", nm: "Panic", sub: "tap", down: panic },
+];
+$("desk").innerHTML = DESK.map(f =>
+  `<button class="pad" id="${f.id}"><span class="nm">${f.nm}</span><span class="sub">${f.sub}</span></button>`).join("");
+for (const f of DESK) bindPlay($(f.id), f);
+
+// One binding for pointer and key, so a pad behaves the same whether it is thumbed or typed.
+function bindPlay(el, f) {
+  if (!el) return;
+  const down = e => { if (e) e.preventDefault(); if (el.dataset.on) return; el.dataset.on = "1";
+                      el.classList.add("act"); f.down && f.down(); };
+  const up = () => { if (!el.dataset.on) return; delete el.dataset.on;
+                     el.classList.remove("act"); f.up && f.up(); };
+  el.addEventListener("pointerdown", down);
+  el.addEventListener("pointerup", up);
+  el.addEventListener("pointercancel", up);
+  el.addEventListener("pointerleave", up);
+  f._down = down; f._up = up;
+}
+
+function paintPresets() {
+  $("presets").innerHTML = PRESETS.length
+    ? PRESETS.map((n, i) => `<button class="pad" id="ps${i}"><span class="nm">${n}</span>
+        <span class="sub">${n === live ? "playing" : "preset"}</span></button>`).join("")
+    : `<div class="hint">No presets for this sketch yet. Make one on the full controls page.</div>`;
+  PRESETS.forEach((n, i) => {
+    const el = $("ps" + i);
+    if (!el) return;
+    el.classList.toggle("live", n === live);
+    el.onclick = () => tap(el, () => { loadPreset(n); live = n; panicTo = n; paintPresets(); pop(el); });
+  });
+}
+
+async function loadLists() {
+  const s = await (await fetch("/api/sketches")).json();
+  $("skSel").innerHTML = s.sketches.map(n => `<option ${n === s.active ? "selected" : ""}>${n}</option>`).join("");
+  const p = await (await fetch("/api/presets")).json();
+  PRESETS = p.presets; paintPresets();
+}
+$("textIn").onchange = () => fetch("/api/text", { method: "POST",
+  body: JSON.stringify({ text: $("textIn").value }) }).catch(() => {});
+$("skSel").onchange = e => fetch("/api/select", { method: "POST", body: JSON.stringify({ sketch: e.target.value }) });
+
+// ---------- global switches
+$("bFreeze").onclick = () => {
+  FREEZE = !FREEZE; R.genFreeze = FREEZE;
+  $("bFreeze").classList.toggle("on", FREEZE);
+  fetch("/api/auto", { method: "POST", body: JSON.stringify({ _freeze: FREEZE }) }).catch(() => {});
+};
+// A sensible thing for the effects to land on without being asked: the sketch's own speed if
+// it has one, otherwise the first parameter that is not part of the standard reactivity block.
+function defaultFocus() {
+  const ps = params();
+  const rate = ps.find(p => VJ.isRate(p));
+  if (rate) return rate.id;
+  const react = /^(a|b|c)(band|loop|shape|amt)$/;
+  const own = ps.find(p => !react.test(p.id) && p.id !== "follow" && p.kind !== "quality");
+  return (own || ps[0] || {}).id || "";
+}
+function paintFocus() {
+  const p = focusP();
+  $("focusName").textContent = p ? p.label : "—";
+  $("focusHint").textContent = p ? (VJ.isRate(p) ? "a speed" : "") : "pick one in MORE";
+  $("focusSel").innerHTML = params().map(p2 =>
+    `<option value="${p2.id}" ${p2.id === FOCUS ? "selected" : ""}>${p2.label}</option>`).join("");
+}
+$("focusSel").onchange = e => { FOCUS = e.target.value; localStorage.setItem("s5pad.focus", FOCUS); paintFocus(); };
+
+// The three note-value chip rows and the chase, all in one place.
+function chips(el, list, get, setv) {
+  $(el).innerHTML = list.map(x =>
+    `<button data-v="${x.v}" class="${x.v === get() ? "on" : ""}">${x.label}</button>`).join("");
+  $(el).querySelectorAll("button").forEach(b => b.onclick = () => { setv(+b.dataset.v); paintChips(); });
+}
+function paintChips() {
+  chips("strChips", [{ v: 8, label: "1/32" }, { v: 4, label: "1/16" }, { v: 2, label: "1/8" },
+                     { v: 1, label: "1/4" }, { v: 0.5, label: "1/2" }],
+        () => strobeRate, v => { strobeRate = v; localStorage.setItem("s5pad.str", v); });
+  chips("swChips", [{ v: 1, label: "1 beat" }, { v: 2, label: "2 beats" }, { v: 4, label: "1 bar" },
+                    { v: 8, label: "2 bars" }, { v: 16, label: "4 bars" }],
+        () => sweepBeats, v => { sweepBeats = v; localStorage.setItem("s5pad.sw", v); });
+  chips("chChips", [{ v: 0, label: "off" }, { v: 1, label: "1 bar" }, { v: 2, label: "2 bars" },
+                    { v: 4, label: "4 bars" }, { v: 8, label: "8 bars" }],
+        () => chaseBars, v => { chaseBars = v; chaseCell = null; localStorage.setItem("s5pad.ch", v); });
+}
+
+function paintQ() {
+  const g = VJ.GRID.find(x => x.beats === L.grid) || VJ.GRID[0];
+  $("bQ").textContent = g.label.toUpperCase();
+  $("bQ").classList.toggle("on", L.grid > 0);
+  $("qChips").innerHTML = VJ.GRID.map(x =>
+    `<button data-b="${x.beats}" class="${x.beats === L.grid ? "on" : ""}">${x.label}</button>`).join("");
+  $("qChips").querySelectorAll("button").forEach(b => b.onclick = () => {
+    L.grid = +b.dataset.b; localStorage.setItem("s5pad.grid", L.grid); paintQ();
+  });
+}
+// Tapping the strip button cycles it, for when the drawer is too slow.
+$("bQ").onclick = () => {
+  const i = VJ.GRID.findIndex(x => x.beats === L.grid);
+  L.grid = VJ.GRID[(i + 1) % VJ.GRID.length].beats;
+  localStorage.setItem("s5pad.grid", L.grid); paintQ();
+};
+$("bMore").onclick = () => $("sheet").classList.add("show");
+$("shClose").onclick = () => $("sheet").classList.remove("show");
+$("sheet").onclick = e => { if (e.target === $("sheet")) $("sheet").classList.remove("show"); };
+$("bPv").onclick = () => {
+  document.body.classList.toggle("nopv");
+  $("bPv").classList.toggle("on", !document.body.classList.contains("nopv"));
+  resize();
+};
+$("bPv").classList.add("on");
+
+// ---------- macros: one group of the sketch at a time, as big sliders
+function buildMacros() {
+  if (!SK) return;
+  grpIdx = Math.min(grpIdx, SK.groups.length - 1);
+  $("grpChips").innerHTML = SK.groups.map((g, i) =>
+    `<button data-i="${i}" class="${i === grpIdx ? "on" : ""}">${g.name}</button>`).join("");
+  $("grpChips").querySelectorAll("button").forEach(b => b.onclick = () => { grpIdx = +b.dataset.i; buildMacros(); });
+  const g = SK.groups[grpIdx];
+  $("macros").innerHTML = g.params.map(p => `<div class="mac" id="m_${p.id}">
+      <div class="top"><label>${p.label}</label><span id="mv_${p.id}"></span></div>
+      <div class="mtr" id="mt_${p.id}"><div class="band"></div><div class="mk2"></div><div class="bar2"></div></div>
+    </div>`).join("");
+  for (const p of g.params) macroTrack(p);
+  paintMacros();
+}
+function macroTrack(p) {
+  const el = $("mt_" + p.id);
+  let on = false;
+  const val = x => {
+    const r = el.getBoundingClientRect();
+    return VJ.quant(p, p.min + Math.max(0, Math.min(1, (x - r.left) / r.width)) * (p.max - p.min));
+  };
+  const go = e => { if (on) { set({ [p.id]: val(e.clientX) }); paintMacro(p); } };
+  el.addEventListener("pointerdown", e => { on = true; dragging++; el.setPointerCapture(e.pointerId); go(e); });
+  el.addEventListener("pointermove", go);
+  const up = () => { if (on) { on = false; dragging = Math.max(0, dragging - 1); } };
+  el.addEventListener("pointerup", up);
+  el.addEventListener("pointercancel", up);
+  el.addEventListener("dblclick", () => { set({ [p.id]: p.default }); paintMacro(p); });
+}
+const fmtV = (p, v) => VJ.isRate(p) ? VJ.snapRate(v).label
+  : p.step >= 1 ? String(Math.round(v)) : v.toFixed(Math.min(3, Math.max(2, -Math.floor(Math.log10(p.step)))));
+function paintMacro(p) {
+  const row = $("m_" + p.id); if (!row) return;
+  const v = V[p.id] ?? p.default, a = AU[p.id] || {};
+  const pc = x => (((x - p.min) / ((p.max - p.min) || 1)) * 100).toFixed(2) + "%";
+  $("mv_" + p.id).textContent = fmtV(p, v);
+  const tr = $("mt_" + p.id);
+  tr.querySelector(".bar2").style.left = pc(v);
+  const b = tr.querySelector(".band");
+  b.style.left = pc(loOf(p));
+  b.style.width = (((hiOf(p) - loOf(p)) / ((p.max - p.min) || 1)) * 100).toFixed(2) + "%";
+  row.classList.toggle("auto", !!a.on);
+}
+function paintMacros() { if (SK) for (const p of SK.groups[grpIdx].params) paintMacro(p); }
+
+// ---------- the frame: preview, beat dots, queued pads, automation markers
+const dots = [...$("beat").children];
+resize();
+(function frame(now) {
+  R.draw(now);
+  const f0 = R.lastFrame;
+
+  // A sweep in beat time: it takes the same number of beats whatever the tempo, and it is the
+  // beat clock that drives it, so it stays with the music if the track speeds up mid-move.
+  if (ramp && f0) {
+    const p = spec(ramp.id);
+    if (!p) ramp = null;
+    else {
+      const t = Math.min(1, (f0.beat - ramp.t0) / Math.max(0.05, ramp.beats));
+      const e = t * t * (3 - 2 * t);                        // ease, so it does not start with a jerk
+      set({ [p.id]: VJ.quant(p, ramp.from + (ramp.to - ramp.from) * e) });
+      if (t >= 1) ramp = null;
+    }
+  }
+
+  // Chase: step to the next preset every so many bars, on the bar.
+  if (chaseBars && f0 && PRESETS.length) {
+    const cell = Math.floor(VJ.barBeat(f0) / (chaseBars * 4));
+    if (chaseCell === null) chaseCell = cell;
+    else if (cell !== chaseCell) {
+      chaseCell = cell;
+      const i = PRESETS.indexOf(live);
+      const n = PRESETS[(i + 1 + PRESETS.length) % PRESETS.length];
+      loadPreset(n); live = n; paintPresets();
+    }
+  }
+  for (const f of [...FX, ...DESK]) {
+    if (!f.latch) continue;
+    const el = $(f.id);
+    if (el) el.classList.toggle("act", !!f.latch());
+  }
+
+  const prog = L.tick();
+  for (const el of document.querySelectorAll(".pad")) {
+    const armed = L.waiting(el.id);
+    el.classList.toggle("armed", armed);
+    el.querySelector(".fill") || el.insertAdjacentHTML("afterbegin", '<div class="fill"></div>');
+    el.querySelector(".fill").style.width = armed ? (prog * 100).toFixed(1) + "%" : "0";
+  }
+  const f = R.lastFrame;
+  if (f) dots.forEach((d, i) => d.classList.toggle("on", i === Math.round(f.bwb) - 1 && 1 - f.frac > 0.35));
+  if (SK && $("sheet").classList.contains("show")) {
+    const lv = R.genLive || {};
+    for (const p of SK.groups[grpIdx].params) {
+      const a = AU[p.id] || {};
+      if (!a.on) continue;
+      const mk = $("mt_" + p.id);
+      if (mk) mk.querySelector(".mk2").style.left =
+        ((((lv[p.id] ?? p.min) - p.min) / ((p.max - p.min) || 1)) * 100).toFixed(2) + "%";
+    }
+  }
+  requestAnimationFrame(frame);
+})(performance.now());
+
+paintQ(); paintChips();
+
+// ---------- keys, for when the pad is on a laptop rather than a phone
+const typing = e => /^(INPUT|TEXTAREA|SELECT)$/.test(e.target.tagName);
+const KEYPAD = {};
+addEventListener("keydown", e => {
+  if (typing(e) || e.repeat) return;
+  const k = e.key.toLowerCase();
+  if (k === "q") return $("en0").click();
+  if (k === "w") return $("en1").click();
+  if (k === "e") return $("en2").click();
+  if (k === " ") { e.preventDefault(); return $("bFreeze").click(); }
+  if (k === "escape") return panic();
+  if (k >= "1" && k <= "8") { const el = $("ps" + (+k - 1)); return el && el.click(); }
+  const f = FX.find(x => x.key === k);
+  if (f) { e.preventDefault(); KEYPAD[k] = f; f._down(); }
+});
+addEventListener("keyup", e => {
+  const k = e.key.toLowerCase(), f = KEYPAD[k];
+  if (f) { delete KEYPAD[k]; f._up(); }
+});
+</script>
+</body>
+</html>

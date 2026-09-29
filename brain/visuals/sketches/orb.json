@@ -6,7 +6,7 @@
       {"id": "size",   "label": "Size",                  "min": 0.05,  "max": 0.6,  "step": 0.005, "default": 0.3},
       {"id": "wobble", "label": "Wobble",                "min": 0,     "max": 1,    "step": 0.01,  "default": 0.5},
       {"id": "pearl",  "label": "Pearl size",            "min": 0.05,  "max": 0.5,  "step": 0.005, "default": 0.16},
-      {"id": "orbit",  "label": "Orbit (turns per 4 beats)", "min": -2, "max": 2,  "step": 0.01,  "default": 0.25},
+      {"id": "orbit", "kind": "rate",  "label": "Orbit (turns per 4 beats)", "min": -2, "max": 2,  "step": 0.01,  "default": 0.25},
       {"id": "gloss",  "label": "Gloss",                 "min": 0,     "max": 1,    "step": 0.01,  "default": 0.6},
       {"id": "beat",   "label": "Beat punch",            "min": 0,     "max": 1,    "step": 0.01,  "default": 0.5}
     ]},
