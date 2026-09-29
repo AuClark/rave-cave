@@ -100,6 +100,103 @@ def strip(ctx, n, role, state):
     return np.zeros((n, 3), np.float32)
 
 
+# ---------------------------------------------------------------- leg pyramids
+# docs/fixtures/leg-pyramids.md: four legs of n LEDs (front-left, front-right, back-right, back-left;
+# 0 = the foot), then one pixel for the laser at the apex (on/off). The left and right pyramids
+# (role "side" -1 / 1) mirror each other, so a spiral turns towards the DJ on both.
+
+SPIRAL_TURNS = 6          # a spiral goes round the pyramid this many times from the feet to the apex
+MIRROR = (1, 0, 3, 2)     # FL<->FR, BR<->BL
+
+
+def _pyr_grid(n, role):
+    """(order of each leg round the pyramid, 4 x 1), (height of each LED, 1 x n)."""
+    order = np.arange(4, dtype=np.float32) if role.get("side", -1) < 0 else np.array(MIRROR, np.float32)
+    return order[:, None], np.linspace(0, 1, n, dtype=np.float32)[None, :]
+
+
+def _spiral(order, x, turns=SPIRAL_TURNS):
+    """Where each LED sits along a spiral that climbs the four legs in turn (0 at the feet, 1 at the apex)."""
+    t = x * turns
+    seg = np.minimum(np.floor(t), turns - 1)
+    return (4 * seg + order + (t - seg)) / (4 * turns)
+
+
+def _pyr_mode(ctx, options):
+    """A look for this stretch of the track: changes with the track and every 16 bars."""
+    seed = sum(ord(c) for c in (ctx.get("title") or "")) + int(ctx.get("bar", 0)) // 16
+    return options[seed % len(options)]
+
+
+def pyramid(ctx, n, role, state):
+    """(4n + 1, 3): the legs' LEDs, then the laser (1 = on)."""
+    s, hue = ctx["scene"], ctx["hue"]
+    frac, bwb, beat = clock(ctx, role)
+    kick = math.exp(-6 * frac)
+    order, x = _pyr_grid(n, role)
+    laser = 0.0
+    white = np.ones(3, np.float32)
+
+    if s in ("BUILD", "HOLD"):
+        # The spiral fill: the legs light from the feet in a spiral round the outside, reaching
+        # the apex as the build ends; a white head leads it, and the lit part flickers faster near the end.
+        p = ctx["progress"]
+        sp = _spiral(order, x)
+        head = 0.02 + 0.98 * p
+        lit = sp <= head
+        rate = 1 if p < 0.5 else 2 if p < 0.75 else 4 if p < 0.9 else 8
+        on = ((beat * rate) % 1.0) < 0.5 or s == "HOLD"
+        body = hsv(hue + 0.12 * x, 1.0 - 0.6 * p * x, (0.4 + 0.6 * p) * (1.0 if on else 0.3))
+        near = np.clip(1 - (head - sp) * 40, 0, 1) * lit
+        out = np.where(lit[..., None], body, 0.0)
+        out = lerp(out, white[None, None, :], near * (0.6 + 0.4 * kick if s == "HOLD" else 1.0))
+    elif s == "PREDROP":
+        # Held breath: dark but for the tips of the legs.
+        out = np.zeros((4, n, 3), np.float32) + white * np.where(x > 0.9, 0.3, 0.0)[..., None]
+    elif s == "DROP":
+        sd = ctx["since_drop"]
+        if sd < 1:                                     # a white burst down from the apex
+            front = 1 - sd
+            out = np.where((x >= front)[..., None], white, hsv(hue, 1, 0.1)) + 0 * order[..., None]
+        else:
+            alt = (order % 2) * 0.5                    # alternate legs in the complementary colour
+            base = hsv(hue + alt, 1.0, 0.5 + 0.5 * kick)
+            ring = np.clip(1 - np.abs((1 - x) - frac) * 7, 0, 1)
+            if sd >= 16:                               # after 4 bars: a white highlight turns round the legs, a leg a beat
+                ring = np.maximum(ring, (order == (int(beat) % 4)) * (0.35 + 0.4 * kick) * np.ones_like(x))
+            out = lerp(base, white[None, None, :], ring * 0.75)
+        # The laser comes on with the drop: held for the first bar, then on the kick, then on the one.
+        laser = 1.0 if sd < 4 else (1.0 if frac < 0.5 else 0.0) if sd < 32 else (1.0 if bwb == 1 and frac < 0.5 else 0.0)
+    elif s == "BREAKDOWN":
+        # Slow breathing in the complementary colour, brighter towards the apex, and a soft
+        # spiral head drifting down every 2 bars.
+        breathe = 0.5 - 0.5 * math.cos(beat * math.pi / 4)
+        sp = _spiral(order, x)
+        head = 1 - (beat / 8) % 1.0
+        glow = np.exp(-np.abs(sp - head) * 30) * 0.5
+        lvl = (0.06 + 0.25 * breathe) * (0.5 + 0.5 * x) + glow
+        out = hsv(hue + 0.5 + 0.1 * x, 0.8 - 0.4 * glow, lvl)
+    elif s in ("INTRO", "OUTRO", "PAUSED"):
+        fade = {"PAUSED": 0.4}.get(s, 1.0)
+        breathe = 0.5 - 0.5 * math.cos(beat * math.pi / 4)
+        out = hsv(hue + 0.1 * x + 0.03 * order, 0.8, (0.05 + 0.15 * breathe) * (0.4 + 0.6 * x) * fade)
+    else:
+        # GROOVE (and anything else): the feet pulse with the kick, plus, by track and every 16
+        # bars, an orbiting comet (one leg a beat, round the pyramid) or a spiral chase (a bar a lap).
+        base = hsv(hue + 0.06 * x + 0.03 * (ctx.get("bar", 0) % 4), 1.0, (0.12 + 0.5 * kick) * (1 - 0.6 * x))
+        if _pyr_mode(ctx, ("orbit", "spiral")) == "orbit":
+            headx = frac * 1.15
+            tail = np.clip(1 - (headx - x) * 5, 0, 1) * (x <= headx) * (order == (bwb - 1))
+        else:
+            sp = _spiral(order, x)
+            headp = ((bwb - 1) + frac) / 4
+            d = headp - sp
+            tail = np.where((d >= 0) & (d < 0.12), np.exp(-d * 30), 0.0)
+        out = lerp(base, hsv(hue + 0.5, 0.35, 1.0)[None, None, :], tail * 0.9)
+    legs = np.asarray(out, np.float32).reshape(4 * n, 3)
+    return np.vstack([legs, np.full((1, 3), laser, np.float32)])
+
+
 # ---------------------------------------------------------------- panel
 
 def panel(ctx, w, h, role, state):
