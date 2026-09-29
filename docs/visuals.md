@@ -153,7 +153,7 @@ and the Stage page draws it again on top of the projector's own copy.
 
 ## Transitions
 
-Changing the sketch, or loading a preset, hands over on the projector through a transition in time with the music, set in the **Transitions** section of the control page. The old sketch stays up until the sync point (now, or the next beat, bar or 4-bar phrase), then the two play together for the transition's length in beats.
+Changing the sketch, or loading a preset, hands over on the projector through a transition in time with the music, set in the **Transitions** section of the control page. The old sketch stays up until the sync point (now, or the next beat, bar or 4-bar phrase, or landing on the next drop), then the two play together for the transition's length in beats.
 
 | Type | What it does |
 |---|---|
@@ -176,6 +176,14 @@ Changing the sketch, or loading a preset, hands over on the projector through a 
 Length is automatic (each type's own) or 1 beat to 8 bars. **Presets morph too** makes loading a preset transition from the old values to the new ones in the same sketch. **Mix to a random sketch** switches to another sketch with one of its shipped presets through the current transition, for quick mixing. The API is `GET/POST /api/transition` (`type`, `beats`, `sync`, `presets`), `POST /api/next`, and `POST /api/select` takes an optional `"transition": {...}` to override the settings once (e.g. `{"type": "cut"}`).
 
 How it's drawn: while a transition runs, each generative surface draws the outgoing sketch with its old values and then the incoming one on top, whose alpha is the transition's mask (in `render.js`, `COMMON`: `u_trole`, `u_tp`, `u_tmode`, and the `s5t_` functions). Either side can warp its own coordinates (zoom, swirl, pixelate, slices). There's no render-to-texture, so it runs on the projector's WebGL1 GPU, but for the transition's length the surface costs both sketches together: going between two heavy sketches (tropical, diamond, artpop, horizon) may stutter on the X3. Sketches need no changes.
+
+## Climaxes on the drop
+
+Timeline sketches have a best moment: eclipse's diamond ring into totality, atlantis's sea fully parted, burn's frame all fire, pendulum's bobs back in one line, geometry's full mandala, milking's full bucket, phyllotaxis's full bloom. Left alone, their cycles run on the beat count and the climax lands wherever it happens to. showbrain predicts the next drop from the track's analysis (`beats_to_drop`), so these sketches can aim for it: with **Land the climax on the drop** on (in their Beat group, on by default), the renderer eases the sketch's cycle, running it up to twice as fast or holding it, so the climax arrives on the drop's downbeat, getting there about a bar early. With no drop predicted (no rekordbox analysis, or none coming) the cycle runs on from wherever it is, so it never jumps. The kick and other beat animation stay on the real beat; only the cycle is moved.
+
+A sketch opts in with a `climax` entry in its JSON: `{"cycle": the param holding its cycle length in beats, "peak": where the climax is in the cycle (0..1, or an expression of its params such as "0.5 - hold / 2"), "lock": the on/off param, "what": a description}`, and runs its cycle on `u_cbeat` instead of `u_beat` (see `MapRenderer._cbeat`). Sketches also get `u_todrop` (beats to the predicted drop, -1 when none) and `dropArc()` in the shared header: 0 far from a drop, rising to 1 over the 16 beats before one and easing off over the 8 after, for anything that should build into the drop.
+
+Transitions can land on the drop too: set the Transitions sync to **Land on the next drop** and the change's cut (its end, or a flash cut's peak) falls on the drop's downbeat, shortened to fit if the drop is close; with no drop predicted it waits for the next bar. Auto does this by itself when the change comes in a BUILD, HOLD or PREDROP with a drop predicted within 16 bars.
 
 ## Writing a sketch
 

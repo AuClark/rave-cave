@@ -1,6 +1,7 @@
 {
   "title": "Atlantis Rising",
   "about": "Moses parts the sea and finds Atlantis, overrun by dolphins with thumbs. The walls of water part over a cycle of beats (or through the song section, fully open by the drop), hold, then crash shut; Moses raises his staff on the beat; the crystal spire pulses on the kick; dolphins leap across the gap giving thumbs up.",
+  "climax": {"cycle": "cycle", "peak": 0.35, "lock": "droplock", "what": "the sea fully parted"},
   "groups": [
     {"name": "The sea", "params": [
       {"id": "cycle",    "label": "Part and close (beats, 0 = by hand)", "min": 0, "max": 128, "step": 4,   "default": 32},
@@ -23,7 +24,8 @@
       {"id": "bright",   "label": "Brightness",                   "min": 0,   "max": 2,   "step": 0.01, "default": 1}
     ]},
     {"name": "Beat", "params": [
-      {"id": "punch",    "label": "Crystal and thumbs on kick",   "min": 0,   "max": 2,   "step": 0.01, "default": 0.7}
+      {"id": "punch",    "label": "Crystal and thumbs on kick",   "min": 0,   "max": 2,   "step": 0.01, "default": 0.7},
+      {"id": "droplock", "label": "Land the climax on the drop", "min": 0, "max": 1, "step": 1, "default": 1}
     ]}
   ]
 }

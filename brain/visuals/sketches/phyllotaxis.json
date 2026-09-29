@@ -1,6 +1,7 @@
 {
   "title": "Phyllotaxis Spiral",
   "about": "A sunflower spiral of glowing points growing from the centre, each a golden angle round from the last, with a faint Fibonacci lattice between neighbours (after Radiant's Phyllotaxis Spiral by Paul Bakaus). It grows over a cycle of beats, breathes with the bar and flashes on the kick.",
+  "climax": {"cycle": "cycle", "peak": 0.9, "lock": "droplock", "what": "full bloom (with Grow on)"},
   "groups": [
     {"name": "Spiral", "params": [
       {"id": "count",   "label": "Points",                    "min": 100,   "max": 4000, "step": 10,     "default": 2000},
@@ -22,7 +23,8 @@
       {"id": "vignette","label": "Vignette",                  "min": 0,     "max": 1,    "step": 0.01,   "default": 0.7}
     ]},
     {"name": "Beat", "params": [
-      {"id": "punch",   "label": "Flash on kick",             "min": 0,     "max": 2,    "step": 0.01,   "default": 0.5}
+      {"id": "punch",   "label": "Flash on kick",             "min": 0,     "max": 2,    "step": 0.01,   "default": 0.5},
+      {"id": "droplock", "label": "Land the climax on the drop", "min": 0, "max": 1, "step": 1, "default": 1}
     ]},
     {"name": "Colour", "params": [
       {"id": "tint",    "label": "Original colours → tint",   "min": 0,     "max": 1,    "step": 0.01,   "default": 0},

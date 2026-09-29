@@ -7,6 +7,7 @@
 // Glow" in Paul Bakaus's Radiant collection (MIT), with reversed smoothsteps rewritten
 // (undefined in GLSL), its hash renamed (it clashed with the renderer's), stars and grain
 // sized from u_px, and time in beats. Params are p_* uniforms; ranges and defaults are in eclipse.json.
+// Its cycle runs on u_cbeat, so its climax ("climax" in the JSON) can land on the drop.
 uniform float p_corona, p_rays, p_size, p_speed, p_diamond, p_punch, p_flare, p_stars,
               p_hue, p_follow, p_bright, p_cycle, p_hold, p_phase, p_section, p_path, p_miss,
               p_moon, p_sun, p_prom;
@@ -73,7 +74,7 @@ vec3 content(vec2 uv0) {
   // ── The moon's path. s runs 0 → 1 over the cycle (or is set by hand, or by the song
   // section); the moon crosses the sun and holds still in totality for Hold of it. ──
   float s = p_phase;
-  if (p_cycle > 0.0) s = mod(u_beat, p_cycle) / p_cycle;
+  if (p_cycle > 0.0) s = mod(u_cbeat, p_cycle) / p_cycle;
   if (p_section > 0.5) s = 0.5 * clamp(u_sp, 0.0, 1.0);   // totality as the section ends
   float x = 2.0 * s - 1.0;
   float f = sign(x) * max(abs(x) - p_hold, 0.0) / max(1.0 - p_hold, 1e-3);

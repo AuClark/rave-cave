@@ -6,6 +6,7 @@
 // (the oldest points fade from the middle, as in the original, and everything fades before
 // it restarts). The original's per-point breathing is kept in the dot sizes; positions get
 // a smooth ripple instead, which a pixel can still invert. Tilt replaces the mouse drag.
+// Its cycle runs on u_cbeat, so its climax ("climax" in the JSON) can land on the drop.
 // Params are p_* uniforms; ranges and defaults are in phyllotaxis.json.
 uniform float p_count, p_spacing, p_grow, p_cycle, p_spin, p_breath, p_tilt, p_ripple,
               p_size, p_glow, p_lattice, p_centre, p_vignette, p_punch,
@@ -68,7 +69,7 @@ vec3 content(vec2 uv) {
   float sp = p_spacing;
 
   // Growth: the head H is the newest point; the newest `count` points are shown.
-  float cyc = mod(u_beat, p_cycle) / p_cycle;
+  float cyc = mod(u_cbeat, p_cycle) / p_cycle;
   float H = p_grow > 0.5 ? cyc * p_count * 1.3 : p_count;
   float rate = p_count * 1.3 / p_cycle;        // points per beat
   float lo = max(0.0, H - p_count);

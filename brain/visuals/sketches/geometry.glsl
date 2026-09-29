@@ -4,6 +4,7 @@
 // reversed smoothsteps (undefined in GLSL) written as 1 - smoothstep, time in beats, the
 // pulses on the kick, and the Pattern morph can swing over a cycle of beats or build
 // through the song section (lattice in the groove, mandala by the drop).
+// Its cycle runs on u_cbeat, so its climax ("climax" in the JSON) can land on the drop.
 // Params are p_* uniforms; ranges and defaults are in geometry.json.
 uniform float p_pattern, p_swing, p_cycle, p_morph, p_complexity, p_size, p_speed, p_rot,
               p_spin, p_punch, p_glow, p_tint, p_hue, p_sat, p_bright, p_follow;
@@ -110,7 +111,7 @@ vec3 content(vec2 uv0) {
   float r = length(uv);
 
   // Pattern: the slider, swung over a cycle of beats, and built up through the section.
-  float swing = 0.5 - 0.5 * cos(TAU * u_beat / max(p_cycle, 1.0));
+  float swing = 0.5 - 0.5 * cos(TAU * u_cbeat / max(p_cycle, 1.0));
   float pat = clamp(p_pattern + p_swing * swing + p_morph * u_sp, 0.0, 1.0);
   float tilingMix = pat;
   float baseSym = mix(6.0, 10.0, pat);
