@@ -259,8 +259,8 @@ function resize() {
 }
 new ResizeObserver(resize).observe(view);
 
-// Room: floor, stage, back wall, truss, DJ booth with two XDJs and the mixer, and a DJ for scale.
-// A venue (below) swaps the room for its own set; the floor and the DJ stay.
+// Room: floor, stage, back wall, truss, and the DJ booth with two XDJs and the mixer.
+// A venue (below) swaps the room for its own set; the floor stays.
 const hemi = new THREE.HemisphereLight(0x5a5a66, 0x151515, 1.6); scene.add(hemi);
 // Daylight: a low sun (with shadows, so the set's shapes read) and a sky that the haze fades into.
 const sun = new THREE.DirectionalLight(0xffc49a, 0); sun.castShadow = true;
@@ -295,14 +295,10 @@ for (const x of [-0.55, 0.55]) {
   scr.rotation.x = -Math.PI / 2 + 0.3; scr.position.set(x, 1.06, -0.13); booth.add(scr);
 }
 box(0.3, 0.1, 0.38, deckMat, 0, 1.0, 0, booth);                                        // mixer
-const dj = new THREE.Group(); dj.position.set(0, STAGE.h, -2.0); scene.add(dj);
-const djMat = mat(0x0e0e0e, 0.9);
-const body = new THREE.Mesh(new THREE.CapsuleGeometry(0.2, 0.75, 4, 12), djMat); body.position.y = 1.05; body.castShadow = true; dj.add(body);
-const head = new THREE.Mesh(new THREE.SphereGeometry(0.12, 16, 12), djMat); head.position.y = 1.68; head.castShadow = true; dj.add(head);
 
 // ------------------------------------------------------------------ venues
 // A venue replaces the room with a set modelled elsewhere (a glTF file in venues/, e.g. exported
-// from Blender), with its own cameras, floor and DJ spot. It's saved with the layout; venues/index.json
+// from Blender), with its own cameras, floor and light. It's saved with the layout; venues/index.json
 // lists the ones on offer, each with a starting rig (venues/<id>.json).
 let venue = null, venueSet = null, venueJogs = [], venueMeshes = new Map();
 const gltf = new GLTFLoader(), venueModels = new Map();
@@ -344,8 +340,6 @@ async function setVenue(v) {
   const fl = venue && venue.floor || {};
   floor.scale.setScalar((fl.size || 40) / 40);
   floor.material.color.set(fl.colour || 0x1c1c1c);
-  dj.position.set(...(venue && venue.dj || [0, STAGE.h, -2.0]));
-  dj.visible = !venue || !!venue.dj;                                       // a venue without "dj" has no stand-in figure
   CAMS = venue && venue.cams ? { ...ROOM_CAMS, ...venue.cams } : ROOM_CAMS;
   const on = document.querySelector("[data-cam].on"); setCam(on ? on.dataset.cam : "audience");
   showVenue(); applyDay();

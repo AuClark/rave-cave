@@ -4,7 +4,7 @@
 
 ## What it shows
 
-The stage in 3D: a 4.8 × 3 m platform, a back wall, a lighting truss, and the DJ booth with two XDJs, the mixer and a DJ for scale. Your rig sits on it, lit from the running show.
+The stage in 3D: a 4.8 × 3 m platform, a back wall, a lighting truss, and the DJ booth with two XDJs, and the mixer. Your rig sits on it, lit from the running show.
 
 | Fixture | Default position | Driven by |
 |---|---|---|
@@ -62,13 +62,12 @@ The simulated lasers play full laser shows, locked to the show's beat clock and 
 
 ## Venues
 
-A layout can stand in a **venue** instead of the built-in room: a set modelled elsewhere, with its own cameras, ground and DJ spot. Pick one under **Layout → Venue**. That loads the venue with its starting rig and replaces the current layout, so EXPORT the current one first to keep it. **RESET TO MY RIG** goes back to the room.
+A layout can stand in a **venue** instead of the built-in room: a set modelled elsewhere, with its own cameras, ground and light. Pick one under **Layout → Venue**. That loads the venue with its starting rig and replaces the current layout, so EXPORT the current one first to keep it. **RESET TO MY RIG** goes back to the room.
 
-- Venues live in `brain/projector/web/venues/`. `index.json` lists them. Each `<id>.json` holds the venue (`model`, `floor`, `cams`, `dj`, `light`) and its fixtures; `<id>.glb` is the set as glTF (three.js's GLTFLoader, in `vendor/`).
+- Venues live in `brain/projector/web/venues/`. `index.json` lists them. Each `<id>.json` holds the venue (`model`, `floor`, `cams`, `light`) and its fixtures; `<id>.glb` is the set as glTF (three.js's GLTFLoader, in `vendor/`).
 - The set is only scenery. The fixtures are ordinary Stage fixtures, so they're linked, simulated and edited as usual. Projectors' images land on the set, and the set casts shadows from them. In a venue, fixtures don't get the room's stands or truss clamps, because the model has its own mounts.
 - **Lights inside the set:** a wash with `inside` set to the name of a part of the venue model (for example `"inside": "Side_Pyramid_L"`) lights that part from within. The part glows in the light's colour and level, and spills a little light around it; there's no beam.
 - **LED strips on the set:** an LED bar with `onto` set to a strip in the venue model (`"onto": "Arch_LED_Strip"`) lays its LEDs along that strip, from one foot of the arc to the other, with a soft halo like the tubes. It's driven like any strip: simulated, or linked to a real one.
-- **The DJ figure** only appears in a venue that sets `dj` (where they stand).
 - **Daylight** (View tab, saved with the layout) runs from night (0, the room as it always was) to a day sky (1): the sky, haze colour, ambient light and a low sun with shadows come up together. A venue sets its own default (`light.day`) and can override the colours (`light.sky`, `hemiSky`, `hemiGround`, `sun` position). The outdoor venue starts at dusk (0.55), so you can see the set and still see the lights.
 - Venue coordinates are the same as the room's (metres, x right, y up, z towards the audience). The venue says where (0, 0, 0) is.
 
