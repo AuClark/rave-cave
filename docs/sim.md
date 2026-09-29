@@ -37,7 +37,7 @@ Press Ctrl-C to stop everything. Each service's log is in `brain/sim/logs/`. Edi
 
 ## Requirements
 
-- Python 3 with `numpy`: `python3 -m pip install --user numpy`
+- Python 3 with `numpy`. On macOS with Homebrew Python, a global `pip install` is refused (PEP 668), so `run.sh` makes a virtualenv at `brain/sim/.venv` and installs numpy there the first time it needs to. It only does this if `numpy` is genuinely missing, so a machine that already has it is untouched.
 - Ports 8080, 8090, 8100 and 8110 must be free. The script checks and names any that are taken.
 
 **About `s5auth.js`:** on the brain, `deploy.sh` copies it next to each service. Locally, `run.sh` links it into place instead. The links are git-ignored.
