@@ -737,7 +737,7 @@ class MapRenderer {
   _cbeat(pr, params, f) {
     const c = pr.climax;
     if (!c) return f.beat;
-    this._clx = this._clx || new Map();
+    this._clx = this._clx || new WeakMap();                          // per program: dropped with it
     const st = this._clx.get(pr) || { off: 0, last: f.beat };
     const dt = Math.max(0, Math.min(4, f.beat - st.last));
     st.last = f.beat;
@@ -758,11 +758,19 @@ class MapRenderer {
   }
 
   // A climax "peak": a number, or a small expression of the sketch's params ("floor(cycle*(1-slip))/cycle").
+  // Compiled once per expression (this runs every frame), reading the params as its argument.
   _peak(expr, params) {
     if (typeof expr === "number") return expr;
     if (typeof expr !== "string" || !/^[\w\s.+\-*\/()?:<>=]+$/.test(expr)) return 0;
-    const js = expr.replace(/[A-Za-z_]\w*/g, id => id === "floor" ? "Math.floor" : `(${+params[id] || 0})`);
-    try { const v = Function(`"use strict"; return (${js});`)(); return Number.isFinite(v) ? ((v % 1) + 1) % 1 : 0; }
+    this._peaks = this._peaks || new Map();
+    let fn = this._peaks.get(expr);
+    if (fn === undefined) {
+      const js = expr.replace(/[A-Za-z_]\w*/g, id => id === "floor" ? "Math.floor" : `(+P[${JSON.stringify(id)}] || 0)`);
+      try { fn = Function("P", `"use strict"; return (${js});`); } catch (e) { fn = null; }
+      this._peaks.set(expr, fn);
+    }
+    if (!fn) return 0;
+    try { const v = fn(params); return Number.isFinite(v) ? ((v % 1) + 1) % 1 : 0; }
     catch (e) { return 0; }
   }
 

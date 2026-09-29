@@ -18,7 +18,7 @@
     ]},
     {"name": "Beat", "params": [
       {"id": "punch",      "label": "Glow and centre on kick",     "min": 0,   "max": 2,   "step": 0.01, "default": 0.4},
-      {"id": "droplock", "label": "Land the climax on the drop", "min": 0, "max": 1, "step": 1, "default": 1}
+      {"id": "droplock", "label": "Land the climax on the drop", "min": 0, "max": 1, "step": 1, "default": 1, "kind": "fixed"}
     ]},
     {"name": "Colour", "params": [
       {"id": "glow",       "label": "Line glow",                   "min": 0,   "max": 3,   "step": 0.01, "default": 1},
