@@ -146,6 +146,27 @@
       <div class="row"><input id="presetName" type="text" class="grow" placeholder="New preset, e.g. hex-bloom"><button id="bSave">Save</button></div>
       <div class="row"><select id="presetList" class="grow"></select><button id="bLoad">Load</button></div>
     </div>
+    <div class="card" id="transCard">
+      <h3>Transitions</h3>
+      <p class="hint">How the projector hands over when the sketch changes (or a preset loads), in time with the music.
+        <b>Auto</b> picks a type that suits the song section: a flash, stutter or zoom into a drop, zooms and swirls
+        through a build, slow dissolves in a breakdown, wipes and irises in the groove.</p>
+      <div class="p"><label for="tType">Type</label></div>
+      <select id="tType" class="big"></select>
+      <div class="row">
+        <select id="tBeats" class="grow" title="Length">
+          <option value="0">Length: auto</option><option value="1">1 beat</option><option value="2">2 beats</option>
+          <option value="4">1 bar</option><option value="8">2 bars</option><option value="16">4 bars</option><option value="32">8 bars</option>
+        </select>
+        <select id="tSync" class="grow" title="Starts on">
+          <option value="now">Start now</option><option value="beat">On the next beat</option>
+          <option value="bar">On the next bar</option><option value="phrase">On the next phrase (4 bars)</option>
+        </select>
+      </div>
+      <label class="hint"><input type="checkbox" id="tPresets"> Presets morph too (loading a preset transitions from the old values)</label>
+      <div class="row"><button id="bNext" class="grow">Mix to a random sketch ▶</button></div>
+      <p class="hint" id="tLast"></p>
+    </div>
     <div id="groups"></div>
   </section>
 </main>
@@ -169,6 +190,7 @@ connectEvents(R, {
   onStatus: ok => { $("conn").textContent = ok ? "live" : "reconnecting"; $("conn").className = "pill" + (ok ? " ok" : ""); },
   onSketch: sk => { SK = sk; build(); refreshSketches(); refreshPresets(); },
   onParams: p => { if (!dragging) { V = p; sync(); } else R.genParams = V; },
+  onTransition: st => showTrans(st),
 });
 
 // ---------- sending changes (throttled; the last value always goes out)
@@ -227,7 +249,10 @@ async function refreshSketches() {
   const r = await (await fetch("/api/sketches")).json();
   $("sketch").innerHTML = r.sketches.map(n => `<option ${n === r.active ? "selected" : ""}>${n}</option>`).join("");
 }
-$("sketch").onchange = e => fetch("/api/select", { method: "POST", body: JSON.stringify({ sketch: e.target.value }) });
+$("sketch").onchange = async e => {
+  const r = await (await fetch("/api/select", { method: "POST", body: JSON.stringify({ sketch: e.target.value }) })).json();
+  noteTrans(r.trans, "Mixing to " + e.target.value);
+};
 async function refreshPresets() {
   const r = await (await fetch("/api/presets")).json();
   $("presetList").innerHTML = r.presets.map(n => `<option>${n}</option>`).join("") || "<option value=''>(none saved)</option>";
@@ -238,6 +263,32 @@ $("bSave").onclick = async () => {
   if (!r.ok) alert((await r.json()).error); refreshPresets();
 };
 $("bLoad").onclick = () => { const n = $("presetList").value; if (n) fetch(`/api/presets/${encodeURIComponent(n)}/load`, { method: "POST" }); };
+
+// ---------- transitions
+const T_LABEL = { auto: "Auto (smart)", cut: "Cut", none: "None (instant)", crossfade: "Crossfade", wipe: "Wipe", iris: "Iris",
+  dissolve: "Dissolve (burning edge)", luma: "Luma (bright parts first)", tiles: "Tiles", slices: "Glitch slices",
+  zoom: "Zoom through", swirl: "Swirl", stutter: "Stutter (16ths)", flash: "Flash cut", pixelate: "Pixelate" };
+function showTrans(st) {
+  $("tType").value = st.type; $("tBeats").value = String(st.beats || 0); $("tSync").value = st.sync; $("tPresets").checked = !!st.presets;
+}
+function postTrans(d) { fetch("/api/transition", { method: "POST", body: JSON.stringify(d) }).catch(() => {}); }
+(async () => {
+  const r = await (await fetch("/api/transition")).json();
+  $("tType").innerHTML = r.types.map(t => `<option value="${t}">${T_LABEL[t] || t}</option>`).join("");
+  showTrans(r.settings);
+})();
+$("tType").onchange = () => postTrans({ type: $("tType").value });
+$("tBeats").onchange = () => postTrans({ beats: +$("tBeats").value });
+$("tSync").onchange = () => postTrans({ sync: $("tSync").value });
+$("tPresets").onchange = () => postTrans({ presets: $("tPresets").checked });
+function noteTrans(tr, what) {
+  $("tLast").textContent = tr ? `${what}: ${T_LABEL[tr.type] || tr.type}, ${tr.beats ? tr.beats + (tr.beats === 1 ? " beat" : " beats") : "instant"}` +
+    (tr.sync !== "now" ? `, from the next ${tr.sync}` : "") : `${what}: instant`;
+}
+$("bNext").onclick = async () => {
+  const r = await (await fetch("/api/next", { method: "POST", body: "{}" })).json();
+  noteTrans(r.trans, "Mixing to " + r.sketch);
+};
 
 // Section tabs under the display (shared, /s5auth.js).
 if (window.S5AUTH && S5AUTH.sectionTabs) S5AUTH.sectionTabs({ panel: document.querySelector(".panel"), mount: document.querySelector(".hero"),

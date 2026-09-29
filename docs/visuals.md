@@ -59,6 +59,32 @@ Low sides with no roundness, zero wave frequency and some twist gives the stacke
 
 `emergence` is not a real reaction-diffusion simulation (that needs a feedback buffer the renderer doesn't have yet). It adds up plane waves of one wavelength in scattered directions and colours where the sum is above a level, which gives the same labyrinth with no memory between frames, so every surface stays in sync.
 
+## Transitions
+
+Changing the sketch, or loading a preset, hands over on the projector through a transition in time with the music, set in the **Transitions** section of the control page. The old sketch stays up until the sync point (now, or the next beat, bar or 4-bar phrase), then the two play together for the transition's length in beats.
+
+| Type | What it does |
+|---|---|
+| Auto (smart) | Picks one that suits the song section showbrain is in, never the same twice running: a flash cut, a stutter or a zoom into a PREDROP or DROP; a zoom, swirl, pixelate or tiles through a BUILD (1 bar); a dissolve, luma, crossfade or iris in a BREAKDOWN, INTRO or OUTRO (4 bars); a wipe, iris, tiles, slices, dissolve, pixelate or swirl in the groove. |
+| Cut | An instant change on the sync point. |
+| Crossfade | A straight fade. |
+| Wipe | A soft line sweeps across at one of 8 angles, lit in the show's colour. |
+| Iris | A glowing circle opens from the centre. |
+| Dissolve | The new sketch burns through the old in noise-shaped holes with a hot edge. |
+| Luma | The new sketch's bright parts appear first, then its darks. |
+| Tiles | Squares pop in at random, each growing from its centre. |
+| Glitch slices | Horizontal bands of the new sketch slide in from the sides. |
+| Zoom through | The old sketch zooms in and away while the new one flies in from the centre as a framed picture. |
+| Swirl | The old one twists away as the new one untwists in. |
+| Stutter | The two flicker on 16th notes, the new one more and more, until it holds. |
+| Flash cut | A white flash, with the cut on its peak. |
+| Pixelate | The old one breaks into big pixels and the new one resolves out of them. |
+| None | Instant, as before. |
+
+Length is automatic (each type's own) or 1 beat to 8 bars. **Presets morph too** makes loading a preset transition from the old values to the new ones in the same sketch. **Mix to a random sketch** switches to another sketch with one of its shipped presets through the current transition, for quick mixing. The API is `GET/POST /api/transition` (`type`, `beats`, `sync`, `presets`), `POST /api/next`, and `POST /api/select` takes an optional `"transition": {...}` to override the settings once (e.g. `{"type": "cut"}`).
+
+How it's drawn: while a transition runs, each generative surface draws the outgoing sketch with its old values and then the incoming one on top, whose alpha is the transition's mask (in `render.js`, `COMMON`: `u_trole`, `u_tp`, `u_tmode`, and the `s5t_` functions). Either side can warp its own coordinates (zoom, swirl, pixelate, slices). There's no render-to-texture, so it runs on the projector's WebGL1 GPU, but for the transition's length the surface costs both sketches together: going between two heavy sketches (tropical, diamond, artpop, horizon) may stutter on the X3. Sketches need no changes.
+
 ## Writing a sketch
 
 Add two files to `brain/visuals/sketches/`:
