@@ -323,7 +323,12 @@ function prepVenue(set) {
     const m = o.material;
     if (o.geometry.attributes.color && m.emissive && m.emissive.getHex() && !(m.map || m.color.getHex())) {
       o.material = new THREE.MeshBasicMaterial({ vertexColors: true, toneMapped: false }); o.castShadow = false;
-    } else if (m.isMeshStandardMaterial) m.metalness = Math.min(m.metalness, 0.6);
+    } else if (m.isMeshStandardMaterial) {
+      m.metalness = Math.min(m.metalness, 0.6);
+      // Deck screens: the model's are a bright emissive (strength 3) that the glow pass blows out;
+      // the real XDJ screens are a soft glow.
+      if (m.name === "screen") m.emissiveIntensity = Math.min(m.emissiveIntensity, 0.35);
+    }
   });
 }
 // Daylight 0 = night (the room as it always was), 1 = the venue's full day sky. Between, the sky
