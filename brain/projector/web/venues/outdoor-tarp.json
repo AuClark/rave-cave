@@ -11,11 +11,6 @@
   "light": {
    "day": 0.55
   },
-  "dj": [
-   0,
-   0,
-   -4.0
-  ],
   "cams": {
    "audience": {
     "pos": [
@@ -176,6 +171,24 @@
     -0.201
    ],
    "angle": 60
+  },
+  {
+   "id": "arch",
+   "type": "ledbar",
+   "name": "Arch LED strip",
+   "source": "sim",
+   "onto": "Arch_LED_Strip",
+   "pos": [
+    0.0,
+    2.542,
+    18.5
+   ],
+   "aim": [
+    0.0,
+    3.542,
+    18.5
+   ],
+   "count": 240
   },
   {
    "id": "tubeL",
