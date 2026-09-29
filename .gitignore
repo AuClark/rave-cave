@@ -4,6 +4,9 @@ __pycache__/
 .env
 brain/projector/layouts/
 brain/visuals/state/
+# The sim's numpy venv, made by brain/sim/run.sh; the bare one catches a venv made by hand at the root
+brain/sim/.venv/
+.venv/
 brain/sim/logs/
 # s5auth.js links made by brain/sim/run.sh (deploy.sh copies the real file to the brain)
 brain/showbrain/s5auth.js

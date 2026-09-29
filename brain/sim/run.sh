@@ -12,9 +12,19 @@
 set -euo pipefail
 cd "$(dirname "$0")/../.."
 REPO="$PWD"
+VENV="$REPO/brain/sim/.venv"
 
 PY=python3
-$PY -c "import numpy" 2>/dev/null || { echo "needs numpy:  $PY -m pip install --user numpy"; exit 1; }
+if ! $PY -c "import numpy" 2>/dev/null; then
+  if [[ -x "$VENV/bin/python3" ]] && "$VENV/bin/python3" -c "import numpy" 2>/dev/null; then
+    PY="$VENV/bin/python3"
+  else
+    echo "numpy missing; creating $VENV (Homebrew Python blocks global pip)"
+    python3 -m venv "$VENV"
+    "$VENV/bin/pip" install -q numpy
+    PY="$VENV/bin/python3"
+  fi
+fi
 
 for port in 8080 8090 8100 8110; do
   if lsof -nP -iTCP:$port -sTCP:LISTEN >/dev/null 2>&1; then
