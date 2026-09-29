@@ -250,8 +250,8 @@ async function refreshSketches() {
   $("sketch").innerHTML = r.sketches.map(n => `<option ${n === r.active ? "selected" : ""}>${n}</option>`).join("");
 }
 $("sketch").onchange = async e => {
-  const r = await (await fetch("/api/select", { method: "POST", body: JSON.stringify({ sketch: e.target.value }) })).json();
-  noteTrans(r.trans, "Mixing to " + e.target.value);
+  const r = await postJson("/api/select", { sketch: e.target.value });
+  if (r) noteTrans(r.trans, "Mixing to " + e.target.value);
 };
 async function refreshPresets() {
   const r = await (await fetch("/api/presets")).json();
@@ -281,13 +281,20 @@ $("tType").onchange = () => postTrans({ type: $("tType").value });
 $("tBeats").onchange = () => postTrans({ beats: +$("tBeats").value });
 $("tSync").onchange = () => postTrans({ sync: $("tSync").value });
 $("tPresets").onchange = () => postTrans({ presets: $("tPresets").checked });
+// A POST whose answer we show: null (and the reason in the transition line) if it was refused.
+async function postJson(url, body) {
+  const r = await fetch(url, { method: "POST", body: JSON.stringify(body) }), j = await r.json().catch(() => ({}));
+  if (r.ok) return j;
+  $("tLast").textContent = r.status === 401 || r.status === 403 ? "Unlock (admin PIN) to change the sketch" : j.error || `failed (${r.status})`;
+  return null;
+}
 function noteTrans(tr, what) {
   $("tLast").textContent = tr ? `${what}: ${T_LABEL[tr.type] || tr.type}, ${tr.beats ? tr.beats + (tr.beats === 1 ? " beat" : " beats") : "instant"}` +
     (tr.sync !== "now" ? `, from the next ${tr.sync}` : "") : `${what}: instant`;
 }
 $("bNext").onclick = async () => {
-  const r = await (await fetch("/api/next", { method: "POST", body: "{}" })).json();
-  noteTrans(r.trans, "Mixing to " + r.sketch);
+  const r = await postJson("/api/next", {});
+  if (r) noteTrans(r.trans, "Mixing to " + r.sketch);
 };
 
 // Section tabs under the display (shared, /s5auth.js).

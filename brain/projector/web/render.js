@@ -418,17 +418,20 @@ class MapRenderer {
   }
 
   // Keep what's showing now (the incoming side of a transition already running) as the outgoing.
+  // A change while the last one is still waiting for its sync point keeps that one's outgoing.
   _beginTrans(t) {
-    this.trans = { out: { prog: this.progs.gen, params: this.genParams }, mode: t.mode ?? 0,
+    const waiting = this.trans && !(this.trans.p >= 0);
+    this.trans = { out: waiting ? this.trans.out : { prog: this.progs.gen, params: this.genParams }, mode: t.mode ?? 0,
                    beats: Math.max(0, t.beats ?? 4), sync: t.sync || "now", seed: t.seed ?? Math.random(), t0: null };
   }
 
-  // The beat the transition starts on: now, or the next beat / bar / phrase (4 bars).
+  // The beat the transition starts on: now, or the next beat / bar / phrase (4 bars). Phrases need
+  // the track's timeline (bar > 0: beat 1 is its first downbeat); without one, the next bar.
   _transStart(f) {
     const b = f.beat, sync = this.trans.sync;
     if (sync === "beat") return Math.floor(b) + 1;
-    if (sync === "bar") return Math.floor(b) - (f.bwb - 1) + 4;
-    if (sync === "phrase") return Math.ceil((b + 0.001) / 16) * 16;
+    if (sync === "phrase" && f.bar > 0) return Math.ceil((b - 1 + 0.001) / 16) * 16 + 1;
+    if (sync === "bar" || sync === "phrase") return Math.floor(b) - (f.bwb - 1) + 4;
     return b;
   }
 
@@ -523,8 +526,11 @@ class MapRenderer {
     const T = this.trans;
     let tp = null;
     if (T) {
+      if (T.t0 !== null && f.beat < T.last - 1)                 // the beat clock jumped back (new master, seek,
+        T.t0 = T.p >= 0 ? f.beat - T.p * T.beats : null;        // idle -> live): carry on from where it had got to
       if (T.t0 === null) T.t0 = this._transStart(f);
       tp = T.beats > 0 ? (f.beat - T.t0) / T.beats : (f.beat >= T.t0 ? 1 : -1);
+      T.last = f.beat; T.p = tp;
       if (tp >= 1) { this.trans = null; tp = null; }
     }
     for (const s of L.surfaces) {
@@ -536,7 +542,7 @@ class MapRenderer {
         if (!g) continue;                                       // its sketch is still loading
         pr = g.prog; vals = g.values;
       }
-      if (tp !== null && pr === this.progs.gen) {
+      if (tp !== null && pr === this.progs.gen && !s.sketch) {   // pinned surfaces don't transition
         if (tp < 0) this._surface(T.out.prog, s, f, now, W, H, T.out.params, 0);
         else {
           this._surface(T.out.prog, s, f, now, W, H, T.out.params, 2, tp, T);

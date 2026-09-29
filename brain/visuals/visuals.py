@@ -31,6 +31,7 @@ with a sketch in sketches/presets/NAME/ (in git); one saved on the brain with th
 """
 import hashlib
 import json
+import math
 import queue
 import random
 import re
@@ -145,6 +146,29 @@ def scene_now():
         return (json.loads(last_state) or {}).get("scene") or "GROOVE"
     except ValueError:
         return "GROOVE"
+
+
+def clean_trans(d):
+    """Transition settings from a request, checked: a bad value is an error (nothing changes)."""
+    if not isinstance(d, dict):
+        raise ValueError("transition must be an object")
+    out = {}
+    if "type" in d:
+        if d["type"] not in ["auto", "cut", "none"] + TRANS_TYPES:
+            raise ValueError(f"unknown transition type {d['type']!r}")
+        out["type"] = d["type"]
+    if "beats" in d:
+        b = float(d["beats"])
+        if not math.isfinite(b):
+            raise ValueError("beats must be a number")
+        out["beats"] = max(0.0, min(64.0, b))
+    if "sync" in d:
+        if d["sync"] not in ("now", "beat", "bar", "phrase"):
+            raise ValueError(f"unknown sync {d['sync']!r}")
+        out["sync"] = d["sync"]
+    if "presets" in d:
+        out["presets"] = bool(d["presets"])
+    return out
 
 
 def make_trans(override=None):
@@ -369,26 +393,23 @@ class H(SimpleHTTPRequestHandler):
                 name = d.get("sketch", "")
                 if name not in sketch_names():
                     return self._json(404, {"error": "no such sketch"})
-                tr = switch(name, d.get("preset"), d.get("transition"))
+                preset, override = d.get("preset"), clean_trans(d.get("transition") or {})
+                if preset and not SAFE_NAME.match(str(preset)):
+                    return self._json(400, {"error": "bad preset name"})
+                tr = switch(name, preset, override)
                 return self._json(200, {"ok": True, "trans": tr})
             if path == "/api/next":
                 d = self._body()
+                override = clean_trans(d.get("transition") or {})
                 others = [n for n in sketch_names() if n != sketch["name"]] or sketch_names()
                 name = random.choice(others)
                 shipped = sorted(p.stem for p in (SKETCHES / "presets" / name).glob("*.json"))
-                tr = switch(name, random.choice(shipped) if shipped else None, d.get("transition"))
+                tr = switch(name, random.choice(shipped) if shipped else None, override)
                 return self._json(200, {"ok": True, "sketch": name, "trans": tr})
             if path == "/api/transition":
-                d = self._body()
+                d = clean_trans(self._body())
                 with lock:
-                    if d.get("type") in ["auto", "cut", "none"] + TRANS_TYPES:
-                        transition["type"] = d["type"]
-                    if "beats" in d:
-                        transition["beats"] = max(0.0, min(64.0, float(d["beats"])))
-                    if d.get("sync") in ("now", "beat", "bar", "phrase"):
-                        transition["sync"] = d["sync"]
-                    if "presets" in d:
-                        transition["presets"] = bool(d["presets"])
+                    transition.update(d)
                     save_transition()
                     snap = dict(transition)
                 broadcast({"t": "transition", "settings": snap})
