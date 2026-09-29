@@ -111,6 +111,7 @@
       <div class="row"><span>Lasers</span><select id="laserLook" title="Laser show look (saved with the layout)"></select></div>
       <div class="row"><span>Section</span><select id="laserSec" title="Preview a section: the lasers play it on a 128 BPM clock, whatever the show is doing">
         <option value="">FOLLOW SHOW</option><option value="GROOVE">GROOVE</option><option value="BUILD">BUILD</option><option value="DROP">DROP</option><option value="BREAKDOWN">BREAKDOWN</option><option value="INTRO">INTRO</option></select></div>
+      <div class="row"><span>Daylight</span><input id="day" type="range" min="0" max="1" step="0.05" value="0" title="Night to dusk to day (saved with the layout)"></div>
       <div class="row"><span>Glow</span><div><button id="bloom" class="on" title="Glow (turn off on slow machines)">GLOW</button></div></div>
     </section>
     <section>
@@ -260,7 +261,12 @@ new ResizeObserver(resize).observe(view);
 
 // Room: floor, stage, back wall, truss, DJ booth with two XDJs and the mixer, and a DJ for scale.
 // A venue (below) swaps the room for its own set; the floor and the DJ stay.
-scene.add(new THREE.HemisphereLight(0x5a5a66, 0x151515, 1.6));
+const hemi = new THREE.HemisphereLight(0x5a5a66, 0x151515, 1.6); scene.add(hemi);
+// Daylight: a low sun (with shadows, so the set's shapes read) and a sky that the haze fades into.
+const sun = new THREE.DirectionalLight(0xffc49a, 0); sun.castShadow = true;
+sun.shadow.mapSize.set(2048, 2048); sun.shadow.bias = -0.0004;
+Object.assign(sun.shadow.camera, { left: -14, right: 14, top: 14, bottom: -14, near: 1, far: 80 });
+scene.add(sun, sun.target);
 const room = new THREE.Group(); scene.add(room);
 const mat = (c, r = 0.85, m = 0) => new THREE.MeshStandardMaterial({ color: c, roughness: r, metalness: m });
 function box(w, h, d, m, x, y, z, parent = scene) {
@@ -298,7 +304,7 @@ const head = new THREE.Mesh(new THREE.SphereGeometry(0.12, 16, 12), djMat); head
 // A venue replaces the room with a set modelled elsewhere (a glTF file in venues/, e.g. exported
 // from Blender), with its own cameras, floor and DJ spot. It's saved with the layout; venues/index.json
 // lists the ones on offer, each with a starting rig (venues/<id>.json).
-let venue = null, venueSet = null, venueJogs = [];
+let venue = null, venueSet = null, venueJogs = [], venueMeshes = new Map();
 const gltf = new GLTFLoader(), venueModels = new Map();
 function venueModel(url) {
   if (!venueModels.has(url)) venueModels.set(url, gltf.loadAsync(url).then(g => g.scene).catch(e => { venueModels.delete(url); throw e; }));
@@ -317,24 +323,38 @@ function prepVenue(set) {
     } else if (m.isMeshStandardMaterial) m.metalness = Math.min(m.metalness, 0.6);
   });
 }
+// Daylight 0 = night (the room as it always was), 1 = the venue's full day sky. Between, the sky
+// and sun come up together, so a dusk setting shows the set but leaves the lights to carry it.
+const NIGHT = { sky: "#0a0a0a", hemiSky: "#5a5a66", hemiGround: "#151515" };
+const DAY = { sky: "#7f9cc4", hemiSky: "#bcd0ee", hemiGround: "#3c4a2c", sun: [-8, 14, 12] };
+const dayLevel = () => calib.day ?? (venue && venue.light && venue.light.day) ?? 0;
+function applyDay() {
+  const d = dayLevel(), L = { ...DAY, ...(venue && venue.light) }, mix = (a, b) => new THREE.Color(a).lerp(new THREE.Color(b), d);
+  scene.background.copy(mix(NIGHT.sky, L.sky)); scene.fog.color.copy(scene.background);
+  hemi.color.copy(mix(NIGHT.hemiSky, L.hemiSky)); hemi.groundColor.copy(mix(NIGHT.hemiGround, L.hemiGround));
+  hemi.intensity = 1.6 + 0.8 * d;
+  sun.intensity = 2.2 * d * d; sun.position.set(...L.sun);
+  $("#day").value = d;
+}
 async function setVenue(v) {
   venue = v && v.model ? v : null;
   room.visible = !venue;
   if (venueSet) { scene.remove(venueSet); venueSet = null; }
-  venueJogs = [];
+  venueJogs = []; venueMeshes = new Map();
   const fl = venue && venue.floor || {};
   floor.scale.setScalar((fl.size || 40) / 40);
   floor.material.color.set(fl.colour || 0x1c1c1c);
   dj.position.set(...(venue && venue.dj || [0, STAGE.h, -2.0]));
   CAMS = venue && venue.cams ? { ...ROOM_CAMS, ...venue.cams } : ROOM_CAMS;
   const on = document.querySelector("[data-cam].on"); setCam(on ? on.dataset.cam : "audience");
-  showVenue();
+  showVenue(); applyDay();
   if (!venue) return;
   const want = venue;
   try {
     const set = (await venueModel(new URL(venue.model, location.href).href)).clone();
     if (want !== venue) return;                                            // switched again while loading
     prepVenue(set); venueSet = set; scene.add(set);
+    set.traverse(o => { if (o.isMesh && !venueMeshes.has(o.name)) venueMeshes.set(o.name, o); });
     set.traverse(o => { if (o.isMesh && /^Jog\d*(_\d+)?$/.test(o.name)) { o.material = o.material.clone(); venueJogs.push(o); } });
   } catch (e) { console.warn("venue model", e); $("#saved").textContent = `Couldn't load the venue model (${venue.model})`; }
 }
@@ -459,6 +479,7 @@ function livePixels(name) { const p = curPreview; return p && p[name] && p[name]
 // every frame from the live pixels (if linked to a real fixture) or the simulation.
 let rig = [], built = new Map(), selected = null, dragging = false, lastSaveAt = 0;
 let haze = 0.55;
+$("#day").oninput = e => { calib.day = +e.target.value; applyDay(); saveRig(); };
 $("#haze").oninput = e => { haze = +e.target.value; scene.fog.density = 0.012 + 0.04 * haze; };
 scene.fog.density = 0.012 + 0.04 * haze;
 
@@ -581,6 +602,12 @@ function build(fx) {
     spot.target = aim; spot.position.z = 0.12; g.add(spot);
     const beam = beamMesh(ang, isStrobe ? 4 : 7); beam.position.z = 0.12; g.add(beam);
     parts.spot = spot; parts.beam = beam; parts.face = face; parts.hit = [b];
+    if (fx.inside) {
+      // A light inside part of the venue (a pyramid lit from within): the venue part glows with
+      // it and spills a little light around it, instead of throwing a beam.
+      b.visible = face.visible = beam.visible = false; spot.visible = false;
+      parts.glowLight = new THREE.PointLight(0xffffff, 0, 5, 2); g.add(parts.glowLight);
+    }
   }
   // Clamp for hanging fixtures: a little yoke up to the truss when they hang from it.
   if (!venue && fx.type !== "tube" && fx.type !== "projector" && Math.abs(fx.pos[1] - (STAGE.trussY - 0.15)) < 0.4) {
@@ -748,6 +775,15 @@ function update(now) {
         p.aim.position.set(a.x + Math.sin(f.beat * Math.PI / 4) * r, a.y, a.z + Math.cos(f.beat * Math.PI / 4) * r * 0.5);
         p.group.lookAt(p.aim.position);
       }
+      if (fx.inside) {
+        const m = venueMeshes.get(fx.inside);
+        if (m) {
+          if (!m.userData.glowMat) { m.material = m.userData.glowMat = m.material.clone(); m.castShadow = false; }   // its own, not shared with other parts
+          m.material.emissive.copy(col).multiplyScalar(lvl * 1.4);
+        }
+        p.glowLight.color.copy(col); p.glowLight.intensity = lvl * 14;
+        continue;
+      }
       p.spot.color.copy(col); p.spot.intensity = lvl * (fx.type === "strobe" ? 900 : 260);
       p.face.material.color.copy(col).multiplyScalar(lvl * 2);
       p.beam.material.uniforms.color.value.copy(col);
@@ -887,7 +923,7 @@ addEventListener("keydown", e => {
   else if (e.key.toLowerCase() === "a") $("#gAim").click();
 });
 
-function showCalib() { $("#laserLook").value = LOOKS[calib.laser] ? calib.laser : "auto"; $("#cLed").value = calib.led; $("#cWash").value = calib.wash; $("#cGamma").value = String(calib.gamma); $("#cProj").value = calib.proj ?? 1; }
+function showCalib() { applyDay(); $("#laserLook").value = LOOKS[calib.laser] ? calib.laser : "auto"; $("#cLed").value = calib.led; $("#cWash").value = calib.wash; $("#cGamma").value = String(calib.gamma); $("#cProj").value = calib.proj ?? 1; }
 $("#cProj").oninput = e => { calib.proj = +e.target.value; saveRig(); };
 $("#pBright").oninput = e => { const fx = cur(); if (fx) { fx.brightness = +e.target.value; $("#vBright").textContent = Math.round(fx.brightness * 100) + "%"; saveRig(); } };
 $("#cLed").oninput = e => { calib.led = +e.target.value; saveRig(); };

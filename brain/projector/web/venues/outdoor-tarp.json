@@ -6,7 +6,10 @@
   "model": "venues/outdoor-tarp.glb",
   "floor": {
    "size": 140,
-   "colour": "#17210f"
+   "colour": "#34482a"
+  },
+  "light": {
+   "day": 0.55
   },
   "dj": [
    0,
@@ -137,6 +140,42 @@
    ],
    "angle": 70,
    "colour": "#ffc27b"
+  },
+  {
+   "id": "pyrL",
+   "type": "wash",
+   "name": "Pyramid L (inside)",
+   "source": "sim",
+   "inside": "Side_Pyramid_L",
+   "pos": [
+    -3.6,
+    0.25,
+    -0.2
+   ],
+   "aim": [
+    -3.6,
+    2.25,
+    -0.201
+   ],
+   "angle": 60
+  },
+  {
+   "id": "pyrR",
+   "type": "wash",
+   "name": "Pyramid R (inside)",
+   "source": "sim",
+   "inside": "Side_Pyramid_R",
+   "pos": [
+    3.6,
+    0.25,
+    -0.2
+   ],
+   "aim": [
+    3.6,
+    2.25,
+    -0.201
+   ],
+   "angle": 60
   },
   {
    "id": "tubeL",

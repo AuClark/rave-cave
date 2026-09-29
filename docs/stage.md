@@ -66,6 +66,8 @@ A layout can stand in a **venue** instead of the built-in room: a set modelled e
 
 - Venues live in `brain/projector/web/venues/`. `index.json` lists them. Each `<id>.json` holds the venue (`model`, `floor`, `cams`, `dj`) and its fixtures; `<id>.glb` is the set as glTF (three.js's GLTFLoader, in `vendor/`).
 - The set is only scenery. The fixtures are ordinary Stage fixtures, so they're linked, simulated and edited as usual. Projectors' images land on the set, and the set casts shadows from them. In a venue, fixtures don't get the room's stands or truss clamps, because the model has its own mounts.
+- **Lights inside the set:** a wash with `inside` set to the name of a part of the venue model (for example `"inside": "Side_Pyramid_L"`) lights that part from within. The part glows in the light's colour and level, and spills a little light around it; there's no beam.
+- **Daylight** (View tab, saved with the layout) runs from night (0, the room as it always was) to a day sky (1): the sky, haze colour, ambient light and a low sun with shadows come up together. A venue sets its own default (`light.day`) and can override the colours (`light.sky`, `hemiSky`, `hemiGround`, `sun` position). The outdoor venue starts at dusk (0.55), so you can see the set and still see the lights.
 - Venue coordinates are the same as the room's (metres, x right, y up, z towards the audience). The venue says where (0, 0, 0) is.
 
 **Outdoor tarp stage** (`outdoor-tarp`) is Chris's Blender design: a 3 × 3 m tarp on four poles, the DJ table with a half-pyramid facade, a side pyramid and PA stack each side, a moon-gate arch 18 m out and the star chill tent beyond it. (0, 0, 0) is the tarp's front edge, on the ground.
@@ -76,6 +78,7 @@ A layout can stand in a **venue** instead of the built-in room: a set modelled e
 | Laser (tripod) | Behind the DJ, on the laser/smoke tripod at 3 m, aimed at the tent roof | Simulated |
 | Table par (uplight) | On the DJ table, straight up at the tarp | Live: `parcan` |
 | Tube L / R | Floor tubes either side of the centre pyramid | Live: `tube1`, `tube2` |
+| Pyramid L / R (inside) | Inside each side pyramid, so the pyramid glows | Simulated (link to a real fixture from the panel) |
 | Tent par | Base of the tent pole, up into the roof | Simulated |
 
 It's exported from the Blender file with `export_sektor5.py` (next to `stage.blend`): `Blender -b stage.blend -P export_sektor5.py -- brain/projector/web/venues`. That script reads positions, aims, beam angles and colours from the model, so re-run it after changing the design.
