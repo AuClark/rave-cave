@@ -60,6 +60,26 @@ The simulated lasers play full laser shows, locked to the show's beat clock and 
 - **Section preview:** the second LASERS menu makes the lasers play one section (GROOVE, BUILD, DROP, BREAKDOWN or INTRO) on the show's clock, or at 128 BPM when no deck is playing. It's for designing and only affects your view. **FOLLOW SHOW** returns to normal.
 - **Laser fixtures:** add more with **Add fixture → Laser** and place them on the truss or the stage front for a fuller field. Each fixture draws up to 72 beams plus a sheet.
 
+## Venues
+
+A layout can stand in a **venue** instead of the built-in room: a set modelled elsewhere, with its own cameras, ground and DJ spot. Pick one under **Layout → Venue**. That loads the venue with its starting rig and replaces the current layout, so EXPORT the current one first to keep it. **RESET TO MY RIG** goes back to the room.
+
+- Venues live in `brain/projector/web/venues/`. `index.json` lists them. Each `<id>.json` holds the venue (`model`, `floor`, `cams`, `dj`) and its fixtures; `<id>.glb` is the set as glTF (three.js's GLTFLoader, in `vendor/`).
+- The set is only scenery. The fixtures are ordinary Stage fixtures, so they're linked, simulated and edited as usual. Projectors' images land on the set, and the set casts shadows from them. In a venue, fixtures don't get the room's stands or truss clamps, because the model has its own mounts.
+- Venue coordinates are the same as the room's (metres, x right, y up, z towards the audience). The venue says where (0, 0, 0) is.
+
+**Outdoor tarp stage** (`outdoor-tarp`) is Chris's Blender design: a 3 × 3 m tarp on four poles, the DJ table with a half-pyramid facade, a side pyramid and PA stack each side, a moon-gate arch 18 m out and the star chill tent beyond it. (0, 0, 0) is the tarp's front edge, on the ground.
+
+| Fixture | Where | Driven by |
+|---|---|---|
+| Mapping projector | Crossbar between the front poles, aimed at the centre pyramid's front faces (72° short throw, 35% so a 2 m throw doesn't blow out) | Projector output (as mapped) |
+| Laser (tripod) | Behind the DJ, on the laser/smoke tripod at 3 m, aimed at the tent roof | Simulated |
+| Table par (uplight) | On the DJ table, straight up at the tarp | Live: `parcan` |
+| Tube L / R | Floor tubes either side of the centre pyramid | Live: `tube1`, `tube2` |
+| Tent par | Base of the tent pole, up into the roof | Simulated |
+
+It's exported from the Blender file with `export_sektor5.py` (next to `stage.blend`): `Blender -b stage.blend -P export_sektor5.py -- brain/projector/web/venues`. That script reads positions, aims, beam angles and colours from the model, so re-run it after changing the design.
+
 ## Designing
 
 - **Add** a tube, wash, strobe, laser, moving head, projector, LED bar or screen.

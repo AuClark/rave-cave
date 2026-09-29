@@ -1,0 +1,176 @@
+{
+ "version": 1,
+ "venue": {
+  "id": "outdoor-tarp",
+  "name": "Outdoor tarp stage",
+  "model": "venues/outdoor-tarp.glb",
+  "floor": {
+   "size": 140,
+   "colour": "#17210f"
+  },
+  "dj": [
+   0,
+   0,
+   -4.0
+  ],
+  "cams": {
+   "audience": {
+    "pos": [
+     0,
+     1.7,
+     9.0
+    ],
+    "look": [
+     0,
+     1.3,
+     -1.5
+    ]
+   },
+   "dj": {
+    "pos": [
+     0.0,
+     1.65,
+     -4.4
+    ],
+    "look": [
+     0.0,
+     0.95,
+     3.569
+    ]
+   },
+   "top": {
+    "pos": [
+     0,
+     12,
+     5.0
+    ],
+    "look": [
+     0,
+     0,
+     -1.0
+    ]
+   },
+   "side": {
+    "pos": [
+     -6.5,
+     1.8,
+     4.0
+    ],
+    "look": [
+     0,
+     1.3,
+     -1.5
+    ]
+   }
+  }
+ },
+ "fixtures": [
+  {
+   "id": "projMap",
+   "type": "projector",
+   "name": "Mapping projector",
+   "source": "projector",
+   "pos": [
+    0.0,
+    2.32,
+    -0.0
+   ],
+   "aim": [
+    0.08,
+    0.601,
+    -1.046
+   ],
+   "angle": 70,
+   "brightness": 0.35
+  },
+  {
+   "id": "laser",
+   "type": "laser",
+   "name": "Laser (tripod)",
+   "source": "sim",
+   "pos": [
+    0.0,
+    3.05,
+    -4.3
+   ],
+   "aim": [
+    0.0,
+    3.353,
+    37.522
+   ],
+   "count": 9,
+   "angle": 64,
+   "colour": "#19ff4a"
+  },
+  {
+   "id": "wash",
+   "type": "wash",
+   "name": "Table par (uplight)",
+   "source": "parcan",
+   "pos": [
+    -0.0,
+    0.99,
+    -1.485
+   ],
+   "aim": [
+    0.0,
+    3.06,
+    -1.486
+   ],
+   "angle": 25,
+   "colour": "#e06cff"
+  },
+  {
+   "id": "tentPar",
+   "type": "wash",
+   "name": "Tent par",
+   "source": "sim",
+   "pos": [
+    0.3,
+    0.09,
+    38.5
+   ],
+   "aim": [
+    0.3,
+    3.16,
+    38.499
+   ],
+   "angle": 70,
+   "colour": "#ffc27b"
+  },
+  {
+   "id": "tubeL",
+   "type": "tube",
+   "name": "Tube L",
+   "source": "tube1",
+   "pos": [
+    -1.2,
+    0,
+    -0.915
+   ],
+   "aim": [
+    -1.2,
+    2,
+    -0.915
+   ],
+   "count": 60
+  },
+  {
+   "id": "tubeR",
+   "type": "tube",
+   "name": "Tube R",
+   "source": "tube2",
+   "pos": [
+    1.2,
+    0,
+    -0.915
+   ],
+   "aim": [
+    1.2,
+    2,
+    -0.915
+   ],
+   "count": 60
+  }
+ ]
+}
