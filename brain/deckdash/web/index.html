@@ -167,9 +167,9 @@
      Near-black, hairline grid, one orange accent, system type (the shared theme in s5auth.js sits on top: docs/design.md).
      Shared with the Commander, projection editor and visuals pages. */
   :root {
-    --bg: #0c0c0e; --panel: #131315; --panel2: #131315; --line: #262628; --line2: #3a3a3c;
-    --text: #fafafa; --dim: #a1a1a1; --accent: #ff5a1f; --accent2: #ff5a1f;
-    --good: #7ccf8a; --warn: #f2b84b; --bad: #ef5b5b; --well: #08080a;
+    --bg: var(--n0c0c0e, #0c0c0e); --panel: var(--n131315, #131315); --panel2: var(--n131315, #131315); --line: var(--n262628, #262628); --line2: var(--n3a3a3c, #3a3a3c);
+    --text: var(--nfafafa, #fafafa); --dim: var(--na1a1a1, #a1a1a1); --accent: #ff5a1f; --accent2: #ff5a1f;
+    --good: #7ccf8a; --warn: #f2b84b; --bad: #ef5b5b; --well: var(--n08080a, #08080a);
     --font: "Inter", -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", Roboto, system-ui, sans-serif;
   }
   html, body { background: var(--bg); }
@@ -240,13 +240,13 @@
   .lanectl button { width: 32px; height: 28px; padding: 0; display: grid; place-items: center; cursor: pointer; border-radius: 0;
     background: rgba(6,6,8,.6); color: var(--text); border: 1px solid var(--line2); }
   .lanectl button:hover { border-color: var(--accent); }
-  .lanectl button.on { background: var(--accent); border-color: var(--accent); color: #050507; }
+  .lanectl button.on { background: var(--accent); border-color: var(--accent); color: var(--n050507, #050507); }
   .lanectl svg { width: 15px; height: 15px; }
   @media (max-width: 760px) { .lanectl .lc { right: 6px; gap: 3px; } .lanectl button { width: 27px; height: 24px; } .lanectl svg { width: 13px; height: 13px; } }
   .libdecks { display: none !important; }   /* deck controls live on the waveform lanes now */
   /* Touch drag (library row or deck chip onto a deck's waveform): the tag that follows the finger. */
   .dragghost { position: fixed; left: 0; top: 0; z-index: 9995; pointer-events: none; margin: -46px 0 0 -12px; padding: 8px 12px;
-    max-width: 70vw; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; background: var(--accent); color: #050507;
+    max-width: 70vw; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; background: var(--accent); color: var(--n050507, #050507);
     font: 600 12px/1 var(--font); box-shadow: 0 6px 18px rgba(0,0,0,.5); }
   @media (pointer: coarse) { #tbody tr, .ldeck { -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; } }
   main { padding: 0; gap: 0; border-left: 1px solid var(--line); border-right: 1px solid var(--line); max-width: 1680px; margin: 0 auto; }
@@ -259,7 +259,7 @@
   .players { gap: 0; } .players > .card + .card { border-left: 1px solid var(--line); }
   .row2, .row3 { gap: 0; } .row2 > * + *, .row3 > * + * { border-left: 1px solid var(--line); }
   .card { padding: 26px 28px; }
-  .card.playing { background: #171719; box-shadow: inset 3px 0 0 var(--accent); border-color: var(--line); }
+  .card.playing { background: var(--n171719, #171719); box-shadow: inset 3px 0 0 var(--accent); border-color: var(--line); }
   .card.master::before { background: var(--accent); color: #fff; font-weight: 600; }
   .flash { background: radial-gradient(circle at 50% 0%, rgba(255,90,31,.18), transparent 70%); }
   .pnum { font-weight: 300; font-size: 48px; color: var(--accent); }
@@ -267,13 +267,13 @@
   .title { font-weight: 600; font-size: 22px; letter-spacing: -.005em; }
   .artist { color: var(--text); opacity: .75; font-weight: 400; }
   .tempo .bpm { font-weight: 300; font-size: 52px; letter-spacing: -.02em; }
-  .art { border-radius: 0; background-color: var(--well); color: #3a3a3c; }
-  .badge { border-radius: 0; background: transparent; color: #4d4d4f; border-color: var(--line); font-weight: 600; letter-spacing: .12em; }
+  .art { border-radius: 0; background-color: var(--well); color: var(--n3a3a3c, #3a3a3c); }
+  .badge { border-radius: 0; background: transparent; color: var(--n4d4d4f, #4d4d4f); border-color: var(--line); font-weight: 600; letter-spacing: .12em; }
   .badge.on { color: #fff; }
   .badge.on.play { background: transparent; color: var(--good); border-color: var(--good); }
   .badge.on.pause, .badge.on.cue { background: transparent; color: var(--warn); border-color: var(--warn); }
   .badge.on.loop, .badge.on.sync, .badge.on.master, .badge.on.air { background: var(--accent); border-color: var(--accent); color: #fff; }
-  .badge.on.end, .badge.on.search { background: var(--text); color: #0a0a0c; }
+  .badge.on.end, .badge.on.search { background: var(--text); color: var(--n0a0a0c, #0a0a0c); }
   .beats { gap: 4px; }
   .beats div { border-radius: 0; background: var(--well); border-color: var(--line); }
   .beats div.on { background: var(--text); border-color: var(--text); box-shadow: none; }
@@ -281,15 +281,15 @@
   canvas.wave, section.stack canvas, pre { border-radius: 0; background: var(--well); }
   section.stack { padding: 0; background: var(--well); }
   .times .rem { color: var(--accent); font-weight: 600; }
-  .kv { border-bottom: 1px solid #1b1b1d; }
+  .kv { border-bottom: 1px solid var(--n1b1b1d, #1b1b1d); }
   .cue { border-radius: 0; background: var(--well); }
   table th { font-weight: 500; letter-spacing: .14em; }
-  th, td { border-bottom-color: #1b1b1d; }
+  th, td { border-bottom-color: var(--n1b1b1d, #1b1b1d); }
   .meter .bar, .sharebar { border-radius: 0; background: var(--well); }
-  .meter .fill { background: linear-gradient(0deg, #808080 0%, #d2d2d2 65%, var(--accent) 88%, var(--bad) 100%); }
+  .meter .fill { background: linear-gradient(0deg, var(--n808080, #808080) 0%, var(--nd2d2d2, #d2d2d2) 65%, var(--accent) 88%, var(--bad) 100%); }
   .meter.live .bar { border-color: var(--accent); box-shadow: none; }
   .showscene { font-weight: 300; font-size: 44px; letter-spacing: .02em; }
-  .showscene.GROOVE { color: var(--text); } .showscene.BREAKDOWN { color: #c4c4c4; }
+  .showscene.GROOVE { color: var(--text); } .showscene.BREAKDOWN { color: var(--nc4c4c4, #c4c4c4); }
   /* Controls: outlined rectangles; orange edge on hover; orange fill when on. */
   .lbtn { border-radius: 0; background: transparent; border-color: var(--line2); font-weight: 600; letter-spacing: .1em; padding: 7px 12px; }
   .lbtn:hover { border-color: var(--accent); color: #fff; }
@@ -306,12 +306,12 @@
   .crates .on .cnt { color: var(--accent); }
   table.tt thead th { background: var(--panel); }
   table.tt thead th.sorted { color: var(--accent); }
-  table.tt tbody tr:hover { background: #19191b; }
-  table.tt tbody tr.sel { background: #1d1d1f; box-shadow: inset 3px 0 0 var(--accent); }
-  table.tt tbody tr.played td:not(.ld) { color: #525254; }
+  table.tt tbody tr:hover { background: var(--n19191b, #19191b); }
+  table.tt tbody tr.sel { background: var(--n1d1d1f, #1d1d1f); box-shadow: inset 3px 0 0 var(--accent); }
+  table.tt tbody tr.played td:not(.ld) { color: var(--n525254, #525254); }
   .onDeck { border-radius: 0; }
   .droptarget { outline-color: var(--accent); }
-  .toast { border-radius: 0; background: #18181a; border-color: var(--line2); border-left: 3px solid var(--accent); font-weight: 500; }
+  .toast { border-radius: 0; background: var(--n18181a, #18181a); border-color: var(--line2); border-left: 3px solid var(--accent); font-weight: 500; }
   /* Page links in the top bar (Decks / Lighting / Projection / Visuals): the current one underlined. */
   nav.pages { display: flex; gap: 2px; align-self: stretch; }
   nav.pages a { display: flex; align-items: center; padding: 0 12px; color: var(--dim); text-decoration: none; font-size: 14px; font-weight: 500;
@@ -323,11 +323,11 @@
   nav.apps a { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 30px 32px; color: var(--dim);
                text-decoration: none; font-size: 18px; font-weight: 400; line-height: 1.3; border-left: 1px solid var(--line); }
   nav.apps a:first-child { border-left: 0; }
-  nav.apps a:hover { color: var(--text); background: #171719; }
+  nav.apps a:hover { color: var(--text); background: var(--n171719, #171719); }
   nav.apps a .arr { font-size: 28px; font-weight: 300; color: var(--text); }
-  nav.apps a small { display: block; font-size: 11px; letter-spacing: .16em; color: #525254; margin-bottom: 4px; }
-  nav.apps a.here { background: var(--text); color: #0a0a0c; }
-  nav.apps a.here small { color: #646464; }
+  nav.apps a small { display: block; font-size: 11px; letter-spacing: .16em; color: var(--n525254, #525254); margin-bottom: 4px; }
+  nav.apps a.here { background: var(--text); color: var(--n0a0a0c, #0a0a0c); }
+  nav.apps a.here small { color: var(--n646464, #646464); }
   nav.apps a.here .arr { background: var(--accent); color: #fff; align-self: stretch; display: grid; place-items: center; width: 84px; margin: -30px -32px -30px 0; }
   @media (max-width: 900px) { nav.apps { grid-template-columns: 1fr 1fr; } nav.apps a:nth-child(3) { border-left: 0; } }
 

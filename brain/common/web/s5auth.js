@@ -36,11 +36,11 @@
   .s5bar > nav.pages { align-self: stretch; height: 100%; display: flex; gap: 2px; margin: 0; padding: 0; }
   .s5bar > nav.pages { align-items: center; gap: 2px; }
   .s5bar > nav.pages a { display: flex; align-items: center; height: 32px; padding: 0 12px; margin: 0; font: 500 13px/1 ${FONT}; letter-spacing: -.005em;
-    text-transform: none; color: #a1a1aa; text-decoration: none; border: 0; border-radius: 8px;
+    text-transform: none; color: var(--na1a1aa, #a1a1aa); text-decoration: none; border: 0; border-radius: 8px;
     transition: color .15s, background .15s, opacity .2s; }
-  .s5bar > nav.pages a:hover { color: #fafafa; background: #1c1c20; }
-  .s5bar > nav.pages a.here { color: #09090b; background: #fafafa; }
-  .s5bar > nav.pages a.s5live { gap: 7px; margin-left: 8px; border: 1px solid #3a3a41; color: #fafafa; }
+  .s5bar > nav.pages a:hover { color: var(--nfafafa, #fafafa); background: var(--n1c1c20, #1c1c20); }
+  .s5bar > nav.pages a.here { color: var(--n09090b, #09090b); background: var(--nfafafa, #fafafa); }
+  .s5bar > nav.pages a.s5live { gap: 7px; margin-left: 8px; border: 1px solid var(--n3a3a41, #3a3a41); color: var(--nfafafa, #fafafa); }
   .s5bar > nav.pages a.s5live i { width: 6px; height: 6px; border-radius: 50%; background: #ff5a1f; box-shadow: 0 0 0 3px rgba(255,90,31,.2); }
   .s5bar > nav.pages a.s5live:hover { border-color: #ff5a1f; }
   html.s5-fontwait .s5bar > nav.pages { visibility: hidden; }
@@ -48,18 +48,24 @@
   .s5bar ~ :not(.s5tabs) { animation: s5in .35s ease; }   /* no fill: nothing lingers (stacking) once faded */
   /* Viewer / admin: a lock at the right end of the bar (stays in view if the bar scrolls sideways). */
   .s5bar > .s5who { margin-left: auto; position: sticky; right: 0; flex: none; width: 28px; height: 28px; padding: 0; display: none;
-    align-items: center; justify-content: center; cursor: pointer; background: var(--bg, #0c0c0e); color: #a1a1aa; border: 1px solid #3a3a41; border-radius: 8px; }
+    align-items: center; justify-content: center; cursor: pointer; background: var(--bg, #0c0c0e); color: var(--na1a1aa, #a1a1aa); border: 1px solid var(--n3a3a41, #3a3a41); border-radius: 8px; }
   html.s5-viewer .s5bar > .s5who, html.s5-admin .s5bar > .s5who { display: flex; }
   html.s5-viewer .s5bar > .s5who { color: #ff5a1f; border-color: rgba(255,90,31,.55); }
   html.s5-admin .s5bar > .s5who { color: #7ccf8a; border-color: rgba(124,207,138,.55); }
   .s5who svg { width: 14px; height: 14px; }
+  .s5bar > .s5right { margin-left: auto; display: flex; gap: 6px; align-items: center; flex: none; position: sticky; right: 36px; background: var(--bg, #0c0c0e); }
+  .s5bar > .s5right + .s5who { margin-left: 8px; }
+  .s5mode { flex: none; width: 28px; height: 28px; padding: 0; display: flex; align-items: center; justify-content: center; cursor: pointer;
+    background: transparent; color: var(--na1a1aa, #a1a1aa); border: 1px solid var(--n3a3a41, #3a3a41); border-radius: 8px; }
+  .s5mode:hover { color: var(--nfafafa, #fafafa); }
+  .s5mode svg { width: 15px; height: 15px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; }
   /* Section tabs under a page's display (S5AUTH.sectionTabs): only the chosen section shows. */
   .s5sect { display: flex; gap: 2px; overflow-x: auto; scrollbar-width: none; padding: 6px 12px; background: var(--bg, #0c0c0e); border-top: 1px solid var(--line, #26262b); border-bottom: 1px solid var(--line, #26262b); }
   .s5sect::-webkit-scrollbar { display: none; }
   .s5sect button { flex: 1 0 auto; margin: 0; height: 34px; padding: 0 14px; background: transparent !important; border: 0 !important; border-radius: 8px !important;
-    color: #a1a1aa !important; cursor: pointer; white-space: nowrap; font: 500 13px/1 ${FONT} !important; letter-spacing: -.005em !important; text-transform: none !important; transition: color .15s, background .15s; }
-  .s5sect button:hover { color: #fafafa !important; background: #1c1c20 !important; }
-  .s5sect button[aria-selected="true"] { color: #fafafa !important; background: #1f1f23 !important; box-shadow: inset 0 0 0 1px #3a3a41; }
+    color: var(--na1a1aa, #a1a1aa) !important; cursor: pointer; white-space: nowrap; font: 500 13px/1 ${FONT} !important; letter-spacing: -.005em !important; text-transform: none !important; transition: color .15s, background .15s; }
+  .s5sect button:hover { color: var(--nfafafa, #fafafa) !important; background: var(--n1c1c20, #1c1c20) !important; }
+  .s5sect button[aria-selected="true"] { color: var(--nfafafa, #fafafa) !important; background: var(--n1f1f23, #1f1f23) !important; box-shadow: inset 0 0 0 1px var(--n3a3a41, #3a3a41); }
   .s5-hide { display: none !important; }
   /* Phones: the page links move to a tab bar at the bottom (Decks in the middle). */
   .s5tabs { display: none; }
@@ -67,13 +73,13 @@
     .s5bar { padding: 0 12px; gap: 10px; }
     .s5bar > nav.pages, .s5bar #self, .s5bar .keys { display: none; }
     .s5tabs { display: grid; grid-template-columns: repeat(6, 1fr); position: fixed; left: 0; right: 0; bottom: 0; z-index: 45;
-      height: calc(60px + env(safe-area-inset-bottom)); padding: 0 0 env(safe-area-inset-bottom); background: rgba(12,12,14,.94); border-top: 1px solid var(--line, #26262b);
+      height: calc(60px + env(safe-area-inset-bottom)); padding: 0 0 env(safe-area-inset-bottom); background: color-mix(in srgb, var(--bg, #0c0c0e) 94%, transparent); border-top: 1px solid var(--line, #26262b);
       backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px); }
-    .s5tabs a { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 5px; color: #a1a1aa;
+    .s5tabs a { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 5px; color: var(--na1a1aa, #a1a1aa);
       text-decoration: none; font: 500 10px/1 ${FONT}; letter-spacing: .04em; -webkit-tap-highlight-color: transparent; }
     .s5tabs a svg { width: 22px; height: 22px; fill: none; stroke: currentColor; stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; }
     .s5tabs a.mid svg { width: 26px; height: 26px; }
-    .s5tabs a.here { color: #fafafa; } .s5tabs a.here svg { stroke: #ff5a1f; }
+    .s5tabs a.here { color: var(--nfafafa, #fafafa); } .s5tabs a.here svg { stroke: #ff5a1f; }
     body { padding-bottom: calc(64px + env(safe-area-inset-bottom)) !important; }
   }
   @keyframes s5in { from { opacity: 0; } to { opacity: 1; } }`;
@@ -85,6 +91,39 @@
   document.documentElement.classList.toggle("s5-admin", S5.enabled && S5.admin);
   // Page links are drawn in Montserrat: wait for it (cached after the first page) so they don't
   // shift when it swaps in. Offline, fall back to the system font after a moment.
+
+  // Appearance: dark (default), light, or match the device. One setting for the whole app, the same
+  // one Live (/show.html) uses, remembered per browser.
+  const MODES = ["dark", "light", "auto"];
+  const mode = () => { const m = localStorage.getItem("s5theme"); return MODES.includes(m) ? m : "dark"; };
+  function applyMode() {
+    const m = mode(), light = m === "light" || (m === "auto" && matchMedia("(prefers-color-scheme: light)").matches);
+    document.documentElement.dataset.theme = light ? "light" : "dark";
+    let meta = document.querySelector('meta[name="theme-color"]');
+    if (meta) meta.content = light ? "#f4f4f5" : "#0c0c0e";
+    paintMode();
+  }
+  function paintMode() {
+    const b = document.querySelector(".s5mode"); if (!b) return;
+    const m = mode(), next = MODES[(MODES.indexOf(m) + 1) % 3];
+    b.innerHTML = { dark: '<svg viewBox="0 0 24 24"><path d="M20 14.5A8 8 0 0 1 9.5 4a8 8 0 1 0 10.5 10.5z"/></svg>',
+                    light: '<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg>',
+                    auto: '<svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="12" rx="2"/><path d="M8 20h8M12 16v4"/></svg>' }[m];
+    b.title = `Appearance: ${{ dark: "dark", light: "light", auto: "matches the device" }[m]}. Click for ${{ dark: "dark", light: "light", auto: "match the device" }[next]}.`;
+    b.setAttribute("aria-label", b.title);
+  }
+  applyMode();
+  addEventListener("storage", e => { if (e.key === "s5theme") applyMode(); });
+  matchMedia("(prefers-color-scheme: light)").addEventListener?.("change", applyMode);
+  function modeButton() {
+    const bar = document.querySelector(".s5bar");
+    if (!bar || bar.querySelector(".s5mode") || document.documentElement.hasAttribute("data-s5-own-theme")) return;
+    let right = bar.querySelector(".s5right");
+    if (!right) { right = el("span", { class: "s5right" }); bar.insertBefore(right, bar.querySelector(".s5who")); }
+    const b = el("button", { class: "s5mode", type: "button" });
+    b.onclick = () => { localStorage.setItem("s5theme", MODES[(MODES.indexOf(mode()) + 1) % 3]); applyMode(); };
+    right.appendChild(b); paintMode();
+  }
 
   // The theme: one design system over every page's own styles (see docs/design.md). Last in <head>,
   // so it wins over the page's blocks; moved there again once the page has parsed, in case a page
@@ -112,6 +151,8 @@
   .s5fader:focus-visible { outline: 2px solid #ff5a1f; outline-offset: 2px; }
   @media (max-width: 760px) { .s5fader { height: 56px; } }
   `; }
+  function darkVars() { return lightVars().replace(/--n([0-9a-f]{6}):#[0-9a-f]{6}/g, "--n$1:#$1"); }
+  function lightVars() { return "--n050507:#fafafb; --n060608:#fafafb; --n08080a:#fafafb; --n09090b:#f4f4f5; --n0a0a0c:#f4f4f5; --n0c0c0e:#f4f4f5; --n111114:#ffffff; --n131315:#ffffff; --n131316:#ffffff; --n141416:#ffffff; --n171719:#ffffff; --n17171a:#ffffff; --n18181a:#ececf0; --n19191b:#ececf0; --n1b1b1d:#ececf0; --n1c1c20:#ececf0; --n1d1d1f:#ececf0; --n1f1f23:#ececf0; --n222224:#ececf0; --n262628:#e4e4e8; --n26262b:#e4e4e8; --n2c2c2e:#e4e4e8; --n3a3a3c:#d4d4d8; --n3a3a41:#d4d4d8; --n4d4d4f:#a1a1a5; --n525254:#a1a1a5; --n52525b:#a1a1a5; --n646464:#a1a1a5; --n686868:#a1a1a5; --n6b6b74:#a1a1a5; --n808080:#626266; --na1a1a1:#626266; --na1a1aa:#626266; --nc4c4c4:#3f3f43; --nd2d2d2:#3f3f43; --nd8d8d8:#09090d; --nfafafa:#09090d;"; }
   function themeCss() { return `
   :root:root { --bg: #0c0c0e; --panel: #131316; --card: #131316; --well: #08080a; --line: #26262b; --line2: #3a3a41;
     --text: #fafafa; --dim: #a1a1aa; --faint: #6b6b74; --hover: #1c1c20;
@@ -150,6 +191,19 @@
   html body ::-webkit-scrollbar { width: 8px; height: 8px; } html body ::-webkit-scrollbar-thumb { background: #3a3a41; border-radius: 8px; }
   html body ::-webkit-scrollbar-track { background: transparent; }
   html body ::selection { background: rgba(255,90,31,.35); }
+  /* Light mode (the sun / moon in the top bar). Every grey in the pages is a --nRRGGBB variable
+     (dark by default); here they're mirrored onto a light zinc scale, roles kept: page, panels,
+     hover, lines, outlines, faint, dim, text. The displays (previews, waveforms, the stage, the
+     fixture strips) are canvases and stay dark, like Live's pictures: they're what the room sees. */
+  html[data-theme=light]:root:root { ${lightVars()} --inv: 0,0,0;
+    --bg: #f4f4f5; --panel: #ffffff; --card: #ffffff; --well: #fafafb; --line: #e4e4e7; --line2: #d4d4d8;
+    --text: #09090b; --dim: #52525b; --faint: #a1a1aa; --hover: #f0f0f2; --good: #16a34a; --warn: #b45309; --bad: #dc2626; color-scheme: light; }
+  html[data-theme=light] body button:not(.on):not([aria-pressed=true]):not(:disabled):hover { border-color: #a1a1aa !important; }
+  html[data-theme=light] body * { scrollbar-color: #d4d4d8 transparent; }
+  /* Controls that sit on a display (the stage's read-out, the deck lanes' buttons) keep the dark
+     values, or they'd be dark on dark. */
+  html[data-theme=light] :is(#hud, .lanectl) { ${darkVars()} --text: #fafafa; --dim: #c4c4c4; --line2: #3a3a3c; --line: #262628; }
+  html[data-theme=light] body ::-webkit-scrollbar-thumb { background: #d4d4d8; }
   html body a:not([class]) { color: var(--accent); text-underline-offset: 2px; }
   @media (hover: none) { html body button:not(.on):hover { border-color: var(--line2) !important; } }
   `; }
@@ -270,6 +324,7 @@
   }
   function links() {
     liveLink();
+    modeButton();
     tabs();
     document.querySelectorAll("a[data-port]").forEach(a => {
       a.href = S5.url(a.dataset.port, a.dataset.path || "/");

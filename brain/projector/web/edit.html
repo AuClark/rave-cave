@@ -40,9 +40,9 @@
   /* ------------------------------------------------------------------ design system
      Near-black, hairline grid, one orange accent, system type (the shared theme in s5auth.js sits on top: docs/design.md).
      Same tokens and bottom tiles as the dashboard, Commander, mapping and visuals pages. */
-  :root { --bg:#0c0c0e; --panel:#131315; --card:#131315; --line:#262628; --line2:#3a3a3c; --text:#fafafa; --dim:#a1a1a1;
-          --accent:#ff5a1f; --good:#7ccf8a; --warn:#f2b84b; --bad:#ef5b5b; --well:#08080a;
-          --pink:#ff5a1f; --cyan:#ff5a1f; --acc:#ff5a1f; --violet:#c4c4c4;
+  :root { --bg:var(--n0c0c0e, #0c0c0e); --panel:var(--n131315, #131315); --card:var(--n131315, #131315); --line:var(--n262628, #262628); --line2:var(--n3a3a3c, #3a3a3c); --text:var(--nfafafa, #fafafa); --dim:var(--na1a1a1, #a1a1a1);
+          --accent:#ff5a1f; --good:#7ccf8a; --warn:#f2b84b; --bad:#ef5b5b; --well:var(--n08080a, #08080a);
+          --pink:#ff5a1f; --cyan:#ff5a1f; --acc:#ff5a1f; --violet:var(--nc4c4c4, #c4c4c4);
           --font:"Inter", -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", Roboto, system-ui, sans-serif; }
   html, body { background: var(--bg); }
   body { font-family: var(--font); letter-spacing: .01em; }
@@ -62,11 +62,11 @@
   nav.apps a { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 28px 30px; color: var(--dim);
                text-decoration: none; font-size: 17px; font-weight: 400; line-height: 1.3; border-left: 1px solid var(--line); }
   nav.apps a:first-child { border-left: 0; }
-  nav.apps a:hover { color: var(--text); background: #171719; }
+  nav.apps a:hover { color: var(--text); background: var(--n171719, #171719); }
   nav.apps a .arr { font-size: 26px; font-weight: 300; color: var(--text); }
-  nav.apps a small { display: block; font-size: 11px; letter-spacing: .16em; color: #525254; margin-bottom: 4px; }
-  nav.apps a.here { background: var(--text); color: #0a0a0c; }
-  nav.apps a.here small { color: #646464; }
+  nav.apps a small { display: block; font-size: 11px; letter-spacing: .16em; color: var(--n525254, #525254); margin-bottom: 4px; }
+  nav.apps a.here { background: var(--text); color: var(--n0a0a0c, #0a0a0c); }
+  nav.apps a.here small { color: var(--n646464, #646464); }
   nav.apps a.here .arr { background: var(--accent); color: #fff; align-self: stretch; display: grid; place-items: center; width: 80px; margin: -28px -30px -28px 0; }
   @media (max-width: 900px) { nav.apps { grid-template-columns: 1fr 1fr; } nav.apps a:nth-child(3) { border-left: 0; } }
 
@@ -78,8 +78,8 @@
   #stage { border-radius: 0; }
   .card { margin-bottom: 0; border: 0; border-bottom: 1px solid var(--line); padding: 18px 0; background: transparent; }
   .list div { border-radius: 0; }
-  .list div.sel { background: #1b1b1d; outline: 0; box-shadow: inset 3px 0 0 var(--accent); }
-  .list div.selm { background: #1b1b1d; outline: 0; box-shadow: inset 3px 0 0 #c4c4c4; }
+  .list div.sel { background: var(--n1b1b1d, #1b1b1d); outline: 0; box-shadow: inset 3px 0 0 var(--accent); }
+  .list div.selm { background: var(--n1b1b1d, #1b1b1d); outline: 0; box-shadow: inset 3px 0 0 var(--nc4c4c4, #c4c4c4); }
   button.warn { border-color: var(--bad); color: var(--bad); }
   /* Page links in the top bar (Decks / Lighting / Projection / Visuals): the current one underlined. */
   nav.pages { display: flex; gap: 2px; align-self: stretch; }
@@ -93,7 +93,7 @@
 
   /* ---- Layout: the display is the hero (full-width band), a clean control panel underneath. ---- */
   main.hl { display: block; padding: 0; gap: 0; max-width: none; }
-  .hero { background: #060608; border-bottom: 1px solid var(--line); padding: 24px 24px 0; }
+  .hero { background: var(--n060608, #060608); border-bottom: 1px solid var(--line); padding: 24px 24px 0; }
   .herobar { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; min-height: 56px; padding: 12px 0; }
   .herobar .hint { margin: 0; }
   .herobar .sp { flex: 1; }

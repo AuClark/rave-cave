@@ -214,6 +214,18 @@
   .words input:focus { border-color: var(--border2); box-shadow: 0 0 0 3px var(--accent-soft); }
   .hint2 { margin: 6px 2px 0; font-size: 12px; color: var(--faint); }
   .under { margin-top: 10px; }
+  .trans { display: grid; gap: 6px; }
+  .trans .seg { display: grid; width: 100%; grid-auto-columns: minmax(0, 1fr); }
+  .trans select { height: var(--h-sm); padding: 0 10px; border-radius: 10px; background: var(--card); border: 1px solid var(--border); color: var(--text); font: 500 13px var(--font); }
+  /* Phones: the picture (and the intensity fader) stay put at the top; everything else scrolls under them. */
+  @media (max-width: 560px) {
+    #s-visuals .stagegrid .centre { display: contents; }
+    #s-visuals .stick { order: 1; position: sticky; top: var(--hdr, 64px); z-index: 6; background: var(--bg); padding: 0 0 8px; margin: 0 -14px; padding-left: 14px; padding-right: 14px;
+                        box-shadow: 0 10px 16px -12px rgba(0,0,0,.6); }
+    #s-visuals #lvVis { order: 5; margin-top: 20px !important; }
+    #s-visuals .pv { max-height: 34vh; }
+    header { background: var(--bg); }
+  }
   /* The way out to the full pages (the page for the screen you're on), and to the Launchpad */
   .fullbtn { display: inline-flex; align-items: center; gap: 6px; height: var(--h-sm); padding: 0 12px; border-radius: var(--r);
              background: var(--card); border: 1px solid var(--border); color: var(--text); text-decoration: none; font-size: 13px; font-weight: 500; white-space: nowrap; }
@@ -799,12 +811,14 @@
       </div>
     </div>
     <div class="centre o1">
+      <div class="stick">
       <div class="pv" id="pv"><canvas id="gl"></canvas><canvas id="ov"></canvas>
         <div class="live" id="liveTag"><i></i><span>Live</span></div>
         <div class="cap"><b id="skName">—</b><button class="pill" id="freeze">Freeze</button><button class="pill" id="next">Next look ›</button>
           <button class="pill focusbtn" id="focusBtn" title="The view to leave open while you play">⤢ Focus</button></div>
       </div>
-      <div class="under"><div id="intensity" title="How busy the picture is, calm to full on. Stays on the beat."></div></div>
+      <div class="under"><div id="intensity" title="How strongly the picture reacts, calm to full on. Glides, stays on the beat."></div></div>
+      </div>
       <div class="level nonly" id="lvVis" style="margin-top:10px"><div class="fill"></div><div class="t"><span>Projectors</span><span class="v">–</span></div></div>
     </div>
     <div class="side right o3">
@@ -831,6 +845,12 @@
       <div class="label fgap">Presets <b id="pCount"></b></div>
       <div class="presets" id="presets"></div>
       <button class="randbtn" id="randPreset" title="A random preset for this look (R)"><span class="dice">⚄</span>Randomise<small>R</small></button>
+      <div class="trans" id="trans">
+        <div class="label">Changes <b id="tNow"></b></div>
+        <div class="seg sm" id="tType" title="How one look hands over to the next"><button data-v="auto">Auto</button><button data-v="cut">Cut</button><button data-v="crossfade">Fade</button><button data-v="more">More</button></div>
+        <select id="tMore" hidden title="Every transition"></select>
+        <div class="seg sm" id="tSync" title="When the change lands"><button data-v="now">Now</button><button data-v="beat">Beat</button><button data-v="bar">Bar</button><button data-v="drop">Drop</button></div>
+      </div>
       <a class="padbtn" id="padBtn" href="pad.html"><span><b>Launchpad</b><small>Effects, push, chase: the visuals as pads</small></span><i>›</i></a>
       <div id="wordsBox" hidden>
         <div class="label">Words <span>this look draws them</span></div>
@@ -1079,6 +1099,7 @@ connectEvents(R, {
     renderPilot();
   },
   onParams: p => { PV = p || {}; if (SK) INT.set(VJ.intensityOf(params(), loOf, hiOf, PV)); },
+  onTransition: st => { if (st) { TR = Object.assign(TR || {}, st); paintTrans(); } },
   onShuffle: sh => { const was = SHUF && SHUF.theme; SHUF = sh; if (sh.playing === (SK && SK.name) && sh.preset) { lastPreset = sh.preset; paintPresets(); }
                      if (was !== sh.theme) paintLooks(); else paintLookState(); paintShuffle(); },
   onText: t => { TEXT = t || ""; if (document.activeElement !== $("words")) $("words").value = TEXT; },
@@ -1188,6 +1209,34 @@ $("wordsForm").onsubmit = async e => {
   if (await send("/api/text", { text: t }, "Words")) { TEXT = t; $("words").blur(); toast(t ? `Words: ${t.split("|").map(w => w.trim()).filter(Boolean).join(" · ")}` : "Words cleared"); }
 };
 fetch("/api/text").then(r => r.json()).then(j => { TEXT = j.text || ""; $("words").value = TEXT; }).catch(() => {});
+
+// Changes: how one look hands over to the next (the visuals service's transition settings).
+const T_NAME = { auto: "Auto", cut: "Cut", none: "None", crossfade: "Fade", wipe: "Wipe", iris: "Iris", dissolve: "Dissolve", luma: "Luma",
+                 tiles: "Tiles", slices: "Slices", zoom: "Zoom", swirl: "Swirl", stutter: "Stutter", flash: "Flash", pixelate: "Pixelate" };
+let TR = null;
+function paintTrans() {
+  if (!TR) return;
+  const t = TR.type, main = ["auto", "cut", "crossfade"].includes(t);
+  on("#tType button", b => b.dataset.v === t || (b.dataset.v === "more" && !main));
+  on("#tSync button", b => b.dataset.v === (TR.sync === "phrase" ? "bar" : TR.sync));
+  $("tMore").hidden = main; $("tMore").value = t;
+  $("tNow").textContent = "";
+}
+async function loadTrans() {
+  try { const j = await (await fetch("/api/transition", { cache: "no-store" })).json(); TR = j.settings;
+        $("tMore").innerHTML = j.types.map(t => `<option value="${t}">${T_NAME[t] || t}</option>`).join(""); paintTrans(); } catch (e) {}
+}
+async function setTrans(d) { if (await send("/api/transition", d, "Changes")) { Object.assign(TR, d); paintTrans(); } }
+$("tType").querySelectorAll("button").forEach(b => b.onclick = () => {
+  if (b.dataset.v === "more") { $("tMore").hidden = false; $("tMore").focus(); on("#tType button", x => x === b); return; }
+  setTrans({ type: b.dataset.v, beats: 0 });
+  toast(b.dataset.v === "cut" ? "Looks cut straight over" : b.dataset.v === "auto" ? "Changes suit the song section" : "Looks fade over");
+});
+$("tMore").onchange = e => setTrans({ type: e.target.value, beats: 0 });
+$("tSync").querySelectorAll("button").forEach(b => b.onclick = () => setTrans({ sync: b.dataset.v }));
+loadTrans();
+// The header's height, for what sticks under it on phones.
+new ResizeObserver(() => document.documentElement.style.setProperty("--hdr", document.querySelector("header").offsetHeight + "px")).observe(document.querySelector("header"));
 
 // Intensity: one fader for how busy the picture is, played live. It stays on the beat: speeds snap
 // to note values and nothing is retimed (see VJ.intensityValues).

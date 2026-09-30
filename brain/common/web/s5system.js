@@ -71,14 +71,14 @@
   #sys .acts button:disabled { opacity: .4; cursor: wait; }
   #sys a { color: var(--accent2); }`;
   const dotCss = `
-  .s5bar > .s5right { margin-left: auto; display: flex; gap: 6px; align-items: center; flex: none; position: sticky; right: 36px; background: #0c0c0e; }
+  .s5bar > .s5right { margin-left: auto; display: flex; gap: 6px; align-items: center; flex: none; position: sticky; right: 36px; background: var(--bg, #0c0c0e); }
   .s5bar > .s5right + .s5who { margin-left: 8px; }
-  .s5right > .s5sim { flex: none; display: none; align-items: center; gap: 7px; height: 28px; padding: 0 10px; cursor: pointer; background: #0c0c0e; color: #a1a1a1; border: 1px solid #3a3a3c;
+  .s5right > .s5sim { flex: none; display: none; align-items: center; gap: 7px; height: 28px; padding: 0 10px; cursor: pointer; border-radius: 8px; background: var(--bg, #0c0c0e); color: var(--na1a1a1, #a1a1a1); border: 1px solid var(--n3a3a3c, #3a3a3c);
     font: 600 11px/1 "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif; letter-spacing: .14em; text-transform: uppercase; }
   .s5right > .s5sim.on, .s5right > .s5sim.live, .s5right > .s5sim.none, .s5right > .s5sim.offline { display: flex; }
   .s5right > .s5sim.on { color: #f2b84b; border-color: #f2b84b; }
   .s5right > .s5sim.live { color: #7ccf8a; border-color: #7ccf8a; }
-  .s5right > .s5spk { flex: none; width: 28px; height: 28px; padding: 0; display: grid; place-items: center; cursor: pointer; background: #0c0c0e; color: #a1a1a1; border: 1px solid #3a3a3c; }
+  .s5right > .s5spk { flex: none; width: 28px; height: 28px; padding: 0; display: grid; place-items: center; cursor: pointer; border-radius: 8px; background: var(--bg, #0c0c0e); color: var(--na1a1a1, #a1a1a1); border: 1px solid var(--n3a3a3c, #3a3a3c); }
   .s5right > .s5spk svg { width: 16px; height: 16px; }
   .s5right > .s5spk.on { color: #f2b84b; border-color: #f2b84b; }
   .s5right > .s5spk.wait { color: #f2b84b; border-color: #f2b84b; animation: s5pulse 1s ease-in-out infinite; }
@@ -87,7 +87,7 @@
   .s5right > .s5sim.on i { animation: s5pulse 1.2s ease-in-out infinite; }
   .s5bar #conn, .herobar #conn { display: none !important; }   /* the status pill (right) says it all */
   @keyframes s5pulse { 50% { opacity: .35; } }
-  .s5home .hdot { position: absolute; left: 88px; top: 50%; width: 7px; height: 7px; margin-top: -3.5px; border-radius: 50%; background: #3a3a3c;
+  .s5home .hdot { position: absolute; left: 88px; top: 50%; width: 7px; height: 7px; margin-top: -3.5px; border-radius: 50%; background: var(--n3a3a3c, #3a3a3c);
     opacity: 0; transition: opacity .4s, background .4s; }
   .s5home .hdot.ok, .s5home .hdot.warn, .s5home .hdot.bad { opacity: 1; }
   .s5home .hdot.ok { background: #7ccf8a; } .s5home .hdot.warn { background: #f2b84b; } .s5home .hdot.bad { background: #ef5b5b; box-shadow: 0 0 8px #ef5b5b; }`;
@@ -255,9 +255,10 @@
   pill.className = "s5sim";
   const bar = document.querySelector(".s5bar");
   // Right-hand group, next to the lock: [speaker] [status pill].
-  const right = document.createElement("span");
-  right.className = "s5right";
-  if (bar) { bar.insertBefore(right, bar.querySelector(".s5who")); right.appendChild(pill); }
+  // (s5auth.js may have made it already, for the appearance button.)
+  let right = bar && bar.querySelector(".s5right");
+  if (!right) { right = document.createElement("span"); right.className = "s5right"; if (bar) bar.insertBefore(right, bar.querySelector(".s5who")); }
+  if (bar) right.prepend(pill);
   // Speaker, left of the pill while the sim runs: sound on/off in one tap. The sound lives in the
   // player (/shell): from a normal page, turning it on moves you into the player.
   const inShell = !!(window.S5AUTH && S5AUTH.inShell);
