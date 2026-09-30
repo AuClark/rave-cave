@@ -217,11 +217,14 @@
   .trans { display: grid; gap: 6px; }
   .trans .seg { display: grid; width: 100%; grid-auto-columns: minmax(0, 1fr); }
   .trans select { height: var(--h-sm); padding: 0 10px; border-radius: 10px; background: var(--card); border: 1px solid var(--border); color: var(--text); font: 500 13px var(--font); }
-  /* Phones: the picture (and the intensity fader) stay put at the top; everything else scrolls under them. */
+  /* Phones: the picture stays put at the top; everything else scrolls under it. */
   @media (max-width: 560px) {
     #s-visuals .stagegrid .centre { display: contents; }
-    #s-visuals .stick { order: 1; position: sticky; top: var(--hdr, 64px); z-index: 6; background: var(--bg); padding: 0 0 8px; margin: 0 -14px; padding-left: 14px; padding-right: 14px;
-                        box-shadow: 0 10px 16px -12px rgba(0,0,0,.6); }
+    /* Only the picture is pinned; the intensity fader scrolls with the rest, straight under it. */
+    #s-visuals .stick { display: contents; }
+    #s-visuals .pv { order: 1; position: sticky; top: var(--hdr, 64px); z-index: 6; margin: 0 -14px; border-radius: 0; border-width: 0 0 1px;
+                     box-shadow: 0 12px 18px -14px rgba(0,0,0,.7); }
+    #s-visuals .under { order: 2; }
     #s-visuals #lvVis { order: 5; margin-top: 20px !important; }
     #s-visuals .pv { max-height: 34vh; }
     header { background: var(--bg); }
