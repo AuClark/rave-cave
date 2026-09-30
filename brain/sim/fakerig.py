@@ -484,8 +484,10 @@ class H(BaseHTTPRequestHandler):
         q = dict(kv.split("=", 1) for kv in self.path.split("?", 1)[1].split("&") if "=" in kv) if "?" in self.path else {}
         if p in ("/", "/index.html", "/preview/", "/preview/index.html"):
             return self.send(200, (WEB / "index.html").read_bytes(), "text/html; charset=utf-8")
-        if p.endswith("/s5auth.js") or p.endswith("/s5system.js"):
+        if p.endswith("/s5auth.js") or p.endswith("/s5system.js") or p.endswith("/s5audio.js"):
             return self.send(200, (COMMON / p.rsplit("/", 1)[1]).read_bytes(), "text/javascript")
+        if p == "/shell":                                # the sound player (the speaker), as deckdash serves it
+            return self.send(200, (COMMON / "s5shell.html").read_bytes(), "text/html; charset=utf-8")
         if p.startswith("/preview/") and (ROOT / "projector" / "web" / p[9:]).is_file():   # stage page via the dashboard
             f = ROOT / "projector" / "web" / p[9:]
             return self.send(200, f.read_bytes(), {"html": "text/html; charset=utf-8", "js": "text/javascript"}.get(f.suffix[1:], "application/octet-stream"))
