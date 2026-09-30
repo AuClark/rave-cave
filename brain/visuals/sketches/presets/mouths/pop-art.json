@@ -1,7 +1,7 @@
 {
  "style": 3,
  "mood": 0,
- "change": 2,
+ "change": 1,
  "bg": 1,
  "busy": 0.55,
  "hue": 0.14,
@@ -9,5 +9,11 @@
  "sat": 1.0,
  "ink": 1.2,
  "gloss": 0.9,
- "face": 0.6
+ "face": 0.6,
+ "elastic": 0.85,
+ "exag": 1.15,
+ "bob": 1.1,
+ "talk": 0.65,
+ "pump": 0.7,
+ "bamt": 0.45
 }

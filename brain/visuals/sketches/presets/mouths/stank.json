@@ -11,5 +11,8 @@
  "busy": 0.85,
  "hue": 0.15,
  "follow": 0,
- "aamt": 0.9
+ "aamt": 0.9,
+ "elastic": 0.85,
+ "talk": 0.6,
+ "bamt": 0.45
 }

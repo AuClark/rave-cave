@@ -566,11 +566,20 @@ class MapRenderer {
   // with its own automation still moving (a copy: the pages edit theirs in place), so an LFO'd
   // value doesn't snap to its held value as the transition starts.
   // A change while the last one is still waiting for its sync point keeps that one's outgoing.
+  // The outgoing keeps its words too: it takes the text texture as it is, and the incoming gets a
+  // fresh copy, which the new sketch's words (sent right after it) then replace. Sharing one, the
+  // outgoing sketch switched to the incoming one's words for the whole handover.
   _beginTrans(t) {
     const waiting = this.trans && !(this.trans.p >= 0);
     const out = waiting ? this.trans.out : { prog: this.progs.gen, params: this.genParams, spec: this.genSpec,
-                                             auto: JSON.parse(JSON.stringify(this.genAuto || {})), live: {} };
-    if (!waiting) Object.assign(out.live, this.genLive);
+                                             auto: JSON.parse(JSON.stringify(this.genAuto || {})), live: {},
+                                             textTex: this.textTex, textN: this.textN };
+    if (!waiting) {
+      Object.assign(out.live, this.genLive);
+      if (this.trans) this.gl.deleteTexture(this.trans.out.textTex);   // cut short: its outgoing is gone
+      this.textTex = this.gl.createTexture();
+      this.setText(this.text);
+    }
     this.trans = { out, mode: t.mode ?? 0,
                    beats: Math.max(0, t.beats ?? 4), sync: t.sync || "now", seed: t.seed ?? Math.random(), t0: null };
   }
@@ -696,7 +705,7 @@ class MapRenderer {
       if (T.t0 === null) T.t0 = this._transStart(f);
       tp = T.beats > 0 ? (f.beat - T.t0) / T.beats : (f.beat >= T.t0 ? 1 : -1);
       T.last = f.beat; T.p = tp;
-      if (tp >= 1) { this.trans = null; tp = null; }
+      if (tp >= 1) { gl.deleteTexture(T.out.textTex); this.trans = null; tp = null; }
     }
     for (const s of L.surfaces) {
       if (!mine(s)) continue;
@@ -807,8 +816,9 @@ class MapRenderer {
     gl.activeTexture(gl.TEXTURE1); gl.bindTexture(gl.TEXTURE_2D, wv ? this.waveTex : this.tex); gl.uniform1i(u.u_wave, 1);
     gl.uniform4f(u.u_wv, wv ? wv.w : 1, wv ? wv.h : 1, wv ? wv.spb : 0, wv ? wv.beats : 0);
     gl.uniform1f(u.u_wloop, wv ? wv.loop : 0);
-    gl.activeTexture(gl.TEXTURE2); gl.bindTexture(gl.TEXTURE_2D, this.textTex); gl.uniform1i(u.u_text, 2);
-    gl.uniform1f(u.u_textn, this.textN);
+    const own = role === 2 && T && T.out.textTex;                  // the outgoing side keeps its own words
+    gl.activeTexture(gl.TEXTURE2); gl.bindTexture(gl.TEXTURE_2D, own ? T.out.textTex : this.textTex); gl.uniform1i(u.u_text, 2);
+    gl.uniform1f(u.u_textn, own ? T.out.textN : this.textN);
     gl.activeTexture(gl.TEXTURE0); gl.bindTexture(gl.TEXTURE_2D, this.tex); gl.uniform1i(u.u_tex, 0);
     gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
   }

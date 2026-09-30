@@ -44,6 +44,15 @@
           "max": 1,
           "step": 0.01,
           "default": 0
+        },
+        {
+          "id": "tword",
+          "kind": "fixed",
+          "label": "Words on the tongue (the text typed on this page, one a bar)",
+          "min": 0,
+          "max": 1,
+          "step": 1,
+          "default": 0
         }
       ]
     },

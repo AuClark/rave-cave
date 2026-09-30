@@ -1,12 +1,16 @@
 {
  "style": 0,
  "mood": 3,
- "change": 2,
+ "change": 1,
  "fang": 0.8,
- "elastic": 0.7,
+ "elastic": 0.9,
  "bg": 0,
  "busy": 0.5,
  "hue": 0.5,
  "follow": 1,
- "talk": 0.6
+ "talk": 0.7,
+ "exag": 1.2,
+ "bob": 1.1,
+ "pump": 0.7,
+ "bamt": 0.45
 }

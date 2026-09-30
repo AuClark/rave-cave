@@ -1,16 +1,18 @@
 {
  "style": 2,
  "mood": 4,
- "change": 2,
+ "change": 1,
  "sync": 0.95,
  "talk": 0.8,
- "pump": 0.4,
+ "pump": 0.65,
  "spit": 0.9,
  "gloss": 1.0,
  "bg": 3,
  "busy": 0.6,
  "hue": 0.12,
  "follow": 0,
- "elastic": 0.5,
- "bob": 0.6
+ "elastic": 0.8,
+ "bob": 1.0,
+ "exag": 1.15,
+ "bamt": 0.45
 }
