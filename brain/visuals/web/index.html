@@ -85,7 +85,9 @@
   @media (max-width: 760px) { .hero .s5wavebox { width: auto; margin: 6px 12px 0; }
     /* the strip under the preview on one line: counter, audio, Freeze, Launchpad, ? */
     .hero .herobar { flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; gap: 6px; } .herobar::-webkit-scrollbar { display: none; }
-    .hero .herobar > * { flex: none; } .hero #beat { gap: 4px; } .hero #beat i { width: 14px; } .padlink .long { display: none; }
+    .hero .herobar > * { flex: none; } .padlink .long { display: none; }
+    /* the four-count takes whatever room the buttons leave, so the row spans the full width */
+    .hero .herobar > #beat { flex: 1 1 auto; min-width: 60px; gap: 4px; padding-right: 4px; } .hero #beat i { flex: 1; width: auto; max-width: 48px; }
     .hero .herobar > button:not(.icon), .hero .herobar > a { padding: 0 11px; } }
   .faderrow { max-width: 1100px; margin: 20px auto 4px; padding: 0 24px; }
   @media (max-width: 760px) { .faderrow { margin: 14px 0 0; padding: 0 12px; } }
