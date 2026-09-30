@@ -6,7 +6,7 @@
 <title>Sektor5 · Visuals</title>
 <link rel="icon" type="image/svg+xml" href="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA2NCA2NCI+PHJlY3Qgd2lkdGg9IjY0IiBoZWlnaHQ9IjY0IiByeD0iMTIiIGZpbGw9IiMyNDI0MjQiLz48cGF0aCB0cmFuc2Zvcm09InRyYW5zbGF0ZSgxNC41IDcpIHNjYWxlKC41KSIgZD0iTTAsMCBMNzAsMCBMNzAsMjEgTDIxLDIxIEwyMSw0MCBMNTcsNDAgTDcwLDUzIEw3MCw4NyBMNTcsMTAwIEwwLDEwMCBMMCw3OSBMNDksNzkgTDQ5LDYxIEwwLDYxIFoiIGZpbGw9IiNGRjVBMUYiLz48L3N2Zz4=">
 <style>
-  :root { --bg: #0c0d14; --card: #151724; --line: #2a2d42; --text: #e8e9f3; --dim: #8a8ea8; --acc: #2fe6ff; }
+  :root { --bg: var(--n0c0d14, #0c0d14); --card: #151724; --line: #2a2d42; --text: #e8e9f3; --dim: #8a8ea8; --acc: #2fe6ff; }
   * { box-sizing: border-box; }
   body { margin: 0; background: var(--bg); color: var(--text); font: 14px/1.4 system-ui, sans-serif; }
   header { display: flex; gap: 10px; align-items: center; padding: 10px 14px; border-bottom: 1px solid var(--line); position: sticky; top: 0; background: var(--bg); z-index: 2; }
@@ -269,7 +269,7 @@
   .energy button kbd { position: absolute; top: 9px; right: 11px; font: 600 11px var(--font); color: var(--dim);
                        border: 1px solid var(--line2); padding: 1px 6px; }
   .energy .e1 { border-color: #4a6f8a; } .energy .e2 { border-color: #8a7a3a; } .energy .e3 { border-color: var(--accent); }
-  .energy .e1:hover { background: #2c3338; } .energy .e2:hover { background: #33312a; } .energy .e3:hover { background: #3a2c26; }
+  .energy .e1:hover { background: #2c3338; } .energy .e2:hover { background: var(--n33312a, #33312a); } .energy .e3:hover { background: #3a2c26; }
   .energy button.hit { background: var(--n222224, #222224); }
   .dice { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin: 0 0 22px; }
   .dice button { padding: 8px 6px; font-size: 12px; color: var(--nd8d8d8, #d8d8d8); border-color: var(--line); }
@@ -292,10 +292,10 @@
      Same behaviour as above; softer, quieter shapes, in line with the shared theme. */
   .herobar { gap: 8px; }
   #conn.pill { border-radius: 99px !important; padding: 4px 10px; font-size: 12px; font-weight: 500; }
-  #beat { gap: 4px; } #beat i { width: 22px; height: 5px; border: 0; border-radius: 99px; background: #26262b; }
+  #beat { gap: 5px; align-items: center; height: 34px; } #beat i { width: 26px; height: 6px; border: 0; border-radius: 99px; background: var(--n3a3a41, #3a3a41); }
   #beat i.on { background: var(--text); } #beat i.b1.on { background: var(--accent); } #beat i.b1 { border: 0; }
   .padlink { border-radius: 8px; padding: 8px 12px; font-weight: 500; font-size: 13px; color: var(--text); }
-  .padlink:hover { border-color: #52525b; }
+  .padlink:hover { border-color: var(--n52525b, #52525b); }
   #shufPill { border-radius: 99px; padding: 6px 12px; font-size: 12px; font-weight: 500; background: rgba(255,90,31,.1); }
   .herobar > button, .herobar > a { height: 34px; display: inline-flex; align-items: center; }
   /* Headings inside a tab */
@@ -311,9 +311,9 @@
   /* Tiles and preset chips: rounded cards; "queue as next" is a quiet icon at the end */
   .tiles, .chips { gap: 6px; }
   .it { border: 1px solid var(--line); border-radius: 10px; overflow: hidden; background: var(--n111114, #111114); transition: border-color .12s, background .12s; }
-  .it:hover { border-color: #52525b; }
+  .it:hover { border-color: var(--n52525b, #52525b); }
   .it .go { padding: 11px 12px; font-size: 13px; font-weight: 500; }
-  .it .nx { width: 36px; padding: 0; font-size: 15px; color: #6b6b74; border-left: 1px solid var(--line); border-radius: 0 !important; }
+  .it .nx { width: 36px; padding: 0; font-size: 15px; color: var(--n6b6b74, #6b6b74); border-left: 1px solid var(--line); border-radius: 0 !important; }
   .it .nx:hover { color: var(--accent); background: rgba(255,90,31,.08); }
   .it.on { background: var(--accent); border-color: var(--accent); }
   .it.on .nx { color: rgba(var(--inv, 255,255,255),.8); border-left-color: rgba(var(--inv, 255,255,255),.25); }
@@ -331,7 +331,7 @@
   .energy button { border-color: var(--line) !important; border-radius: 12px !important; background: var(--n111114, #111114); font-size: 15px; font-weight: 600 !important; }
   .energy button::before { content: ""; position: absolute; top: 14px; left: 14px; width: 8px; height: 8px; border-radius: 50%; background: #60a5fa; }
   .energy .e2::before { background: #fbbf24; } .energy .e3::before { background: var(--accent); }
-  .energy button:hover { background: var(--n17171a, #17171a) !important; border-color: #52525b !important; }
+  .energy button:hover { background: var(--n17171a, #17171a) !important; border-color: var(--n52525b, #52525b) !important; }
   .energy button small { font-size: 12px; font-weight: 400; }
   .energy button kbd { border-radius: 5px; font-size: 11px; }
   .dice button { border-radius: 8px !important; color: var(--text); }
@@ -360,11 +360,10 @@
     <div id="previewWrap"><canvas id="gl"></canvas><canvas id="ov"></canvas></div>
     <div class="herobar">
       <span id="conn" class="pill">connecting</span>
-      <span id="beat" title="Beat and bar"><i class="b1"></i><i></i><i></i><i></i></span>
+      <span id="beat" title="The bar's four beats (the 1 in orange)"><i class="b1"></i><i></i><i></i><i></i></span>
       <button id="bFreeze" title="Freeze all automation (Space)">Freeze</button>
       <a href="pad.html" class="padlink">Launchpad →</a>
       <button id="bKeys" title="Keyboard shortcuts (?)">?</button>
-      <span id="shufPill" title="Shuffle is on: tap for the Sketch tab"><span id="shufPillText"></span></span>
       <span id="shout"></span>
       <span class="hint">Live on every projector surface set to <b>generative</b>
         (<a id="editLink" data-port="8100" data-path="/edit">mapping editor</a>).</span>
@@ -719,9 +718,12 @@ const beatDots = [...$("beat").children];
       mk.style.left = (frac(p, live[p.id] ?? p.min) * 100).toFixed(2) + "%";
     }
     const f = R.lastFrame;
-    if (f) beatDots.forEach((d, i) => d.classList.toggle("on", i === Math.round(f.bwb) - 1 && 1 - f.frac > 0.35));
     INT.beat(f);
   }
+  // The beat counter: the beat you're on stays lit the whole beat (brightest on the hit).
+  const bf = R.lastFrame;
+  beatDots.forEach((d, i) => { const now = !!bf && i === Math.round(bf.bwb) - 1; d.classList.toggle("on", now);
+    d.style.opacity = now ? (0.55 + 0.45 * Math.pow(1 - bf.frac, 2)).toFixed(2) : ""; });
   requestAnimationFrame(frame);
 })(performance.now());
 
@@ -865,8 +867,6 @@ function paintShuffle() {
   $("shufText").innerHTML = on
     ? `Next change in <b>${bars(SHUF.left || SHUF.every)}</b>, on the 1: a sketch from <b>${esc(th)}</b> with one of its presets.`
     : `Off. Turn it on for a new sketch from <b>${esc(th)}</b>, with one of its presets, every ${bars(SHUF.every)} on the 1. Picking one yourself gives it the full ${bars(SHUF.every)}.`;
-  $("shufPill").classList.toggle("show", on);
-  $("shufPillText").textContent = on ? `Shuffle · ${th} · ${SHUF.left || SHUF.every}` : "";
   $("nowPreset").textContent = SHUF.playing === ACTIVE && SHUF.preset ? SHUF.preset : (lastPreset || "");
   // Next up: what the next change will be, if something is queued.
   const q = SHUF.queue;
@@ -1048,7 +1048,6 @@ $("bNext").onclick = async () => {
 // Section tabs under the display (shared, /s5auth.js).
 const TABS = window.S5AUTH && S5AUTH.sectionTabs && S5AUTH.sectionTabs({ panel: document.querySelector(".panel"), mount: document.querySelector(".hero"),
   items: () => [...document.querySelectorAll(".panel > .card, .panel > #groups > .card")], title: c => (c.querySelector("h3").firstChild.textContent || "").trim() });
-$("shufPill").onclick = () => TABS && TABS.select("Sketch");
 </script>
 </body>
 </html>

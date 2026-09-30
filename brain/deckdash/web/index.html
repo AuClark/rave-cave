@@ -7,7 +7,7 @@
 <link rel="icon" type="image/svg+xml" href="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA2NCA2NCI+PHJlY3Qgd2lkdGg9IjY0IiBoZWlnaHQ9IjY0IiByeD0iMTIiIGZpbGw9IiMyNDI0MjQiLz48cGF0aCB0cmFuc2Zvcm09InRyYW5zbGF0ZSgxNC41IDcpIHNjYWxlKC41KSIgZD0iTTAsMCBMNzAsMCBMNzAsMjEgTDIxLDIxIEwyMSw0MCBMNTcsNDAgTDcwLDUzIEw3MCw4NyBMNTcsMTAwIEwwLDEwMCBMMCw3OSBMNDksNzkgTDQ5LDYxIEwwLDYxIFoiIGZpbGw9IiNGRjVBMUYiLz48L3N2Zz4=">
 <style>
   :root {
-    --bg: #07070c; --panel: #11121b; --panel2: #171927; --line: #262a3d;
+    --bg: var(--n07070c, #07070c); --panel: #11121b; --panel2: #171927; --line: #262a3d;
     --text: #e8e9f3; --dim: #8a8fa8; --accent: #ff2fd0; --accent2: #2fe6ff;
     --good: #3dff8b; --warn: #ffb02e; --bad: #ff4d5e;
   }
@@ -34,13 +34,13 @@
   .meters { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
   .meter { text-align: center; }
   .meter .lbl { color: var(--dim); font-size: 12px; letter-spacing: .1em; text-transform: uppercase; margin-bottom: 6px; }
-  .meter .bar { position: relative; height: 150px; width: 34px; margin: 0 auto; background: #0b0c13; border: 1px solid var(--line); border-radius: 8px; overflow: hidden; }
+  .meter .bar { position: relative; height: 150px; width: 34px; margin: 0 auto; background: var(--n0b0c13, #0b0c13); border: 1px solid var(--line); border-radius: 8px; overflow: hidden; }
   .meter .fill { position: absolute; bottom: 0; left: 0; right: 0; background: linear-gradient(0deg, var(--good) 0%, var(--good) 60%, var(--warn) 80%, var(--bad) 100%); transition: height .06s linear; }
   .meter .hold { position: absolute; left: 0; right: 0; height: 2px; background: #fff; }
   .meter .val { font-variant-numeric: tabular-nums; font-weight: 800; margin-top: 6px; }
   .meter .sub { color: var(--dim); font-size: 12px; font-variant-numeric: tabular-nums; }
   .meter.live .bar { border-color: var(--accent); box-shadow: 0 0 14px rgba(255,47,208,.35); }
-  .sharebar { display: flex; height: 16px; border-radius: 8px; overflow: hidden; margin-top: 14px; border: 1px solid var(--line); background: #0b0c13; }
+  .sharebar { display: flex; height: 16px; border-radius: 8px; overflow: hidden; margin-top: 14px; border: 1px solid var(--line); background: var(--n0b0c13, #0b0c13); }
   .sharebar div { transition: width .1s linear; }
   .midi { font-family: ui-monospace, monospace; font-size: 12px; color: var(--dim); margin-top: 10px; min-height: 18px; }
   .showscene { font-size: 38px; font-weight: 900; letter-spacing: .04em; line-height: 1; }
@@ -48,7 +48,7 @@
   .showscene.GROOVE { color: var(--accent2); } .showscene.BREAKDOWN { color: #9b8cff; } .showscene.PREDROP { color: #fff; }
   .fx { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
   @media (max-width: 900px) { .row3 { grid-template-columns: 1fr; } }
-  section.stack canvas { width: 100%; display: block; border-radius: 10px; background: #0b0c13; touch-action: none; cursor: zoom-in; }
+  section.stack canvas { width: 100%; display: block; border-radius: 10px; background: var(--n0b0c13, #0b0c13); touch-action: none; cursor: zoom-in; }
   section.stack.hidden { display: none; }
   .card { background: linear-gradient(180deg, var(--panel2), var(--panel)); border: 1px solid var(--line);
           border-radius: 18px; padding: 18px; position: relative; overflow: hidden; }
@@ -85,7 +85,7 @@
   .beats div { height: 14px; border-radius: 4px; background: #1d2031; border: 1px solid var(--line); transition: background .08s; }
   .beats div.on { background: var(--accent); border-color: var(--accent); box-shadow: 0 0 14px var(--accent); }
   .beats div.on.one { background: var(--accent2); border-color: var(--accent2); box-shadow: 0 0 14px var(--accent2); }
-  canvas.wave { width: 100%; height: 70px; display: block; background: #0b0c13; border-radius: 8px; border: 1px solid var(--line); }
+  canvas.wave { width: 100%; height: 70px; display: block; background: var(--n0b0c13, #0b0c13); border-radius: 8px; border: 1px solid var(--line); }
   .times { display: flex; justify-content: space-between; font-variant-numeric: tabular-nums; margin-top: 6px; }
   .times .rem { color: var(--accent); font-weight: 800; }
   .times span { color: var(--dim); }
@@ -104,7 +104,7 @@
   th { color: var(--dim); font-weight: 600; font-size: 11px; letter-spacing: .1em; text-transform: uppercase; }
   .row2 { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
   details summary { cursor: pointer; color: var(--dim); }
-  pre { background: #0b0c13; border: 1px solid var(--line); border-radius: 10px; padding: 12px; overflow: auto; max-height: 420px; font-size: 12px; }
+  pre { background: var(--n0b0c13, #0b0c13); border: 1px solid var(--line); border-radius: 10px; padding: 12px; overflow: auto; max-height: 420px; font-size: 12px; }
   @media (max-width: 700px) { .players { grid-template-columns: 1fr; } .row2 { grid-template-columns: 1fr; }
     .top { grid-template-columns: 80px 1fr; } .art { width: 80px; height: 80px; } .tempo { grid-column: 1 / -1; text-align: left; } }
   /* Library (Serato-style): crates on the left, search + track table on the right. */
@@ -131,7 +131,7 @@
   .crates details > summary { color:var(--dim); font-weight:700; }
   .tracks { display:flex; flex-direction:column; min-width:0; }
   .ltools { display:flex; gap:8px; align-items:center; flex-wrap:wrap; padding:10px 12px; border-bottom:1px solid var(--line); }
-  .ltools input[type=search] { flex:1 1 220px; font:inherit; padding:8px 12px; border-radius:10px; border:1px solid var(--line); background:#0b0c13; color:var(--text); }
+  .ltools input[type=search] { flex:1 1 220px; font:inherit; padding:8px 12px; border-radius:10px; border:1px solid var(--line); background:var(--n0b0c13, #0b0c13); color:var(--text); }
   .ltools input[type=search]:focus { outline:none; border-color:var(--accent2); }
   .ltools select { font:inherit; font-size:12px; padding:6px; border-radius:8px; background:#151827; color:var(--text); border:1px solid var(--line); }
   .ltools .count { color:var(--dim); font-size:12px; margin-left:auto; }
@@ -233,7 +233,7 @@
     .crates li { flex: none; } .crates li > span { padding: 7px 10px; border: 1px solid var(--line2); }
     .crates details { display: flex; gap: 4px; align-items: center; } .crates summary { padding: 7px 10px; }
   }
-  @media (pointer: coarse) { table.tt td { padding: 10px 8px; } table.tt td.load .lbtn { min-width: 36px; min-height: 32px; } }
+  @media (pointer: coarse) { table.tt td { padding: 10px 8px; } table.tt td.load .lbtn { min-width: 40px; min-height: 40px; } }
   /* Deck buttons on the waveform lanes (laneCtlRender): right of each lane's BPM. */
   section.stack { position: relative; }
   .lanectl .lc { position: absolute; right: 10px; display: flex; gap: 4px; }
@@ -242,7 +242,8 @@
   .lanectl button:hover { border-color: var(--accent); }
   .lanectl button.on { background: var(--accent); border-color: var(--accent); color: var(--n050507, #050507); }
   .lanectl svg { width: 15px; height: 15px; }
-  @media (max-width: 760px) { .lanectl .lc { right: 6px; gap: 3px; } .lanectl button { width: 27px; height: 24px; } .lanectl svg { width: 13px; height: 13px; } }
+  /* Phones: thumb-sized transport (36 px), inside the slim lane header (44 px). */
+  @media (max-width: 760px) { .lanectl .lc { right: 6px; gap: 4px; } .lanectl button { width: 36px; height: 36px; border-radius: 8px; } .lanectl svg { width: 15px; height: 15px; } }
   .libdecks { display: none !important; }   /* deck controls live on the waveform lanes now */
   /* Touch drag (library row or deck chip onto a deck's waveform): the tag that follows the finger. */
   .dragghost { position: fixed; left: 0; top: 0; z-index: 9995; pointer-events: none; margin: -46px 0 0 -12px; padding: 8px 12px;
@@ -704,7 +705,7 @@ function drawStack() {
   const loaded = players.filter(p => p.status.trackLoaded);
   // Narrow screens (phones): slimmer lanes, so the pinned display leaves room for the controls.
   const slim = cv.clientWidth < 560;
-  const CTLW = slim ? 90 : 108;                 // the deck buttons' width (CSS px), see .lanectl
+  const CTLW = slim ? 124 : 108;                // the deck buttons' width (CSS px), see .lanectl
   const HEADc = slim ? 44 : 52, WAVEc = slim ? 62 : 104, OVc = slim ? 24 : 30, laneCss = HEADc + WAVEc + OVc + 6;
   const meterCss = Math.max(34, 16 * loaded.length + 6);
   const Wc = cv.clientWidth, Hc = Math.max(1, players.length) * laneCss + meterCss;
@@ -775,7 +776,9 @@ function drawStack() {
     if (s.atEnd) tags.push(["End", "#fafafa", true]);
     // Phones: only the essentials on the right, so the title keeps some room.
     const narrow = W / dpr < 560;
-    const shown = narrow ? tags.filter(([txt]) => /^(Playing|Cued|Paused|Loop|Master)/.test(txt)) : tags;
+    // Phones: no tags. The deck buttons beside them already show playing, sync and master (lit orange),
+    // and there is no room: they were drawn over the title.
+    const shown = narrow ? [] : tags;
     g.font = `600 ${10 * dpr}px ${CANVAS_FONT}`;
     let tx = rx;
     for (const [txt, col, fill] of shown.slice().reverse()) {
@@ -791,7 +794,7 @@ function drawStack() {
       if (nxt) line2.push([`Drop in ${Math.ceil(nxt.beat - ph.beat - ph.frac)}`, "#ff5a1f"]);
     }
     if (!narrow) line2.push([`track ${s.trackBpm ? s.trackBpm.toFixed(2) : "—"} · ${pc > 0 ? "+" : ""}${pc.toFixed(2)}%`, pc ? "#f2b84b" : "#a1a1a1"]);
-    if (narrow && line2.length > 1) line2.shift();   // keep the drop countdown, drop the key
+    if (narrow) line2.length = 0;                     // phones: the drop countdown is in the header above
     g.font = `500 ${11 * dpr}px ${CANVAS_FONT}`;
     let lx2 = rx;
     for (const [txt, col] of line2.slice().reverse()) {
@@ -1594,7 +1597,7 @@ function laneCtlRender() {
   const html = st.players.slice().sort((a, b) => a.number - b.number).map(p => {
     const s = p.status, h = laneHits.find(l => l.n === p.number); if (!h) return "";
     const b = (a, on, ico, title) => `<button class="${on ? "on" : ""}" data-dk="${p.number}" data-a="${a}" title="${title}" aria-label="${title}">${ICO[ico]}</button>`;
-    return `<div class="lc" style="top:${top + h.y0 + 8}px">` +
+    return `<div class="lc" style="top:${top + h.y0 + (cv.clientWidth < 560 ? 4 : 8)}px">` +
       b(s.playing ? "stop" : "play", s.playing, s.playing ? "stop" : "play", s.playing ? `Stop deck ${p.number}` : `Play deck ${p.number}`) +
       b(s.synced ? "sync_off" : "sync_on", s.synced, "sync", `Sync deck ${p.number}`) +
       b("master", s.tempoMaster, "master", `Make deck ${p.number} tempo master`) + `</div>`;

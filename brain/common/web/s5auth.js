@@ -152,7 +152,7 @@
   @media (max-width: 760px) { .s5fader { height: 56px; } }
   `; }
   function darkVars() { return lightVars().replace(/--n([0-9a-f]{6}):#[0-9a-f]{6}/g, "--n$1:#$1"); }
-  function lightVars() { return "--n050507:#fafafb; --n060608:#fafafb; --n08080a:#fafafb; --n09090b:#f4f4f5; --n0a0a0c:#f4f4f5; --n0c0c0e:#f4f4f5; --n111114:#ffffff; --n131315:#ffffff; --n131316:#ffffff; --n141416:#ffffff; --n171719:#ffffff; --n17171a:#ffffff; --n18181a:#ececf0; --n19191b:#ececf0; --n1b1b1d:#ececf0; --n1c1c20:#ececf0; --n1d1d1f:#ececf0; --n1f1f23:#ececf0; --n222224:#ececf0; --n262628:#e4e4e8; --n26262b:#e4e4e8; --n2c2c2e:#e4e4e8; --n3a3a3c:#d4d4d8; --n3a3a41:#d4d4d8; --n4d4d4f:#a1a1a5; --n525254:#a1a1a5; --n52525b:#a1a1a5; --n646464:#a1a1a5; --n686868:#a1a1a5; --n6b6b74:#a1a1a5; --n808080:#626266; --na1a1a1:#626266; --na1a1aa:#626266; --nc4c4c4:#3f3f43; --nd2d2d2:#3f3f43; --nd8d8d8:#09090d; --nfafafa:#09090d;"; }
+  function lightVars() { return "--n050507:#fafafb; --n060608:#fafafb; --n07070c:#fafafb; --n08080a:#fafafb; --n09090b:#f4f4f5; --n0a0a0c:#f4f4f5; --n0b0c13:#f4f4f5; --n0c0c0e:#f4f4f5; --n0c0d14:#f4f4f5; --n111114:#ffffff; --n131315:#ffffff; --n131316:#ffffff; --n141416:#ffffff; --n171719:#ffffff; --n17171a:#ffffff; --n18181a:#ececf0; --n18181c:#ececf0; --n19191b:#ececf0; --n1b1b1d:#ececf0; --n1c1c20:#ececf0; --n1d1d1f:#ececf0; --n1f1f23:#ececf0; --n222224:#ececf0; --n262628:#e4e4e8; --n26262b:#e4e4e8; --n2c2c2e:#e4e4e8; --n33312a:#d4d4d8; --n3a3a3c:#d4d4d8; --n3a3a41:#d4d4d8; --n4d4d4f:#a1a1a5; --n525254:#a1a1a5; --n52525b:#a1a1a5; --n646464:#a1a1a5; --n686868:#a1a1a5; --n6b6b74:#a1a1a5; --n808080:#626266; --na1a1a1:#626266; --na1a1aa:#626266; --nc4c4c4:#3f3f43; --nd2d2d2:#3f3f43; --nd8d8d8:#09090d; --nfafafa:#09090d;"; }
   function themeCss() { return `
   :root:root { --bg: #0c0c0e; --panel: #131316; --card: #131316; --well: #08080a; --line: #26262b; --line2: #3a3a41;
     --text: #fafafa; --dim: #a1a1aa; --faint: #6b6b74; --hover: #1c1c20;
@@ -205,6 +205,16 @@
   html[data-theme=light] body ::-webkit-scrollbar-thumb { background: #d4d4d8; }
   html body a:not([class]) { color: var(--accent); text-underline-offset: 2px; }
   @media (hover: none) { html body button:not(.on):hover { border-color: var(--line2) !important; } }
+  /* Phones: nothing smaller than 40 px to hit with a thumb in a dark room. Not the deck lanes'
+     overlay buttons, which are laid out to the waveform's height. */
+  @media (max-width: 760px) {
+    html body button:not(.lanectl button):not(.s5sect button), html body select, html body a.padlink,
+    html body input:not([type=range]):not([type=checkbox]):not([type=radio]):not([type=color]) { min-height: 40px; }
+    html body button:not(.lanectl button):not(.s5sect button) { min-width: 40px; }
+    html body .s5bar .s5mode, html body .s5bar .s5spk, html body .s5bar .s5who { width: 36px; height: 36px; min-height: 36px; min-width: 36px; }
+    html body .s5sect button { height: 40px; }
+    html body input[type=range] { min-height: 40px; }
+  }
   `; }
 
   const css = `

@@ -12,7 +12,7 @@
   /* The Launchpad: the visuals, played. Same system as every other page (the shared theme in
      /s5auth.js): near-black, soft corners, one orange accent that means live. Pads are big,
      square-ish and say what they do. */
-  :root { --bg:var(--n0c0c0e, #0c0c0e); --panel:var(--n131316, #131316); --pad:var(--n111114, #111114); --line:#26262b; --line2:#3a3a41; --text:var(--nfafafa, #fafafa); --dim:#a1a1aa; --faint:#6b6b74;
+  :root { --bg:var(--n0c0c0e, #0c0c0e); --panel:var(--n131316, #131316); --pad:var(--n111114, #111114); --line:var(--n26262b, #26262b); --line2:var(--n3a3a41, #3a3a41); --text:var(--nfafafa, #fafafa); --dim:var(--na1a1aa, #a1a1aa); --faint:var(--n6b6b74, #6b6b74);
           --accent:#ff5a1f; --good:#4ade80; --warn:#fbbf24; --bad:#ef4444; --well:var(--n08080a, #08080a);
           --font:"Inter", -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", Roboto, system-ui, sans-serif; }
   * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
@@ -37,7 +37,7 @@
   .bar button, .backlink { height: 34px; padding: 0 12px; font-size: 13px; display: inline-flex; align-items: center; }
   .bar button.on { background: var(--accent); border-color: var(--accent); color: #fff; }
   .backlink { gap: 6px; border: 1px solid var(--line2); border-radius: 10px; color: var(--text); text-decoration: none; font-weight: 500; white-space: nowrap; }
-  .backlink:hover { border-color: #52525b; }
+  .backlink:hover { border-color: var(--n52525b, #52525b); }
   #conn { font-size: 12px; font-weight: 500; color: var(--bad); display: inline-flex; align-items: center; gap: 6px; }
   #conn::before { content: ""; width: 7px; height: 7px; border-radius: 50%; background: currentColor; }
   #conn.ok { color: var(--good); }
@@ -48,6 +48,7 @@
   #pv canvas { position: absolute; inset: 0; width: 100%; height: 100%; }
   body.nopv #pv { display: none; }
   .faderwrap { flex: none; padding: 10px 12px 2px; }
+  @media (max-width: 760px) { .bar button, .backlink { height: 40px; min-width: 40px; justify-content: center; } .sect .change { height: 36px; } }
   @media (max-width: 430px) { .bar { flex-wrap: nowrap; gap: 6px; } .bar .logo, #conn span, .backlink .long { display: none; }
     .bar button, .backlink { padding: 0 10px; } #beat i { width: 12px; } }
 
@@ -67,7 +68,7 @@
          transition: background .1s, border-color .1s, transform .06s; }
   .pad .nm { font-size: 15px; font-weight: 600; overflow-wrap: anywhere; min-width: 0; position: relative; }
   .pad .sub { font-size: 12px; color: var(--dim); position: relative; }
-  .pad:active { transform: scale(.97); background: #18181c; }
+  .pad:active { transform: scale(.97); background: var(--n18181c, #18181c); }
   .pad.live { border-color: var(--accent); }
   .pad.live .sub { color: var(--accent); }
   .pad .fill { position: absolute; inset: 0; background: var(--accent); opacity: .2; width: 0; transition: none; }
@@ -105,7 +106,7 @@
   .chips button.on { background: var(--text); border-color: var(--text); color: var(--n09090b, #09090b); }
   input[type=text], select { width: 100%; font: inherit; background: var(--well); color: var(--text);
                      border: 1px solid var(--line2); border-radius: 10px; padding: 0 12px; height: 44px; font-size: 15px; }
-  input[type=text]:focus, select:focus { outline: none; border-color: #52525b; box-shadow: 0 0 0 3px rgba(255,90,31,.18); }
+  input[type=text]:focus, select:focus { outline: none; border-color: var(--n52525b, #52525b); box-shadow: 0 0 0 3px rgba(255,90,31,.18); }
   .mac { padding: 8px 0 12px; }
   .mac .top { display: flex; align-items: baseline; gap: 8px; }
   .mac .top label { flex: 1; font-size: 13px; }
