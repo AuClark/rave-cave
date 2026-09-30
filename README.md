@@ -124,6 +124,7 @@ All pages are served by the brain (`sektor5.local` on the rig's network). Changi
 3. **Tubes:** ESP32 + WLED in each tube → [docs/fixtures/tubes.md](docs/fixtures/tubes.md).
 4. **Par can:** uDMX into the brain, light on 10-channel DMX at address 1 → [docs/fixtures/parcan.md](docs/fixtures/parcan.md).
 5. **Pyramid:** Pi 3 A+ → SP901E → strips → [docs/fixtures/pyramid.md](docs/fixtures/pyramid.md).
+   **Leg pyramids** (the two side ones, not built yet): ESP32 + WLED, a strip per leg, a laser at the apex → [docs/fixtures/leg-pyramids.md](docs/fixtures/leg-pyramids.md).
 6. List the fixtures in `config.json`, run `brain/deploy.sh`, then set the admin PIN (`ssh -t pi@sektor5.local 'python3 ~/tools/set_pin.py'`).
 
 ## Known limitations

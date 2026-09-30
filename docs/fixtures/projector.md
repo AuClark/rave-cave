@@ -15,12 +15,22 @@ A projector running Chrome, showing the brain's projection-mapping page full-scr
 
 1. Open `/` on the projector and make it full-screen.
 2. Open `/edit` on your phone. Turn on **Handles on wall** so the corner dots show on the wall too.
-3. For each wall, panel or object: **+ Surface**, then drag its four corner dots onto the real corners. Each corner has its own colour: red top-left, green top-right, blue bottom-right, yellow bottom-left. Drag inside a surface to move it. On a laptop, arrow keys nudge the selected corner by 1 px (Shift = 10 px); **Next corner** picks which one.
+3. For each wall, panel or object: **+ Surface** (four corners) or **+ Triangle** (three: the apex, then the base right and base left, for the faces of a pyramid), then drag its corner dots onto the real corners. A triangle shows its content's square cropped to the triangle, apex at the top centre. Each corner has its own colour: red top-left, green top-right, blue bottom-right, yellow bottom-left. Drag inside a surface to move it. On a laptop, arrow keys nudge the selected corner by 1 px (Shift = 10 px); **Next corner** picks which one.
 4. **Test pattern** on: every surface shows a grid, border and circle. Adjust until the lines look straight and the circle round on the real surface.
 5. Pick each surface's **content**, and draw **masks** over anything that shouldn't be lit (doorways, the DJ, speakers): **+ Draw mask**, tap points around it, then **Finish mask**.
 6. Turn off Handles and Test pattern, set **Latency compensation** so drops land with the lights, and **Save** a preset (e.g. `workshop-back-wall`).
 
 Layouts are saved on the brain in `~/projector/layouts/`: `current.json` plus presets. They aren't in git.
+
+### Mapping from the Stage view
+
+The [Stage view](../stage.md) models each projector as a camera: its lens is 16:9 with **Throw** as the horizontal angle, and it throws its picture exactly as the real one would. So you can map there before you're on site, and check the result:
+
+- **MAP ONTO** (Stage → select a projector → *Map onto*, e.g. `Pyramid`): works out where each flat face of that part of the set lands in the projector's picture and adds a surface for each (a triangle for each face of a pyramid, a quad for a four-cornered face), named `Pyramid · left face` and so on, each with a different generative sketch. Mapping again replaces those surfaces but keeps the content you gave them. It only uses faces the projector sees completely; it doesn't know about things in the way.
+- **SEND TO EDITOR** renders the set through the projector's lens, with work lights on, and sends it to the Projection editor as that projector's **Backdrop** (toolbar: *Backdrop*, and its strength). Drag corners onto the shapes in it. The backdrop is only in the editor; the projector never shows it.
+- **LOOK THROUGH** puts the Stage camera at the lens, so you see what the projector sees.
+
+On site, the real projector needs the same position, aim and throw as in the Stage view for the mapping to land; then fine-tune the corners with the projector on. The centre pyramid in the outdoor venue is a half-pyramid against the front of the table: the mapping projector on the front crossbar sees its two front faces.
 
 ## Content
 
@@ -51,7 +61,7 @@ Every surface has its own opacity and hue shift, so neighbouring surfaces can us
 
 ## API (on :8100)
 
-`GET /api/events` (SSE: `state`, `layout`, `screen`), `GET/POST /api/layout`, `GET /api/layouts`, `GET/POST /api/layouts/NAME`, `POST /api/layouts/NAME/load`, `POST /api/screen`.
+`GET /api/events` (SSE: `state`, `layout`, `screen`, `backdrop`), `GET/POST /api/layout`, `GET /api/layouts`, `GET/POST /api/layouts/NAME`, `POST /api/layouts/NAME/load`, `POST /api/screen`, `GET/POST /api/backdrop?p=PROJECTOR` (a JPEG, the editor's backdrop; POST needs the admin PIN).
 
 ## Next (phase 2)
 

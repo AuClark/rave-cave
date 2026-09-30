@@ -60,7 +60,11 @@
      -1.5
     ]
    }
-  }
+  },
+  "hide": [
+   "Side_Pyramid_L",
+   "Side_Pyramid_R"
+  ]
  },
  "fixtures": [
   {
@@ -79,7 +83,7 @@
     -1.046
    ],
    "angle": 70,
-   "brightness": 0.35
+   "brightness": 0.12
   },
   {
    "id": "laser",
@@ -138,39 +142,39 @@
   },
   {
    "id": "pyrL",
-   "type": "wash",
-   "name": "Pyramid L (inside)",
-   "source": "sim",
-   "inside": "Side_Pyramid_L",
+   "type": "pyramid",
+   "name": "Leg pyramid L",
+   "source": "pyramidL",
    "pos": [
     -3.6,
-    0.25,
+    0,
     -0.2
    ],
    "aim": [
     -3.6,
-    2.25,
-    -0.201
+    1,
+    -0.2
    ],
-   "angle": 60
+   "count": 60,
+   "cover": false
   },
   {
    "id": "pyrR",
-   "type": "wash",
-   "name": "Pyramid R (inside)",
-   "source": "sim",
-   "inside": "Side_Pyramid_R",
+   "type": "pyramid",
+   "name": "Leg pyramid R",
+   "source": "pyramidR",
    "pos": [
     3.6,
-    0.25,
+    0,
     -0.2
    ],
    "aim": [
     3.6,
-    2.25,
-    -0.201
+    1,
+    -0.2
    ],
-   "angle": 60
+   "count": 60,
+   "cover": false
   },
   {
    "id": "arch",
@@ -196,14 +200,14 @@
    "name": "Tube L",
    "source": "tube1",
    "pos": [
-    -1.2,
+    -1.72,
     0,
-    -0.915
+    -0.25
    ],
    "aim": [
-    -1.2,
+    -1.72,
     2,
-    -0.915
+    -0.25
    ],
    "count": 60
   },
@@ -213,14 +217,14 @@
    "name": "Tube R",
    "source": "tube2",
    "pos": [
-    1.2,
+    1.72,
     0,
-    -0.915
+    -0.25
    ],
    "aim": [
-    1.2,
+    1.72,
     2,
-    -0.915
+    -0.25
    ],
    "count": 60
   }

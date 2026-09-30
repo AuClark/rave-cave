@@ -17,11 +17,13 @@ The stage in 3D: a 4.8 × 3 m platform, a back wall, a lighting truss, and the D
 | Wash | Top middle | **Live:** the par can's DMX colour (`parcan`) |
 
 - **Live fixtures** use what the show engine actually sends each light: `preview` in its state (every LED of a strip, with the fixture's brightness applied; the par can's emitters mixed into one colour), via the projector's `/api/events` feed. Showbrain keeps its last four output frames (50 fps, time-stamped, each fixture as one hex string). The projector sends each frame once, only to pages that ask for them (`/api/events?frames=1`, the Stage page), and leaves the per-LED preview out of the normal state stream. The page plays the frames back at their real spacing, behind by the measured delivery spread plus 50 ms (it adapts if Wi-Fi delivery gets bursty), so rain, sparkles and fills move as smoothly as on the real tubes.
-  - Tubes and LED bars are drawn as one continuous strip blended between LEDs, like the real diffuser, inside a frosted shell with a faint halo.
+  - Tubes and LED bars are drawn as one continuous strip blended between LEDs, like the real diffuser. A tube is the real one: a 26 mm OD, 1.03 m tube standing in the collar of a four-leg fold-out base.
+  - Leg pyramids ([leg-pyramids.md](fixtures/leg-pyramids.md)) draw their four legs' strips from one 241-pixel fixture (60 per leg, foot to apex, then the laser), and their laser straight up from the apex.
   - Drive levels are linear light, so they're read as linear RGB and scaled as a whole (never clipped per channel), which keeps hues exact.
   - Strobe, blinder and the drop's white hit are drawn by the page on the same beat clock, frame-exact, so they can't fall between updates.
   - **Match real lights** (saved with the layout): an LED display gain, a wash gain, a **Projectors** trim, and gamma (1.0 = as sent, WLED's realtime default; 2.8 if the fixture applies its own gamma). Set these by eye against the real rig.
 - **Projectors** each show the projector output (as mapped), the Visuals page (generative), or nothing. To make the *real* projector show the visuals, set its surface content to "generative" on the Projection page.
+  - A projector throws a 16:9 picture, **Throw** being its horizontal angle, so it lands where the real one would. It's also a camera: **LOOK THROUGH**, **SEND TO EDITOR** (the Projection editor's backdrop) and **MAP ONTO** (surfaces for the faces of a part of the set, e.g. the pyramid), under Selected. See [projector.md](fixtures/projector.md#mapping-from-the-stage-view).
 - **Simulated fixtures** follow the scene, beat, colour, strobe and blackout.
 - **Linking:** any fixture can be linked to a real fixture from the panel.
 
@@ -67,6 +69,7 @@ A layout can stand in a **venue** instead of the built-in room: a set modelled e
 - Venues live in `brain/projector/web/venues/`. `index.json` lists them. Each `<id>.json` holds the venue (`model`, `floor`, `cams`, `light`) and its fixtures; `<id>.glb` is the set as glTF (three.js's GLTFLoader, in `vendor/`).
 - The set is only scenery. The fixtures are ordinary Stage fixtures, so they're linked, simulated and edited as usual. Projectors' images land on the set, and the set casts shadows from them. In a venue, fixtures don't get the room's stands or truss clamps, because the model has its own mounts.
 - **Lights inside the set:** a wash with `inside` set to the name of a part of the venue model (for example `"inside": "Side_Pyramid_L"`) lights that part from within. The part glows in the light's colour and level, and spills a little light around it; there's no beam.
+- **Parts the rig replaces:** `venue.hide` lists parts of the model that aren't drawn (they're hidden, not deleted), for when a fixture now models the thing itself. The outdoor venue hides `Side_Pyramid_L` / `_R`, which the leg pyramids replace.
 - **LED strips on the set:** an LED bar with `onto` set to a strip in the venue model (`"onto": "Arch_LED_Strip"`) lays its LEDs along that strip, from one foot of the arc to the other, with a soft halo like the tubes. It's driven like any strip: simulated, or linked to a real one.
 - **Daylight** (View tab, saved with the layout) runs from night (0, the room as it always was) to a day sky (1): the sky, haze colour, ambient light and a low sun with shadows come up together. A venue sets its own default (`light.day`) and can override the colours (`light.sky`, `hemiSky`, `hemiGround`, `sun` position). The outdoor venue starts at dusk (0.55), so you can see the set and still see the lights.
 - Venue coordinates are the same as the room's (metres, x right, y up, z towards the audience). The venue says where (0, 0, 0) is.
@@ -78,16 +81,16 @@ A layout can stand in a **venue** instead of the built-in room: a set modelled e
 | Mapping projector | Crossbar between the front poles, aimed at the centre pyramid's front faces (72° short throw, 35% so a 2 m throw doesn't blow out) | Projector output (as mapped) |
 | Laser (tripod) | Behind the DJ, on the laser/smoke tripod at 3 m, aimed at the tent roof | Simulated |
 | Table par (uplight) | On the DJ table, straight up at the tarp | Live: `parcan` |
-| Tube L / R | Floor tubes either side of the centre pyramid | Live: `tube1`, `tube2` |
-| Pyramid L / R (inside) | Inside each side pyramid, so the pyramid glows | Simulated (link to a real fixture from the panel) |
+| Tube L / R | Floor tubes just outside the gazebo, beside the speakers | Live: `tube1`, `tube2` |
+| Leg pyramid L / R | The two side pyramids, built to the real frame ([leg-pyramids.md](fixtures/leg-pyramids.md)): LED strips up the legs, a red laser up from the apex, cover optional (Selected → Cover) | Simulated; View → Section previews their looks |
 | Arch LED strip | Round the inside of the arch, foot to foot (240 LEDs) | Simulated (link to a real fixture from the panel) |
 | Tent par | Base of the tent pole, up into the roof | Simulated |
 
-It's exported from the Blender file with `export_sektor5.py` (next to `stage.blend`): `Blender -b stage.blend -P export_sektor5.py -- brain/projector/web/venues`. That script reads positions, aims, beam angles and colours from the model, so re-run it after changing the design.
+It's exported from the Blender file with `export_sektor5.py` (next to `stage.blend`): `Blender -b stage.blend -P export_sektor5.py -- brain/projector/web/venues`. That script reads positions, aims, beam angles and colours from the model, so re-run it after changing the design. The leg pyramids, the tubes' new positions and `venue.hide` were edited into `outdoor-tarp.json` by hand (30 Sep 2026): carry them into the Blender file before the next export, or it will put the old side pyramids and tube positions back.
 
 ## Designing
 
-- **Add** a tube, wash, strobe, laser, moving head, projector, LED bar or screen.
+- **Add** a tube, wash, strobe, laser, moving head, projector, LED bar, leg pyramid or screen.
 - **Select** a fixture by clicking it in the view or the list.
 - **Move and aim:** **MOVE** (or M) drags the fixture; **AIM** (or A) drags the orange dot it points at. You can also type positions in metres. X is left/right, Y is height, Z is towards the audience, and (0, 0, 0) is the front edge of the stage floor, centre.
 - **Per-fixture settings:** projector **brightness** (0–150%), beam angle or projector throw, LED or beam count, colour for simulated fixtures, and screen size.

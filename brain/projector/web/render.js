@@ -2,8 +2,10 @@
 // editor's live preview (edit.html).
 //
 // Each surface is a quad given by four corners in normalised screen coordinates
-// (0..1, y down). Content is drawn per pixel through the inverse homography of that
-// quad, so it lands with correct perspective on angled surfaces. Masks are black
+// (0..1, y down), or a triangle given by three (apex, base right, base left: for the faces of a
+// pyramid). Content is drawn per pixel through the inverse homography of that quad, so it lands
+// with correct perspective on angled surfaces; a triangle shows the content's square cropped to
+// the triangle, apex at the top centre (an affine map, exact for a flat face). Masks are black
 // polygons drawn on top. All content is beat-locked to the show engine's state.
 // Surfaces can have rounded corners and a border band drawn over their content.
 // Content "gen" is a generative sketch from the visuals service (:8110): the live one (whatever the
@@ -109,6 +111,14 @@ function squareToQuad(c) {
           g, h, 1];
 }
 
+// A triangle surface: the content square's (0.5, 0), (1, 1), (0, 1) -> its apex, base right, base left.
+function squareToTri(c) {
+  const [a, r, l] = c, ex = r[0] - l[0], ey = r[1] - l[1];              // (1, 0) in the square
+  const fx = 0.5 * ex - (a[0] - l[0]), fy = 0.5 * ey - (a[1] - l[1]);   // (0, 1)
+  return [ex, fx, l[0] - fx, ey, fy, l[1] - fy, 0, 0, 1];
+}
+const surfaceMatrix = c => c.length === 3 ? squareToTri(c) : squareToQuad(c);
+
 function invert3(m) {
   const [a, b, c, d, e, f, g, h, i] = m;
   const A = e * i - f * h, B = -(d * i - f * g), C = d * h - e * g;
@@ -123,6 +133,7 @@ const colMajor = m => new Float32Array([m[0], m[3], m[6], m[1], m[4], m[7], m[2]
 
 function quadSize(c, W, H) {
   const d = (p, q) => Math.hypot((p[0] - q[0]) * W, (p[1] - q[1]) * H);
+  if (c.length === 3) return [d(c[1], c[2]), d(c[0], [(c[1][0] + c[2][0]) / 2, (c[1][1] + c[2][1]) / 2])];   // base, height
   return [(d(c[0], c[1]) + d(c[3], c[2])) / 2, (d(c[0], c[3]) + d(c[1], c[2])) / 2];
 }
 function quadAspect(c, W, H) {
@@ -149,6 +160,7 @@ uniform float u_beat, u_frac, u_bwb, u_bar, u_hue, u_scene, u_progress, u_since,
 uniform float u_todrop, u_cbeat;
 uniform float u_opacity, u_bright, u_sel, u_time;
 uniform float u_radius, u_border, u_bbright, u_bsat, u_bpulse;
+uniform float u_tri;   // 1: a triangle surface (apex at the top centre of the square)
 uniform float u_px;   // one output pixel in surface units (surface height = 1), for anti-aliasing
 uniform sampler2D u_tex;
 // The live track's waveform, resampled per beat by the visuals service (trackwave.py).
@@ -340,6 +352,10 @@ void main() {
   float rad = min(u_radius, min(hs.x, hs.y));
   vec2 qd = abs(sp) - hs + rad;
   float sd = length(max(qd, 0.0)) + min(max(qd.x, qd.y), 0.0) - rad;
+  if (u_tri > 0.5) {           // and inside the triangle: distance to its sloping edges, in the same units
+    sd = max(sd, (abs(sp.x) - 0.5 * u_aspect * (sp.y + 0.5)) / sqrt(1.0 + 0.25 * u_aspect * u_aspect));
+    if (sd > 2.0 * u_px) discard;
+  }
   float a = smoothstep(0.0, 1.5 * u_px, -sd) * u_opacity;
   vec2 cuv = u_trole > 0.5 ? s5t_uv(uv) : uv;
   vec3 c = content(cuv) * u_bright;
@@ -647,7 +663,7 @@ class MapRenderer {
     const u = {};
     for (const n of ["u_res", "u_Hinv", "u_aspect", "u_beat", "u_frac", "u_bwb", "u_bar", "u_hue", "u_scene", "u_progress",
                      "u_since", "u_energy", "u_sp", "u_opacity", "u_bright", "u_sel", "u_time", "u_tex",
-                     "u_radius", "u_border", "u_bbright", "u_bsat", "u_bpulse", "u_px", "u_box",
+                     "u_radius", "u_border", "u_bbright", "u_bsat", "u_bpulse", "u_px", "u_box", "u_tri",
                      "u_wave", "u_wv", "u_wloop", "u_text", "u_textn", "u_trole", "u_tp", "u_tmode", "u_tseed", "u_tdur", "u_todrop", "u_cbeat", ...extra])
       u[n] = gl.getUniformLocation(p, n);
     return { p, u, a: gl.getAttribLocation(p, "a") };
@@ -791,7 +807,8 @@ class MapRenderer {
     gl.vertexAttribPointer(pr.a, 2, gl.FLOAT, false, 0, 0);
     const u = pr.u;
     gl.uniform2f(u.u_res, W, H);
-    gl.uniformMatrix3fv(u.u_Hinv, false, colMajor(invert3(squareToQuad(s.corners))));
+    gl.uniformMatrix3fv(u.u_Hinv, false, colMajor(invert3(surfaceMatrix(s.corners))));
+    gl.uniform1f(u.u_tri, s.corners.length === 3 ? 1 : 0);
     const xs = s.corners.map(c => c[0]), ys = s.corners.map(c => c[1]);
     gl.uniform4f(u.u_box, 2 * Math.min(...xs) - 1, 1 - 2 * Math.max(...ys), 2 * Math.max(...xs) - 1, 1 - 2 * Math.min(...ys));
     const [qw, qh] = quadSize(s.corners, W, H);
@@ -878,7 +895,7 @@ class MapRenderer {
         o.beginPath(); o.arc(x * W, y * H, sel ? r * 1.3 : r, 0, Math.PI * 2); o.fill();
         if (sel) { o.strokeStyle = "#fff"; o.stroke(); }
       });
-      const cx = s.corners.reduce((a, c) => a + c[0], 0) / 4 * W, cy = s.corners.reduce((a, c) => a + c[1], 0) / 4 * H;
+      const k = s.corners.length, cx = s.corners.reduce((a, c) => a + c[0], 0) / k * W, cy = s.corners.reduce((a, c) => a + c[1], 0) / k * H;
       o.fillStyle = sel ? "#2fe6ff" : "#fff"; o.textAlign = "center";
       o.fillText(`${s.name || s.id} · ${s.content === "gen" && s.sketch ? s.sketch + (s.preset ? " · " + s.preset : "") : s.content}`, cx, cy);
     }
@@ -905,7 +922,7 @@ class MapRenderer {
 // Connect to an event stream (the projector host's by default); calls the handlers as messages arrive.
 // Each service says hello with a version of its page code; when that changes (a deploy),
 // the page reloads itself so nobody has to hard-refresh the projector. reload: false opts out.
-function connectEvents(renderer, { onLayout, onScreen, onScreens, onStatus, onSketch, onParams, onAuto, onText, onTransition, onShuffle, url = "/api/events", state = true, reload = true } = {}) {
+function connectEvents(renderer, { onLayout, onScreen, onScreens, onStatus, onSketch, onParams, onAuto, onText, onTransition, onShuffle, onBackdrop, url = "/api/events", state = true, reload = true } = {}) {
   let es, version = null;
   const open = () => {
     es = new EventSource(url);
@@ -924,6 +941,7 @@ function connectEvents(renderer, { onLayout, onScreen, onScreens, onStatus, onSk
       else if (m.t === "sketch") { renderer.setSketch(m.sketch, m.trans); onSketch && onSketch(m.sketch); }
       else if (m.t === "params") { renderer.setParams(m.params, m.trans); onParams && onParams(m.params); }
       else if (m.t === "transition" && onTransition) onTransition(m.settings);
+      else if (m.t === "backdrop" && onBackdrop) onBackdrop(m);
       else if (m.t === "auto") {
         renderer.genAuto = m.auto || {};
         renderer.genFreeze = !!m.freeze;

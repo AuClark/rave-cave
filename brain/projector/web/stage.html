@@ -89,6 +89,14 @@
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;500;600&display=swap" rel="stylesheet">
 <script type="importmap">{ "imports": { "three": "./vendor/three.module.min.js", "three/addons/": "./vendor/addons/" } }</script>
+<script>if (new URLSearchParams(location.search).has("embed")) document.documentElement.classList.add("s5embed");</script>
+<style>
+  /* Embedded in the Show app: only the 3D view; the app has the controls. */
+  html.s5embed header, html.s5embed aside, html.s5embed #design, html.s5embed #hint, html.s5embed #hud,
+  html.s5embed .s5tabs, html.s5embed .s5who { display: none !important; }
+  html.s5embed main, html.s5embed main.full { grid-template-columns: minmax(0, 1fr); height: 100vh; }
+  html.s5embed #view { position: relative; top: 0; height: 100vh; background: #000; }
+</style>
 <script src="/s5auth.js"></script>
 </head>
 <body>
@@ -109,8 +117,8 @@
       <div class="row"><span>Camera</span><div class="btns cams" style="margin:0"><button data-cam="audience" class="on">AUDIENCE</button><button data-cam="dj">DJ</button><button data-cam="top">TOP</button><button data-cam="side">SIDE</button></div></div>
       <div class="row"><span>Haze</span><input id="haze" type="range" min="0" max="1" step="0.05" value="0.55"></div>
       <div class="row"><span>Lasers</span><select id="laserLook" title="Laser show look (saved with the layout)"></select></div>
-      <div class="row"><span>Section</span><select id="laserSec" title="Preview a section: the lasers play it on a 128 BPM clock, whatever the show is doing">
-        <option value="">FOLLOW SHOW</option><option value="GROOVE">GROOVE</option><option value="BUILD">BUILD</option><option value="DROP">DROP</option><option value="BREAKDOWN">BREAKDOWN</option><option value="INTRO">INTRO</option></select></div>
+      <div class="row"><span>Section</span><select id="laserSec" title="Preview a section: the lasers and leg pyramids play it on a 128 BPM clock, whatever the show is doing">
+        <option value="">FOLLOW SHOW</option><option value="GROOVE">GROOVE</option><option value="BUILD">BUILD</option><option value="PREDROP">PREDROP</option><option value="DROP">DROP</option><option value="BREAKDOWN">BREAKDOWN</option><option value="INTRO">INTRO</option></select></div>
       <div class="row"><span>Daylight</span><input id="day" type="range" min="0" max="1" step="0.05" value="0" title="Night to dusk to day (saved with the layout)"></div>
       <div class="row"><span>Glow</span><div><button id="bloom" class="on" title="Glow (turn off on slow machines)">GLOW</button></div></div>
     </section>
@@ -134,7 +142,11 @@
       <div class="row" id="rowAngle"><span id="lAngle">Beam</span><input id="pAngle" type="range" min="2" max="70" step="1"></div>
       <div class="row" id="rowCount"><span id="lCount">Beams</span><input id="pCount" type="number" min="1" max="240" step="1"></div>
       <div class="row" id="rowSize"><span>Size</span><div class="xyz" style="grid-template-columns:1fr 1fr"><input id="sw" type="number" step="0.1" min="0.2" max="12"><input id="sh" type="number" step="0.1" min="0.2" max="8"></div></div>
+      <div class="row" id="rowLens"><span>Lens</span><div class="btns" style="margin:0;flex-wrap:wrap"><button id="bLook" title="See the set through this projector's lens">LOOK THROUGH</button><button id="bShot" title="Send the set as this projector sees it to the Projection editor, as a backdrop to map surfaces onto">SEND TO EDITOR</button></div></div>
+      <div class="row" id="rowMap"><span>Map onto</span><div style="display:flex;gap:6px;min-width:0"><select id="pMapPart" style="flex:1;min-width:0" title="A part of the set this projector sees"></select><button id="bMap" title="Add a surface for each face of it that this projector sees (triangles for a pyramid), in the projection layout">MAP</button></div></div>
+      <div class="note" id="mapNote" style="margin:-2px 0 8px"></div>
       <div class="row" id="rowBright"><span>Brightness</span><div style="display:flex;gap:8px;align-items:center"><input id="pBright" type="range" min="0" max="1.5" step="0.05" style="flex:1"><span id="vBright" style="width:38px;text-align:right;color:var(--dim);font-size:12px"></span></div></div>
+      <div class="row" id="rowCover"><span>Cover</span><label style="display:flex;gap:8px;align-items:center"><input id="pCover" type="checkbox"> White fabric over the frame</label></div>
       <div class="row" id="rowColour"><span>Colour</span><input id="pColour" type="color" style="padding:0;height:30px"></div>
       <div class="note" id="laserNote" style="margin:-2px 0 8px">* Beams, spread and colour are for the CLASSIC look. The other laser looks (LASERS, top bar) draw their own beams, sheets and colours, mirrored left and right.</div>
       <div class="btns">
@@ -199,6 +211,7 @@ const TYPES = {
   moving:    { label: "Moving head", angle: 9 },
   projector: { label: "Projector",   angle: 32 },
   ledbar:    { label: "LED bar",     count: 24, angle: 0 },
+  pyramid:   { label: "Leg pyramid", count: 60 },          // count = LEDs per leg (see docs/fixtures/leg-pyramids.md)
   screen:    { label: "Screen",      size: [2.0, 1.2] },
 };
 const DEFAULT_RIG = () => [
@@ -238,7 +251,9 @@ const ROOM_CAMS = {
 };
 let CAMS = ROOM_CAMS;                           // a venue brings its own
 function setCam(k) {
-  const c = CAMS[k]; camera.position.set(...c.pos); orbit.target.set(...c.look); orbit.update();
+  const c = CAMS[k]; camera.position.set(...c.pos); orbit.target.set(...c.look);
+  if (camera.fov !== 50) { camera.fov = 50; camera.updateProjectionMatrix(); }       // after LOOK THROUGH
+  orbit.update();
   document.querySelectorAll("[data-cam]").forEach(b => b.classList.toggle("on", b.dataset.cam === k));
 }
 document.querySelectorAll("[data-cam]").forEach(b => b.onclick = () => setCam(b.dataset.cam));
@@ -316,7 +331,12 @@ function prepVenue(set) {
     const m = o.material;
     if (o.geometry.attributes.color && m.emissive && m.emissive.getHex() && !(m.map || m.color.getHex())) {
       o.material = new THREE.MeshBasicMaterial({ vertexColors: true, toneMapped: false }); o.castShadow = false;
-    } else if (m.isMeshStandardMaterial) m.metalness = Math.min(m.metalness, 0.6);
+    } else if (m.isMeshStandardMaterial) {
+      m.metalness = Math.min(m.metalness, 0.6);
+      // Deck screens: the model's are a bright emissive (strength 3) that the glow pass blows out;
+      // the real XDJ screens are a soft glow.
+      if (m.name === "screen") m.emissiveIntensity = Math.min(m.emissiveIntensity, 0.35);
+    }
   });
 }
 // Daylight 0 = night (the room as it always was), 1 = the venue's full day sky. Between, the sky
@@ -351,6 +371,10 @@ async function setVenue(v) {
     prepVenue(set); venueSet = set; scene.add(set);
     set.traverse(o => { if (o.isMesh && !venueMeshes.has(o.name)) venueMeshes.set(o.name, o); });
     set.traverse(o => { if (o.isMesh && /^Jog\d*(_\d+)?$/.test(o.name)) { o.material = o.material.clone(); venueJogs.push(o); } });
+    // Parts of the model that a fixture now draws itself (e.g. the side pyramids): hidden, not deleted,
+    // so the Blender file doesn't have to change first.
+    const hide = new Set(venue.hide || []);
+    if (hide.size) set.traverse(o => { if (hide.has(o.name)) o.visible = false; });
   } catch (e) { console.warn("venue model", e); $("#saved").textContent = `Couldn't load the venue model (${venue.model})`; }
 }
 
@@ -519,6 +543,311 @@ function bodyMesh(w, h, d, colour = 0x1a1a1a) {
   const m = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), mat(colour, 0.5, 0.4)); m.castShadow = true; return m;
 }
 
+// ------------------------------------------------------------------ projectors as cameras
+// A projector's lens: 16:9, Throw = the horizontal angle. The same frustum throws the picture in
+// this view and is the "camera" for looking through it, the editor's backdrop and mapping.
+// three.js lights a spotlight's whole cone and only applies its picture inside the shadow frustum,
+// so the frustum is a square that contains the cone, and the 16:9 picture sits in the middle of a
+// square texture (band: its share of the width and height), black around it: light only lands on
+// the real projector's rectangle.
+function lensOf(fx) {
+  const tH = Math.tan(THREE.MathUtils.degToRad(Math.max(5, Math.min(120, fx.angle || TYPES.projector.angle))) / 2), tV = tH * 9 / 16;
+  const S = Math.hypot(tH, tV);                                            // the cone's radius (in tan units) = the square's half-size
+  return { vFov: THREE.MathUtils.radToDeg(2 * Math.atan(tV)), cone: Math.atan(S), band: [tH / S, tV / S] };
+}
+function projCamera(fx, p) {
+  const cam = new THREE.PerspectiveCamera(lensOf(fx).vFov, 16 / 9, 0.05, 80);
+  p.group.updateMatrixWorld(true); p.spot.getWorldPosition(cam.position);
+  cam.lookAt(new THREE.Vector3(...fx.aim)); cam.updateMatrixWorld(true); cam.updateProjectionMatrix();
+  return cam;
+}
+// Which projection projector a Stage projector shows: its output is drawn from the first one's layout.
+const projId = () => (mapRenderer && mapRenderer.layout && mapRenderer.projectorId()) || "main";
+
+// LOOK THROUGH: this view's camera to the projector's lens (orbiting moves it off again).
+function lookThrough(fx, p) {
+  const c = projCamera(fx, p);
+  camera.position.copy(c.position); camera.fov = c.fov; camera.updateProjectionMatrix();
+  orbit.target.set(...fx.aim); orbit.update();
+  document.querySelectorAll("[data-cam]").forEach(b => b.classList.remove("on"));
+}
+
+// Render the set through a projector's lens with work lights on (no fog, beams or projection), as a
+// JPEG: the Projection editor's backdrop, so surfaces can be dragged onto the real shapes.
+function lensShot(fx, p, w = 1280, h = 720) {
+  const cam = projCamera(fx, p), hidden = [];
+  scene.traverse(o => { if (o.visible && (o.isInstancedMesh || (o.material && o.material.isShaderMaterial) || o === p.handle)) { hidden.push(o); o.visible = false; } });
+  const spots = [...built.values()].filter(q => q.spot).map(q => [q.spot, q.spot.intensity]);
+  spots.forEach(([l]) => (l.intensity = 0));
+  const fog = scene.fog, hi = hemi.intensity, gz = gizmo.visible, size = renderer.getSize(new THREE.Vector2());
+  // Work lights: a soft fill, and a lamp at the lens, so what the projector can reach is lit and its edges show.
+  const fill = new THREE.AmbientLight(0xffffff, 0.8), lamp = new THREE.PointLight(0xffffff, 40, 0, 1.2), side = new THREE.DirectionalLight(0xffffff, 1.2);
+  lamp.position.copy(cam.position); side.position.set(cam.position.x + 6, cam.position.y + 3, cam.position.z + 2);   // from one side: faces read apart
+  scene.add(fill, lamp, side);
+  scene.fog = null; hemi.intensity = hi + 1.2; gizmo.visible = false;
+  renderer.setSize(w, h, false); renderer.render(scene, cam);
+  scene.remove(fill, lamp, side); lamp.dispose(); side.dispose();
+  const url = renderer.domElement.toDataURL("image/jpeg", 0.85);
+  renderer.setSize(size.x, size.y, false);
+  scene.fog = fog; hemi.intensity = hi; gizmo.visible = gz;
+  spots.forEach(([l, v]) => (l.intensity = v)); hidden.forEach(o => (o.visible = true));
+  resize();
+  return url;
+}
+async function sendLensShot(fx, p) {
+  const blob = await (await fetch(lensShot(fx, p))).blob();
+  const r = await fetch(`${PROJ}/api/backdrop?p=${encodeURIComponent(projId())}`, { method: "POST", body: blob, headers: { "Content-Type": "image/jpeg" } });
+  $("mapNote").textContent = r.ok ? `Sent: the Projection editor's backdrop for "${projId()}" (turn on BACKDROP there).`
+    : r.status === 401 ? "Unlock (admin PIN) to send it." : `Couldn't send it (${r.status}).`;
+}
+
+// MAP ONTO: the faces of a part of the set that this projector sees, as projection surfaces (a
+// triangle per triangular face, a quad per four-cornered one), in the output's coordinates.
+function facesSeen(fx, p, part) {
+  const m = venueMeshes.get(part); if (!m || !m.geometry) return [];
+  const cam = projCamera(fx, p), pos = m.geometry.attributes.position, idx = m.geometry.index;
+  m.updateMatrixWorld(true);
+  const n = idx ? idx.count : pos.count, at = k => new THREE.Vector3().fromBufferAttribute(pos, idx ? idx.getX(k) : k).applyMatrix4(m.matrixWorld);
+  // Which side of a face is outside: away from the part's centre (right for a convex part like a
+  // pyramid or a box, whichever way the model's faces happen to be wound).
+  const centre = new THREE.Vector3();
+  for (let k = 0; k < n; k++) centre.add(at(k));
+  centre.divideScalar(Math.max(1, n));
+  const groups = new Map();
+  for (let k = 0; k + 2 < n; k += 3) {
+    const a = at(k), b = at(k + 1), c = at(k + 2);
+    const nrm = new THREE.Vector3().subVectors(b, a).cross(new THREE.Vector3().subVectors(c, a));
+    if (nrm.lengthSq() < 1e-10) continue;
+    nrm.normalize();
+    const mid = a.clone().add(b).add(c).divideScalar(3);
+    if (nrm.dot(mid.clone().sub(centre)) < 0) nrm.negate();
+    if (nrm.dot(cam.position.clone().sub(mid)) <= 1e-6) continue;           // faces away from the lens
+    const key = `${nrm.x.toFixed(2)},${nrm.y.toFixed(2)},${nrm.z.toFixed(2)},${nrm.dot(a).toFixed(2)}`;   // one flat face
+    if (!groups.has(key)) groups.set(key, []);
+    groups.get(key).push(a, b, c);
+  }
+  const faces = [];
+  for (const pts of groups.values()) {
+    const uniq = [];
+    for (const v of pts) if (!uniq.some(u => u.distanceToSquared(v) < 1e-6)) uniq.push(v);
+    const px = uniq.map(v => { const q = v.clone().project(cam); return { x: (q.x + 1) / 2, y: (1 - q.y) / 2, z: q.z }; });
+    if (px.some(q => q.z > 1 || q.x < -0.02 || q.x > 1.02 || q.y < -0.02 || q.y > 1.02)) continue;   // not all in the picture
+    const area = Math.abs(px.reduce((s, q, i) => { const r = px[(i + 1) % px.length]; return s + q.x * r.y - r.x * q.y; }, 0)) / 2;
+    let corners;
+    if (px.length === 3) {                                                   // apex (topmost), base right, base left
+      const top = px.reduce((a, b) => (b.y < a.y ? b : a)), rest = px.filter(q => q !== top).sort((a, b) => b.x - a.x);
+      corners = [top, ...rest];
+    } else if (px.length === 4) {                                            // clockwise from the top left
+      const cx = px.reduce((s, q) => s + q.x, 0) / 4, cy = px.reduce((s, q) => s + q.y, 0) / 4;
+      corners = px.slice().sort((a, b) => Math.atan2(a.y - cy, a.x - cx) - Math.atan2(b.y - cy, b.x - cx));
+      const tl = corners.reduce((i, q, j) => (q.x + q.y < corners[i].x + corners[i].y ? j : i), 0);
+      corners = corners.slice(tl).concat(corners.slice(0, tl));
+    } else continue;                                                         // curved or many-sided: map it by hand
+    if (area < 1e-4) continue;
+    faces.push({ corners: corners.map(q => [+q.x.toFixed(4), +q.y.toFixed(4)]), cx: corners.reduce((s, q) => s + q.x, 0) / corners.length, area });
+  }
+  faces.sort((a, b) => a.cx - b.cx);
+  const names = faces.length === 2 ? ["left face", "right face"] : faces.length === 3 ? ["left face", "middle face", "right face"] : faces.map((_, i) => `face ${i + 1}`);
+  return faces.map((f, i) => ({ ...f, name: names[i] }));
+}
+function mapCandidates(fx, p) {
+  return [...venueMeshes.keys()].map(k => ({ k, a: facesSeen(fx, p, k).reduce((s, f) => s + f.area, 0) })).filter(c => c.a > 0.001).sort((a, b) => b.a - a.a).slice(0, 15).map(c => c.k);
+}
+async function mapOnto(fx, p, part) {
+  const faces = facesSeen(fx, p, part);
+  if (!faces.length) return ($("mapNote").textContent = `${fx.name} doesn't see a flat face of ${part} completely.`);
+  const L = await (await fetch(`${PROJ}/api/layout`)).json(), pid = projId(), prefix = part + " · ";
+  const old = L.surfaces.filter(s => (s.projector || "main") === pid && s.name.startsWith(prefix));
+  if (!confirm(`Map ${faces.length} surface${faces.length > 1 ? "s" : ""} onto ${part} (${faces.map(f => f.name).join(", ")}) for projector "${pid}"?` +
+               (old.length ? ` This replaces the ${old.length} mapped there before (keeping their content).` : "")) ) return;
+  let sketches = [];
+  try { const d = await (await fetch(`${visualsBase()}/api/sketches`)).json(); sketches = (d.sketches || []).map(x => typeof x === "string" ? x : x.name).filter(x => x !== d.active); } catch (e) {}
+  const used = new Set(L.surfaces.map(s => s.id)), newId = () => { let i = 1; while (used.has("s" + i)) i++; used.add("s" + i); return "s" + i; };
+  const made = faces.map((f, i) => {
+    const was = old.find(s => s.name === prefix + f.name);
+    return was ? { ...was, corners: f.corners }
+      : { id: newId(), name: prefix + f.name, content: "gen", sketch: i === 0 ? null : sketches[(i - 1) % Math.max(1, sketches.length)] || null, preset: null,
+          opacity: 1, hue_shift: 0, radius: 0, border: 0, projector: pid, corners: f.corners };   // a different sketch on each face
+  });
+  L.surfaces = L.surfaces.filter(s => !old.includes(s)).concat(made);
+  delete L.screen; delete L.screens;
+  const r = await fetch(`${PROJ}/api/layout`, { method: "POST", body: JSON.stringify(L) });
+  $("mapNote").textContent = r.ok ? `Mapped ${made.length} onto ${part}: ${made.map(s => s.name.slice(prefix.length) + (s.content === "gen" ? ` (${s.sketch || "live sketch"})` : "")).join(", ")}. Fine-tune in Projection, with BACKDROP on.`
+    : r.status === 401 ? "Unlock (admin PIN) to map." : `Couldn't save the layout (${r.status}).`;
+}
+
+// The floor tubes' fold-out base: a collar the tube sits in, on four short legs that splay out.
+const TUBE_BASE = { lift: 0.1, reach: 0.16 };
+function tubeBase() {
+  const b = new THREE.Group(), m = mat(0x151515, 0.5, 0.5);
+  const collar = new THREE.Mesh(new THREE.CylinderGeometry(0.018, 0.018, 0.08, 16), m);
+  collar.position.y = TUBE_BASE.lift + 0.02; collar.castShadow = true; b.add(collar);
+  const top = new THREE.Vector3(), foot = new THREE.Vector3(), up = new THREE.Vector3(0, 1, 0);
+  for (let k = 0; k < 4; k++) {
+    const a = Math.PI / 4 + k * Math.PI / 2, c = Math.cos(a), s = Math.sin(a);
+    top.set(c * 0.016, TUBE_BASE.lift - 0.005, s * 0.016); foot.set(c * TUBE_BASE.reach, 0.006, s * TUBE_BASE.reach);
+    const len = top.distanceTo(foot), leg = new THREE.Mesh(new THREE.CylinderGeometry(0.005, 0.005, len, 8), m);
+    leg.position.copy(top).add(foot).multiplyScalar(0.5);
+    leg.quaternion.setFromUnitVectors(up, top.clone().sub(foot).normalize()); leg.castShadow = true; b.add(leg);
+    const pad = new THREE.Mesh(new THREE.CylinderGeometry(0.012, 0.012, 0.008, 12), m); pad.position.copy(foot).setY(0.004); b.add(pad);
+  }
+  return b;
+}
+
+// ------------------------------------------------------------------ leg pyramids
+// The two side pyramids (docs/fixtures/leg-pyramids.md), from the Fusion model "Pyramid v3": four
+// 1 m aluminium U-channel legs (20 x 11.5 mm) slotted into a 3D-printed top junction at 45 degrees,
+// so the feet stand about 1.02 m apart and the apex is about 0.74 m up. A WS2815 strip runs up the
+// outside of each leg (count = LEDs per leg), an ESP32 at the top drives each leg from its own pin,
+// and a red laser points straight up out of the apex. Optionally a white fabric cover.
+// Legs in pixel order: front-left, front-right, back-right, back-left (0 = the foot of each leg).
+const PYR = { leg: 1.0, slope: 45, junction: { r0: 0.028, r1: 0.042, h: 0.043 }, boss: { r: 0.0073, h: 0.007 },
+              channel: [0.02, 0.0115], strip: 0.012, laserLen: 30 };
+const PYR_LEGS = [[-1, 1], [1, 1], [1, -1], [-1, -1]];            // (x, z) of each corner: FL, FR, BR, BL
+function pyramidGeom(fx) {
+  const L = fx.leg || PYR.leg, a = THREE.MathUtils.degToRad(fx.slope || PYR.slope);
+  const top = L * Math.sin(a), run = L * Math.cos(a);             // leg top (in the junction) and horizontal reach
+  const legs = PYR_LEGS.map(([sx, sz]) => {
+    const h = new THREE.Vector3(sx, 0, sz).normalize();
+    const foot = h.clone().multiplyScalar(run + 0.004), tip = h.clone().multiplyScalar(0.004).setY(top);
+    const u = tip.clone().sub(foot).normalize();                  // up the leg
+    const n = h.clone().sub(u.clone().multiplyScalar(h.dot(u))).normalize();   // its outside face: out and up
+    return { h, foot, tip, u, n, t: new THREE.Vector3().crossVectors(u, n) };
+  });
+  const jBottom = top - 0.025;                                    // the legs end inside the junction's sockets
+  return { L, top, legs, jBottom, apex: jBottom + PYR.junction.h + PYR.boss.h };
+}
+function buildPyramid(fx, T, g, parts) {
+  const n = Math.max(1, Math.min(240, fx.count || T.count)), G = pyramidGeom(fx);
+  const alu = mat(0x8d9196, 0.7, 0.25), printed = mat(0x1b1b1b, 0.6, 0.1);
+  parts.pyr = { n, texs: [], datas: [], G };
+  parts.hit = [];
+  const basis = new THREE.Matrix4();
+  G.legs.forEach(l => {
+    const mid = l.foot.clone().add(l.tip).multiplyScalar(0.5);
+    basis.makeBasis(l.t, l.u, l.n);
+    const leg = new THREE.Mesh(new THREE.BoxGeometry(PYR.channel[0], G.L, PYR.channel[1]), alu);
+    leg.quaternion.setFromRotationMatrix(basis); leg.position.copy(mid); leg.castShadow = leg.receiveShadow = true;
+    g.add(leg); parts.hit.push(leg);
+    // the strip, in the channel on the outside face; its LEDs as a 1 x n texture (0 = the foot)
+    const data = new Uint16Array(n * 4);
+    for (let i = 0; i < n; i++) data[i * 4 + 3] = THREE.DataUtils.toHalfFloat(1);
+    const tex = new THREE.DataTexture(data, 1, n, THREE.RGBAFormat, THREE.HalfFloatType);
+    tex.magFilter = tex.minFilter = THREE.LinearFilter; tex.colorSpace = THREE.LinearSRGBColorSpace; tex.needsUpdate = true;
+    const strip = new THREE.Mesh(new THREE.PlaneGeometry(PYR.strip, Math.min(1, G.L) * 0.98), new THREE.MeshBasicMaterial({ map: tex, toneMapped: false }));
+    strip.quaternion.copy(leg.quaternion); strip.position.copy(mid).addScaledVector(l.n, PYR.channel[1] / 2 + 0.0015);
+    g.add(strip); parts.hit.push(strip);
+    parts.pyr.texs.push(tex); parts.pyr.datas.push(data);
+  });
+  // the printed junction (an eight-sided cap) and the boss the laser sits in
+  const j = new THREE.Mesh(new THREE.CylinderGeometry(PYR.junction.r0, PYR.junction.r1, PYR.junction.h, 8), printed);
+  j.rotation.y = Math.PI / 8; j.position.y = G.jBottom + PYR.junction.h / 2; j.castShadow = true; g.add(j);
+  const boss = new THREE.Mesh(new THREE.CylinderGeometry(PYR.boss.r, PYR.boss.r, PYR.boss.h, 16), printed);
+  boss.position.y = G.jBottom + PYR.junction.h + PYR.boss.h / 2; g.add(boss);
+  parts.hit.push(j, boss);
+  // the laser: a thin red beam straight up (same beam shader as the show lasers), and its dot
+  const mk = (r, soft) => {
+    const geo = new THREE.CylinderGeometry(r, r, 1, 6, 1, true); geo.translate(0, 0.5, 0); geo.rotateX(Math.PI / 2);
+    const m = new THREE.InstancedMesh(geo, new THREE.ShaderMaterial({ vertexShader: laserVS, fragmentShader: laserFS, uniforms: { soft: { value: soft } },
+      transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, side: THREE.DoubleSide }), 1);
+    m.setMatrixAt(0, new THREE.Matrix4().compose(new THREE.Vector3(0, G.apex, 0), new THREE.Quaternion().setFromUnitVectors(new THREE.Vector3(0, 0, 1), new THREE.Vector3(0, 1, 0)),
+      new THREE.Vector3(1, 1, PYR.laserLen)));
+    m.setColorAt(0, cBlack); m.frustumCulled = false; m.renderOrder = 11; g.add(m); return m;
+  };
+  parts.pyr.core = mk(0.0025, 0); parts.pyr.glow = mk(0.014, 1);
+  parts.pyr.dot = new THREE.Mesh(new THREE.SphereGeometry(0.005, 10, 8), new THREE.MeshBasicMaterial({ color: 0x000000, toneMapped: false }));
+  parts.pyr.dot.position.y = G.apex; g.add(parts.pyr.dot);
+  // the white cover: four faces between the legs, just inside them (the strips stay on the outside)
+  if (fx.cover) {
+    const pos = [], apex = new THREE.Vector3(0, G.top + 0.01, 0);
+    for (let k = 0; k < 4; k++) {
+      const a = G.legs[k], b = G.legs[(k + 1) % 4];
+      const fa = a.foot.clone().addScaledVector(a.n, -0.008), fb = b.foot.clone().addScaledVector(b.n, -0.008);
+      pos.push(...fa.toArray(), ...fb.toArray(), ...apex.toArray());
+    }
+    const geo = new THREE.BufferGeometry(); geo.setAttribute("position", new THREE.Float32BufferAttribute(pos, 3)); geo.computeVertexNormals();
+    const cover = new THREE.Mesh(geo, new THREE.MeshStandardMaterial({ color: 0xb8b8b4, roughness: 1, transparent: true, opacity: 0.85, side: THREE.DoubleSide, emissive: 0x000000 }));
+    cover.receiveShadow = true; g.add(cover); parts.hit.push(cover); parts.pyr.cover = cover;
+  }
+  // Spill: the strips face outward, so bare they light the ground around the feet, not the inside;
+  // under the cover the fabric glows from within.
+  parts.pyr.light = new THREE.PointLight(0xffffff, 0, 4, 2); parts.pyr.light.position.y = fx.cover ? G.top * 0.45 : 0.06; g.add(parts.pyr.light);
+}
+
+// The pyramids' simulated show, for when showbrain isn't sending (nothing playing, or the Section
+// preview): a sketch of showbrain's own looks (looks.pyramid). Leg k (FL, FR, BR, BL), x = 0 at the
+// foot, 1 at the top; side -1 / 1 for the left / right pyramid, so the pair mirror each other.
+const SPIRAL_TURNS = 6;
+function pyrSpiral(order, x) {                                     // position along a spiral up the four legs, 0..1
+  const t = x * SPIRAL_TURNS, seg = Math.min(Math.floor(t), SPIRAL_TURNS - 1);
+  return (4 * seg + order + (t - seg)) / (4 * SPIRAL_TURNS);
+}
+const pyrC = new THREE.Color(), pyrW = new THREE.Color(1, 1, 1);
+function pyramidLook(f, k, x, side, out) {
+  const sc = f.scene, kick = Math.exp(-6 * f.frac), I = f.intensity ?? 0.8;
+  const leg = side < 0 ? k : (5 - k) % 4;                          // the right one runs the other way round
+  const beat = Math.floor(f.beat), bw = ((beat % 4) + 4) % 4;
+  if (f.black) return out.setRGB(0, 0, 0);
+  if (sc === "PREDROP")                                            // dark, but for the tips of the legs
+    return out.copy(pyrW).multiplyScalar(x > 0.9 ? 0.3 : 0);
+  if (sc === "BUILD" || sc === "HOLD") {                           // the spiral fill, feet to apex; flicker quickens
+    const p = f.progress || 0, sp = pyrSpiral(leg, x), head = 0.02 + 0.98 * p;
+    if (sp > head) return out.setRGB(0, 0, 0);
+    const rate = p < 0.5 ? 1 : p < 0.75 ? 2 : p < 0.9 ? 4 : 8, on = ((f.beat * rate) % 1) < 0.5 || sc === "HOLD";
+    out.copy(hsl(f.hue + 0.12 * x, 1 - 0.6 * p * x)).multiplyScalar((0.4 + 0.6 * p) * (on ? 1 : 0.3));
+    return out.lerp(pyrW, Math.max(0, 1 - (head - sp) * 40)).multiplyScalar(I);
+  }
+  if (sc === "DROP") {                                             // a burst down from the apex each beat, full colour
+    if (f.since < 1) { const front = 1 - f.since; return out.copy(x >= front ? pyrW : hsl(f.hue)).multiplyScalar(x >= front ? 1 : 0.15); }
+    const ring = Math.max(0, 1 - Math.abs((1 - x) - f.frac) * 7);
+    const spin = f.since >= 16 && leg === ((Math.floor(f.beat) % 4) + 4) % 4 ? 0.35 + 0.4 * kick : 0;
+    out.copy(hsl(f.hue + (leg % 2) * 0.5)).multiplyScalar(0.5 + 0.5 * kick);
+    return out.lerp(pyrW, Math.max(ring, spin) * 0.75).multiplyScalar(I);
+  }
+  if (sc === "BREAKDOWN" || sc === "INTRO" || sc === "OUTRO") {    // slow breathing, soft complementary colour
+    const breathe = 0.5 - 0.5 * Math.cos(f.beat * Math.PI / 4), lvl = 0.08 + 0.3 * breathe * (0.6 + 0.4 * x);
+    return out.copy(hsl(f.hue + 0.5 + x * 0.1, 0.8)).multiplyScalar(lvl * I);
+  }
+  if (sc === "IDLE" || !sc) return out.copy(hsl(f.hue + x * 0.3 + k * 0.25, 0.9)).multiplyScalar(0.12);
+  // GROOVE: a comet up one leg per beat, round the pyramid; the feet pulse with the kick
+  const head = f.frac * 1.15, on = leg === bw, tail = on ? Math.max(0, 1 - (head - x) * 5) * (x <= head ? 1 : 0) : 0;
+  out.copy(hsl(f.hue + x * 0.06)).multiplyScalar((0.12 + 0.5 * kick) * (1 - 0.6 * x));
+  return out.lerp(pyrW, tail * 0.85).multiplyScalar(I);
+}
+function pyramidLaser(f) {                                         // on with the drop: held a bar, on the kick, then on the one
+  if (f.black || f.scene !== "DROP") return false;
+  return f.since < 4 ? true : f.since < 32 ? f.frac < 0.5 : f.bwb === 1 && f.frac < 0.5;
+}
+function updatePyramid(fx, p, f, live, fast) {
+  const P = p.pyr, n = P.n, side = fx.pos[0] < 0 ? -1 : 1, h = THREE.DataUtils.toHalfFloat;
+  let sr = 0, sg = 0, sb = 0;
+  for (let k = 0; k < 4; k++) {
+    const d = P.datas[k];
+    for (let i = 0; i < n; i++) {
+      if (live) {
+        ledColour(live[Math.min(live.length - 1, k * n + i)], cTmp, calib.led);
+        if (fast.white) cTmp.setRGB(fast.white, fast.white, fast.white); else if (fast.black) cTmp.setRGB(0, 0, 0);
+      } else {
+        pyramidLook(f, k, n > 1 ? i / (n - 1) : 0, side, cTmp);
+        if (fast.strobe && !f.black) cTmp.setRGB(1, 1, 1);
+      }
+      const o = i * 4; d[o] = h(cTmp.r); d[o + 1] = h(cTmp.g); d[o + 2] = h(cTmp.b);
+      sr += cTmp.r; sg += cTmp.g; sb += cTmp.b;
+    }
+    P.texs[k].needsUpdate = true;
+  }
+  const avg = new THREE.Color(sr / (4 * n), sg / (4 * n), sb / (4 * n)), lvl = Math.max(avg.r, avg.g, avg.b);
+  P.light.color.copy(avg).multiplyScalar(1 / Math.max(0.001, lvl)); P.light.intensity = (P.cover ? 5 : 4) * Math.min(1, lvl);
+  if (P.cover) P.cover.material.emissive.copy(avg).multiplyScalar(0.22);         // the fabric glows faintly; the strips stay on top
+  // the laser: pixel 4n+1 of the fixture when live (on/off), else the simulated cue
+  const lz = live && live.length > 4 * n ? parseInt(live[4 * n].slice(1), 16) : 0;
+  const laserOn = live ? Math.max(lz >> 16 & 255, lz >> 8 & 255, lz & 255) > 127 : pyramidLaser(f);
+  const lv = laserOn ? 0.25 + 0.9 * haze : 0;
+  P.core.setColorAt(0, lc.setRGB(1, 0.04, 0.02).multiplyScalar(lv * 0.9)); P.glow.setColorAt(0, lc.setRGB(1, 0.04, 0.02).multiplyScalar(lv * 0.1));
+  P.core.instanceColor.needsUpdate = P.glow.instanceColor.needsUpdate = true;
+  P.dot.material.color.setRGB(laserOn ? 1 : 0.05, laserOn ? 0.1 : 0.02, laserOn ? 0.05 : 0.02);
+}
+
 function build(fx) {
   const g = new THREE.Group(); g.userData.fid = fx.id;
   const aim = new THREE.Object3D(); scene.add(aim);                                   // aim point (spotlight target)
@@ -531,35 +860,44 @@ function build(fx) {
     const frame = new THREE.Mesh(new THREE.BoxGeometry(w + 0.06, h + 0.06, 0.02), mat(0x111111, 0.6)); frame.position.z = -0.012; g.add(frame);
     parts.hit = [scr, frame];
   } else if (fx.type === "tube" || fx.type === "ledbar") {
-    // The LEDs as a 1 x n texture on a glowing core, linearly blended between LEDs like the real
-    // diffuser, inside a frosted shell, with a faint halo so they read as light from a distance.
-    const n = Math.max(1, fx.count || T.count), len = fx.type === "tube" ? 1.03 : 1.0;
+    // The LEDs as a 1 x n texture on the tube itself, linearly blended between LEDs like the real
+    // diffuser; the glow pass makes it read as light from a distance. A tube is the real one: a
+    // 26 mm OD, 1.03 m tube standing in the collar of a four-leg fold-out base.
+    const tube = fx.type === "tube";
+    const n = Math.max(1, fx.count || T.count), len = tube ? 1.03 : 1.0, lift = tube ? TUBE_BASE.lift : 0;
     const data = new Uint16Array(n * 4);
     for (let i = 0; i < n; i++) data[i * 4 + 3] = THREE.DataUtils.toHalfFloat(1);
     const tex = new THREE.DataTexture(data, 1, n, THREE.RGBAFormat, THREE.HalfFloatType);
     tex.magFilter = tex.minFilter = THREE.LinearFilter; tex.colorSpace = THREE.LinearSRGBColorSpace; tex.needsUpdate = true;
-    const core = new THREE.Mesh(new THREE.CylinderGeometry(0.02, 0.02, len, 20, 1, true), new THREE.MeshBasicMaterial({ map: tex, toneMapped: false }));
-    const shell = new THREE.Mesh(new THREE.CylinderGeometry(0.03, 0.03, len, 24, 1, true),
-      new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.05, depthWrite: false }));   // unlit: its own glow lights would ring it
-    const halo = new THREE.Mesh(new THREE.CylinderGeometry(0.075, 0.075, len * 1.02, 20, 1, true),
-      new THREE.MeshBasicMaterial({ map: tex, transparent: true, opacity: 0.22, blending: THREE.AdditiveBlending, depthWrite: false, toneMapped: false, side: THREE.DoubleSide }));
-    const holder = new THREE.Group(); holder.add(core, shell, halo);
-    holder.position.y = len / 2;                                                       // stands on its position
+    const r = tube ? 0.013 : 0.02;
+    const core = new THREE.Mesh(new THREE.CylinderGeometry(r, r, len, 20, 1, true), new THREE.MeshBasicMaterial({ map: tex, toneMapped: false }));
+    const holder = new THREE.Group(); holder.add(core);
+    holder.position.y = lift + len / 2;                                                // stands on its position
     if (fx.type === "ledbar") holder.rotation.z = Math.PI / 2;
     g.add(holder);
-    const base = bodyMesh(0.12, 0.03, 0.12); base.position.y = 0.015; g.add(base);
-    parts.tex = tex; parts.texData = data; parts.n = n; parts.len = len; parts.hit = [shell, core, base];
+    const base = tube ? tubeBase() : bodyMesh(0.12, 0.03, 0.12);
+    if (!tube) base.position.y = 0.015;
+    g.add(base);
+    parts.tex = tex; parts.texData = data; parts.n = n; parts.len = len;
+    parts.hit = [core]; base.traverse(o => { if (o.isMesh) parts.hit.push(o); });
     if (fx.onto) holder.visible = base.visible = false;          // its LEDs are drawn on a part of the venue (mapStrip)
     parts.lights = [0.25, 0.75].map(k => { const l = new THREE.PointLight(0xffffff, 0, 3.5, 2); l.position.set(0, len * k, 0.08); holder.add(l); l.position.y -= len / 2; return l; });
+  } else if (fx.type === "pyramid") {
+    buildPyramid(fx, T, g, parts);
   } else if (fx.type === "projector") {
     const b = bodyMesh(0.34, 0.14, 0.3, 0x202020); g.add(b);
     const lens = new THREE.Mesh(new THREE.CylinderGeometry(0.04, 0.04, 0.03, 20), new THREE.MeshBasicMaterial({ color: 0x9fb4ff }));
     lens.rotation.x = Math.PI / 2; lens.position.z = 0.16; g.add(lens);
     if (!venue) { const stand = bodyMesh(0.04, Math.max(0.01, fx.pos[1] - STAGE.h), 0.04, 0x333333); stand.position.y = -(fx.pos[1] - STAGE.h) / 2; g.add(stand); }   // a venue models its own mounts
-    // The image is projected through the spotlight's square shadow frustum; open the round cone wide
-    // enough to contain that square, so the picture lands as a rectangle with sharp edges.
-    const spot = new THREE.SpotLight(0xffffff, 0, 14, Math.min(1.4, THREE.MathUtils.degToRad(fx.angle || T.angle) / 2 * 1.45), 0, 1.2);
-    spot.map = fx.source === "visuals" ? visTex : projTex; spot.castShadow = true; spot.shadow.mapSize.set(512, 512); spot.shadow.bias = -0.0005;
+    // The picture is thrown as the real projector's would be: 16:9, Throw = its horizontal angle
+    // (lensOf: letterboxed in a square texture, redrawn each frame from the projection's canvas).
+    // The same lens is the projector's "camera" (projCamera: LOOK THROUGH, SEND TO EDITOR, MAP ONTO).
+    const L = lensOf(fx), lensCv = document.createElement("canvas");
+    lensCv.width = lensCv.height = 512;
+    const lensTex = new THREE.CanvasTexture(lensCv); lensTex.colorSpace = THREE.SRGBColorSpace;
+    const spot = new THREE.SpotLight(0xffffff, 0, 14, Math.min(1.45, L.cone), 0, 1.2);
+    spot.map = lensTex; spot.castShadow = true; spot.shadow.mapSize.set(512, 512); spot.shadow.bias = -0.0005;
+    parts.lensCv = lensCv; parts.lensTex = lensTex; parts.band = L.band;
     spot.target = aim; spot.position.set(0, 0, 0.17); g.add(spot);
     const beam = beamMesh(fx.angle || T.angle, 5); beam.position.z = 0.17; g.add(beam);
     parts.spot = spot; parts.beam = beam; parts.hit = [b]; parts.lens = lens;
@@ -606,7 +944,7 @@ function build(fx) {
     }
   }
   // Clamp for hanging fixtures: a little yoke up to the truss when they hang from it.
-  if (!venue && fx.type !== "tube" && fx.type !== "projector" && Math.abs(fx.pos[1] - (STAGE.trussY - 0.15)) < 0.4) {
+  if (!venue && fx.type !== "tube" && fx.type !== "pyramid" && fx.type !== "projector" && Math.abs(fx.pos[1] - (STAGE.trussY - 0.15)) < 0.4) {
     const clamp = bodyMesh(0.05, STAGE.trussY - fx.pos[1], 0.05, 0x444444); clamp.position.y = (STAGE.trussY - fx.pos[1]) / 2; g.add(clamp);
   }
   // Aim handle, shown when selected.
@@ -620,7 +958,7 @@ function build(fx) {
 function place(fx, p) {
   p.group.position.set(...fx.pos);
   p.aim.position.set(...fx.aim); p.handle.position.set(...fx.aim);
-  if (fx.type === "tube" || fx.type === "ledbar") p.group.rotation.set(0, 0, 0);
+  if (fx.type === "tube" || fx.type === "ledbar" || fx.type === "pyramid") p.group.rotation.set(0, 0, 0);
   else p.group.lookAt(p.aim.position);
 }
 function destroy(p) {
@@ -743,6 +1081,7 @@ function update(now) {
     const p = built.get(fx.id); if (!p) continue;
     if (fx.type === "screen") continue;
     const live = fx.source && fx.source !== "sim" ? livePixels(fx.source) : null;
+    if (p.pyr) { updatePyramid(fx, p, laserShowFrame(f, now), live, { white: fastWhite, black: fastBlack, strobe: strobeOn && !laserSec }); continue; }   // the Section preview plays them too
     if (p.tex) {
       // Tube / LED bar: the fixture's own pixels (0 = bottom), or a simulated pulse + chase.
       const n = p.n; let sumR = 0, sumG = 0, sumB = 0;
@@ -825,6 +1164,14 @@ function update(now) {
   const uses = new Set(rig.filter(fx => fx.type === "projector").map(fx => fx.source));
   if (mapRenderer && uses.has("projector")) { try { mapRenderer.draw(now); projTex.needsUpdate = true; } catch (e) { /* layout not in yet */ } }
   if (visRenderer && uses.has("visuals")) { try { visRenderer.draw(now); visTex.needsUpdate = true; } catch (e) { /* sketch not in yet */ } }
+  // Each projector's lens: its picture, letterboxed in the middle of its square texture (lensOf).
+  for (const fx of rig) {
+    const p = fx.type === "projector" && built.get(fx.id); if (!p || !p.lensCv) continue;
+    const c = p.lensCv.getContext("2d"), N = p.lensCv.width, [bw, bh] = p.band;
+    c.fillStyle = "#000"; c.fillRect(0, 0, N, N);
+    if (fx.source !== "off") c.drawImage(fx.source === "visuals" ? visCanvas : projCanvas, (1 - bw) / 2 * N, (1 - bh) / 2 * N, bw * N, bh * N);
+    p.lensTex.needsUpdate = true;
+  }
   const s = show;
   $("#hud").innerHTML = `<span class="scene">${s ? s.scene || "—" : "—"}</span>` +
     (s && s.live ? `deck <b>${s.live}</b> · <b>${(s.bpm || 0).toFixed(1)}</b> BPM · bar ${s.bar || 0}` + (s.title ? ` · ${esc(s.title)}` : "") : "no deck playing") +
@@ -886,7 +1233,7 @@ $("#list").onclick = e => { const d = e.target.closest("[data-id]"); if (d) { se
 $("#add").innerHTML = Object.entries(TYPES).map(([k, t]) => `<button data-type="${k}">${t.label.toUpperCase()}</button>`).join("");
 $("#add").onclick = e => {
   const b = e.target.closest("[data-type]"); if (!b) return;
-  const type = b.dataset.type, T = TYPES[type], hang = !["tube", "projector", "ledbar", "screen"].includes(type);
+  const type = b.dataset.type, T = TYPES[type], hang = !["tube", "projector", "ledbar", "screen", "pyramid"].includes(type);
   const fx = { id: type + Date.now().toString(36), type, name: `${T.label} ${rig.filter(f => f.type === type).length + 1}`,
                source: type === "projector" ? "projector" : "sim",
                pos: hang ? [0, 3.02, STAGE.trussZ] : type === "screen" ? [0, 2.2, STAGE.wallZ + 0.03] : type === "ledbar" ? [0, STAGE.h + 0.05, -0.2] : [0, STAGE.h, -0.6],
@@ -911,7 +1258,9 @@ function fillProps(fx) {
   $("#lAngle").textContent = fx.type === "projector" ? "Throw" : fx.type === "laser" ? "Spread*" : "Beam";
   $("#pAngle").value = fx.angle || T.angle || 20;
   $("#rowCount").style.display = T.count ? "" : "none";
-  $("#lCount").textContent = fx.type === "laser" ? "Beams*" : "LEDs";
+  $("#lCount").textContent = fx.type === "laser" ? "Beams*" : fx.type === "pyramid" ? "LEDs / leg" : "LEDs";
+  $("#rowCover").style.display = fx.type === "pyramid" ? "" : "none";
+  $("#pCover").checked = !!fx.cover;
   $("#pCount").value = fx.count || T.count || 1;
   $("#rowSize").style.display = fx.type === "screen" ? "" : "none";
   if (fx.type === "screen") { const [w, h] = fx.size || TYPES.screen.size; $("#sw").value = w; $("#sh").value = h; }
@@ -919,10 +1268,26 @@ function fillProps(fx) {
   $("#laserNote").style.display = fx.type === "laser" ? "" : "none";
   $("#rowColour").style.display = ["laser", "wash", "moving"].includes(fx.type) && fx.source === "sim" ? "" : "none";
   $("#rowBright").style.display = fx.type === "projector" ? "" : "none";
+  const mapping = fx.type === "projector" && fx.source === "projector";
+  $("#rowLens").style.display = fx.type === "projector" ? "" : "none";
+  $("#bShot").disabled = !mapping;
+  $("#rowMap").style.display = mapping && venue ? "" : "none";
+  $("#mapNote").style.display = fx.type === "projector" ? "" : "none";
+  if (fx.type === "projector" && !mapping) $("#mapNote").textContent = "SEND TO EDITOR and MAP are for projectors driven by the projector output (Driven by).";
+  else if (fx.type === "projector" && $("#mapNote").dataset.fx !== fx.id) $("#mapNote").textContent = `Its picture is projector "${projId()}" in Projection.`;
+  $("#mapNote").dataset.fx = fx.id;
+  // The parts it sees: worked out a moment after the last change (not on every drag step).
+  clearTimeout(mapListTimer);
+  if (mapping && venue) mapListTimer = setTimeout(() => {
+    const p = built.get(fx.id); if (!p || document.activeElement === $("#pMapPart") || cur() !== fx) return;
+    const have = $("#pMapPart").value, opts = mapCandidates(fx, p), pick = opts.includes(have) ? have : opts.includes("Pyramid") ? "Pyramid" : opts[0];
+    $("#pMapPart").innerHTML = opts.length ? opts.map(k => `<option${k === pick ? " selected" : ""}>${esc(k)}</option>`).join("") : "<option value=''>(nothing flat in full view)</option>";
+  }, 250);
   if (fx.type === "projector") { $("#pBright").value = fx.brightness ?? 1; $("#vBright").textContent = Math.round((fx.brightness ?? 1) * 100) + "%"; }
   $("#pColour").value = fx.colour || "#ff5a1f";
 }
 const cur = () => rig.find(f => f.id === selected);
+let mapListTimer = null;
 function edited(fx, needsRebuild) { if (needsRebuild) rebuild(fx); else place(fx, built.get(fx.id)); renderList(); saveRig(); }
 $("#pName").oninput = e => { const fx = cur(); if (fx) { fx.name = e.target.value; renderList(); saveRig(); } };
 $("#pSource").onchange = e => { const fx = cur(); if (fx) { fx.source = e.target.value; fillProps(fx); edited(fx, fx.type === "projector"); } };
@@ -932,7 +1297,11 @@ for (const [id, i] of [["sw", 0], ["sh", 1]])
   $("#" + id).onchange = e => { const fx = cur(); if (fx && +e.target.value > 0) { fx.size = [...(fx.size || TYPES.screen.size)]; fx.size[i] = +e.target.value; edited(fx, true); } };
 $("#pAngle").onchange = e => { const fx = cur(); if (fx) { fx.angle = +e.target.value; edited(fx, true); } };
 $("#pCount").onchange = e => { const fx = cur(); if (fx) { fx.count = Math.max(1, Math.min(240, Math.round(+e.target.value))); edited(fx, true); } };
+$("#pCover").onchange = e => { const fx = cur(); if (fx) { fx.cover = e.target.checked; edited(fx, true); } };
 $("#pColour").oninput = e => { const fx = cur(); if (fx) { fx.colour = e.target.value; edited(fx, fx.type === "laser"); } };
+$("#bLook").onclick = () => { const fx = cur(), p = fx && built.get(fx.id); if (p) lookThrough(fx, p); };
+$("#bShot").onclick = () => { const fx = cur(), p = fx && built.get(fx.id); if (p) sendLensShot(fx, p); };
+$("#bMap").onclick = () => { const fx = cur(), p = fx && built.get(fx.id), part = $("#pMapPart").value; if (p && part) mapOnto(fx, p, part); };
 $("#gMove").onclick = () => { gizmoMode = "move"; $("#gMove").classList.add("on"); $("#gAim").classList.remove("on"); attachGizmo(); };
 $("#gAim").onclick = () => { gizmoMode = "aim"; $("#gAim").classList.add("on"); $("#gMove").classList.remove("on"); attachGizmo(); };
 $("#bDup").onclick = () => {
@@ -1025,10 +1394,13 @@ const showSelected = id => { if (id && window.stageTabs) stageTabs.select("Selec
 $("#design").onclick = () => { $("#main").classList.toggle("full"); $("#design").classList.toggle("on", !$("#main").classList.contains("full")); if (!$("#design").classList.contains("on")) select(null); setTimeout(resize, 0); };
 
 // ------------------------------------------------------------------ go
+let paused = false;   // the Show app pauses the view while its Stage screen is hidden
 function frame(now) {
-  update(now);
-  orbit.update();
-  if (useBloom) composer.render(); else renderer.render(scene, camera);
+  if (!paused) {
+    update(now);
+    orbit.update();
+    if (useBloom) composer.render(); else renderer.render(scene, camera);
+  }
   requestAnimationFrame(frame);
 }
 resize();
@@ -1037,6 +1409,35 @@ showCalib();
 await loadRenderJs();
 connect();
 requestAnimationFrame(frame);
+// ------------------------------------------------------------------ embedded in the Show app
+// It sends {s5stage: "set", ...} and gets {s5stage: "state", ...} back. Everything goes through this
+// page's own controls, so what's saved (Daylight, the laser look) is saved just as it is from here.
+if (document.documentElement.classList.contains("s5embed")) {
+  const tagOf = fx => fx.type === "screen" ? "surface" : fx.type === "projector" ? (fx.source === "visuals" ? "visuals" : fx.source === "off" ? "off" : "mapped")
+    : fx.source && fx.source !== "sim" ? "live" : "simulated";
+  const post = () => parent.postMessage({ s5stage: "state",
+    cam: (document.querySelector("[data-cam].on") || {}).dataset?.cam || "", cams: Object.keys(CAMS),
+    haze, day: dayLevel(), glow: useBloom, laser: LOOKS[calib.laser] ? calib.laser : "auto", sec: laserSec, cue: laserCue,
+    looks: Object.entries(LOOKS).map(([k, l]) => [k, l.label]), selected,
+    rig: rig.map(fx => ({ id: fx.id, name: fx.name, type: fx.type, source: fx.source || "sim", tag: tagOf(fx) })),
+    venue: $("#venueSel").selectedOptions[0]?.textContent || "" }, "*");
+  const fire = (el, v, ev) => { el.value = v; el.dispatchEvent(new Event(ev)); };
+  addEventListener("message", e => {
+    const m = e.data || {};
+    if (m.s5stage !== "set") return;
+    if (m.cam && CAMS[m.cam]) setCam(m.cam);
+    if (m.haze != null) fire($("#haze"), m.haze, "input");
+    if (m.day != null) fire($("#day"), m.day, "input");
+    if (m.laser) fire($("#laserLook"), m.laser, "change");
+    if (m.sec != null) fire($("#laserSec"), m.sec, "change");
+    if (m.glow != null && m.glow !== useBloom) $("#bloom").click();
+    if ("select" in m) select(m.select);
+    if ("pause" in m) paused = !!m.pause;
+    post();
+  });
+  setInterval(post, 700);
+  post();
+}
 window.stage = { scene, camera, orbit, rig: () => rig, built, show: () => show, map: () => mapRenderer, projCanvas, frames: () => ({ buffered: frameBuf.length, delayS: +(lagSpread + BASE_DELAY).toFixed(3), spreadS: +lagSpread.toFixed(3), timed: timedFrames() }) };   // for poking at from the console
 </script>
 </body>

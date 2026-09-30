@@ -17,6 +17,10 @@ presets and a desk section, with a launch-on-the-beat quantise. The **full contr
 for rigging a look up. They share the same state over the same event stream, so one device can set
 up while another plays. Both are described in **[visuals-live.md](visuals-live.md)**.
 
+**The Show app** (`:8110/show.html`) puts decks, lights, visuals, mapping and the stage on one page,
+with a Focus view to leave open while playing, colour palettes that set the lights and the sketch's
+colours together, and automix. See **[show-app.md](show-app.md)**.
+
 **Playing it live — [visuals-live.md](visuals-live.md).** Every parameter has a **range** (the orange
 band on its track, with two ▲ arrows) that everything else respects, and an **automation** toggle that
 moves it between the ends of that range on its own, in note values, locked to the beat. There are
