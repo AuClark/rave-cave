@@ -246,13 +246,13 @@
     #s-decks .dwrap .deck { opacity: calc(1.25 - var(--dp, 0) * 1.6); }
     #s-decks .dstrip { display: grid; gap: 4px; margin: 0 -14px; padding: 6px 14px 8px; position: relative; background: var(--bg);
                        opacity: calc(var(--dp, 0) * 2.2 - 1.1); box-shadow: 0 12px 18px -14px rgba(0,0,0, calc(var(--dp, 0) * .8)); }
-    #s-decks .dstrip .r { display: grid; grid-template-columns: 22px minmax(0, 1fr) auto; gap: 8px; align-items: center; height: 30px; padding: 0 10px;
+    #s-decks .dstrip .r { display: grid; grid-template-columns: 22px minmax(0, 1fr) auto; grid-template-rows: 18px 18px; column-gap: 8px; align-items: center; height: 46px; padding: 4px 10px;
                           border-radius: 9px; background: var(--card); border: 1px solid var(--border); position: relative; overflow: hidden; }
     #s-decks .dstrip .r b { font-weight: 700; color: var(--dim); } #s-decks .dstrip .r.air b { color: var(--accent); }
     #s-decks .dstrip .r span { font-size: 13px; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
     #s-decks .dstrip .r em { font-style: normal; font-size: 13px; font-weight: 600; font-variant-numeric: tabular-nums; }
-    #s-decks .dstrip .r i { position: absolute; left: 0; bottom: 0; height: 2px; background: var(--text); opacity: .7; }
-    #s-decks .dstrip .r.air i { background: var(--accent); opacity: 1; }
+    #s-decks .dstrip .r b { grid-row: 1 / 3; }
+    #s-decks .dstrip .r .swv { grid-column: 2 / 4; grid-row: 2; width: 100%; height: 18px; display: block; border-radius: 3px; background: #08080a; }
     #s-stage .stcap2 { display: block; order: 1; margin: 6px 2px 0; font-size: 13px; color: var(--dim); line-height: 1.4; }
     #s-stage .stcap2 b { color: var(--text); font-weight: 600; }
     #s-lights .strip { position: sticky; top: var(--hdr, 64px); z-index: 6; background: var(--bg); margin: 0 -14px; padding: 8px 14px 10px;
@@ -1416,14 +1416,13 @@ function renderDecks() {
   }
   // The compact strip (phones, when scrolled into the music): one row a deck.
   const ds = $("dstrip");
-  if (ds.dataset.sig !== sig) { ds.dataset.sig = sig; ds.innerHTML = players.map(p => `<div class="r" data-n="${p.number}"><b>${p.number}</b><span></span><em></em><i></i></div>`).join(""); }
+  if (ds.dataset.sig !== sig) { ds.dataset.sig = sig; ds.innerHTML = players.map(p => `<div class="r" data-n="${p.number}"><b>${p.number}</b><span></span><em></em><canvas class="swv" data-n="${p.number}"></canvas></div>`).join(""); }
   for (const p of players) {
     const r = ds.querySelector(`[data-n="${p.number}"]`); if (!r) continue;
     const st = p.status || {}, t = p.track, loaded = !!(st.trackLoaded && t), dur = loaded ? t.durationSec || 0 : 0, pos = (p.position && p.position.ms || 0) / 1000;
     r.classList.toggle("air", !!st.onAir && !!st.playing);
     r.querySelector("span").textContent = loaded ? t.title : "Empty";
     r.querySelector("em").textContent = loaded && st.effectiveBpm ? st.effectiveBpm.toFixed(1) : "–";
-    r.querySelector("i").style.width = dur ? Math.min(100, pos / dur * 100) + "%" : "0";
   }
   deckFold();
   if (masterBpm !== lastMasterBpm) { lastMasterBpm = masterBpm; renderTracks(); }
@@ -2071,7 +2070,7 @@ function fitCanvas(cv) {
 function drawDetail(cv, p, now) {
   const [g, W, H, dpr] = fitCanvas(cv); g.clearRect(0, 0, W, H);
   if (!p.track) return;
-  const { det } = waveData(p), tl = tlOf(p), pos = playheadMs(p, now), win = 8000, t0 = pos - win / 2, mpp = win / W, mid = H / 2, half = H / 2 - 3 * dpr;
+  const { det } = waveData(p), tl = tlOf(p), pos = playheadMs(p, now), win = 8000, t0 = pos - win / 2, mpp = win / W, mid = H / 2, half = H / 2 - (H > 40 * dpr ? 3 : 0.5) * dpr;
   if (det) {
     const frames = det.length / 4;
     for (let x = 0; x < W; x++) {
@@ -2080,7 +2079,7 @@ function drawDetail(cv, p, now) {
       let hm = 0, fi = -1;
       for (let f = Math.max(0, f0); f < Math.min(frames, f1); f++) if (det[f * 4] >= hm) { hm = det[f * 4]; fi = f; }
       if (fi < 0) continue;
-      const h = hm / 31 * half;
+      const h = (H > 40 * dpr ? hm / 31 : Math.sqrt(hm / 31)) * half;   // the strip's small ones: sqrt, so quiet parts still read
       g.globalAlpha = t < pos ? 0.45 : 1;
       g.fillStyle = `rgb(${det[fi * 4 + 1]},${det[fi * 4 + 2]},${det[fi * 4 + 3]})`;
       g.fillRect(x, mid - h, 1, h * 2);
@@ -2094,7 +2093,8 @@ function drawDetail(cv, p, now) {
       const x = Math.round((ms - t0) / mpp), bar = bars.has(b);
       if (!bar && ppb < 5 * dpr) continue;
       g.fillStyle = bar ? "rgba(255,255,255,.55)" : "rgba(255,255,255,.22)";
-      g.fillRect(x, 0, bar ? 2 * dpr : dpr, (bar ? 10 : 5) * dpr); g.fillRect(x, H - (bar ? 10 : 5) * dpr, bar ? 2 * dpr : dpr, (bar ? 10 : 5) * dpr);
+      const mk = Math.min((bar ? 10 : 5) * dpr, H * (bar ? .3 : .15));   // shorter on the strip's small waveforms
+      g.fillRect(x, 0, bar ? 2 * dpr : dpr, mk); g.fillRect(x, H - mk, bar ? 2 * dpr : dpr, mk);
     }
     g.fillStyle = "#ff5a1f";
     for (const d of tl.drops || []) { const ms = tl.beatMs[d.beat - 1]; if (ms >= t0 && ms <= t0 + win) g.fillRect(Math.round((ms - t0) / mpp) - dpr, 0, 3 * dpr, H); }
@@ -2118,6 +2118,10 @@ function drawOverview(cv, p, now) {
   g.fillStyle = "#fff"; g.fillRect(frac * W - dpr, 0, 2 * dpr, H);
 }
 requestAnimationFrame(function waveLoop(now) {
+  // The minimised strip's waveforms: whenever the strip is showing, whatever the setting.
+  const sw = document.querySelector("#s-decks.on .dwrap");
+  if (D && D.players && sw && +getComputedStyle(sw).getPropertyValue("--dp") > .3)
+    document.querySelectorAll("#dstrip canvas.swv").forEach(cv => { const p = D.players.find(x => x.number === +cv.dataset.n); if (p) drawDetail(cv, p, now); });
   if (WAVES && D && D.players && document.querySelector("#s-decks.on")) {
     document.querySelectorAll("#decks canvas.wv").forEach(cv => {
       const p = D.players.find(x => x.number === +cv.dataset.n); if (!p) return;
