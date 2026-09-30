@@ -184,8 +184,7 @@
   html body ::placeholder { color: var(--faint); }
   /* Status tags and pills: small rounded chips. */
   html body .pill, html body .tag, html body .badge, html body .chip { border-radius: 6px !important; }
-  /* Pictures (previews, canvases, the 3D view) get a soft corner where they sit in the page. */
-  html body #previewWrap, html body .preview, html body .pv { border-radius: 12px !important; overflow: hidden; }
+  /* Pictures (previews, canvases, the 3D view) stay square: they're a projector's frame. */
   /* Thin, quiet scrollbars. */
   html body * { scrollbar-width: thin; scrollbar-color: #3a3a41 transparent; }
   html body ::-webkit-scrollbar { width: 8px; height: 8px; } html body ::-webkit-scrollbar-thumb { background: #3a3a41; border-radius: 8px; }

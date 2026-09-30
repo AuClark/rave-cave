@@ -182,6 +182,11 @@
   .pv .live.frozen i { background: #7dd3fc; animation: none; }
   .pv .live.off { background: rgba(239,68,68,.85); } .pv .live.off i { background: #fff; animation: none; }
   @keyframes blink { 50% { opacity: .35; } }
+  /* The bar's four beats, on the picture (top right): the 1 in orange. */
+  .pv .pvbeat { position: absolute; top: 12px; right: 12px; display: flex; gap: 4px; align-items: center; height: 24px; padding: 0 9px;
+                border-radius: 99px; background: rgba(0,0,0,.55); }
+  .pv .pvbeat i { width: 14px; height: 5px; border-radius: 99px; background: rgba(255,255,255,.28); transition: background .05s; }
+  .pv .pvbeat i.on { background: #fff; } .pv .pvbeat i.on:first-child { background: var(--accent); }
   .pill { height: var(--h-sm); padding: 0 14px; border-radius: 10px; background: rgba(255,255,255,.12); border: 1px solid rgba(255,255,255,.14);
           backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); font-weight: 500; font-size: 13px; white-space: nowrap; transition: background .12s; }
   .pill:hover { background: rgba(255,255,255,.2); }
@@ -817,6 +822,7 @@
       <div class="stick">
       <div class="pv" id="pv"><canvas id="gl"></canvas><canvas id="ov"></canvas>
         <div class="live" id="liveTag"><i></i><span>Live</span></div>
+        <div class="pvbeat" id="pvBeat" aria-hidden="true"><i></i><i></i><i></i><i></i></div>
         <div class="cap"><b id="skName">—</b><button class="pill" id="freeze">Freeze</button><button class="pill" id="next">Next look ›</button>
           <button class="pill focusbtn" id="focusBtn" title="The view to leave open while you play">⤢ Focus</button></div>
       </div>
@@ -1263,13 +1269,13 @@ keepAwake();
 addEventListener("pointerdown", e => { if (e.pointerType === "touch" && e.target.closest(".tile, .looklist button") && navigator.vibrate) navigator.vibrate(8); }, { passive: true });
 
 // One loop: the preview, the room glow behind the app, and the beat.
-const amb = $("amb").getContext("2d"), dots = [...$("beat").children];
+const amb = $("amb").getContext("2d"), dots = [...$("beat").children], pvDots = [...$("pvBeat").children];
 requestAnimationFrame(function frame(now) {
   R.draw(now);
   try { amb.drawImage($("gl"), 0, 0, 32, 18); } catch (e) {}
   if (mOn() && ML) M.draw(now, { handles: true, draft, projector: pid() });
   const f = R.lastFrame;
-  if (f) dots.forEach((d, i) => d.classList.toggle("on", i === Math.round(f.bwb) - 1 && 1 - f.frac > 0.4));
+  if (f) for (const set of [dots, pvDots]) set.forEach((d, i) => d.classList.toggle("on", i === Math.round(f.bwb) - 1 && 1 - f.frac > 0.4));
   INT.beat(f);
   requestAnimationFrame(frame);
 });

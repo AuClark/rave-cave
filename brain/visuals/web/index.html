@@ -81,8 +81,8 @@
   .s5logo .s5word { color: var(--text, #fafafa); flex: none; display: block; }
   .s5logo .s5five { fill: var(--accent, #ff5a1f); }
 
-  .faderrow { width: min(100%, calc(50vh * 16 / 9)); margin: 12px auto 0; }
-  @media (max-width: 760px) { .faderrow { width: auto; margin: 10px 12px 0; } }
+  .faderrow { max-width: 1100px; margin: 20px auto 4px; padding: 0 24px; }
+  @media (max-width: 760px) { .faderrow { margin: 14px 0 0; padding: 0 12px; } }
   /* ---- Layout: the display is the hero (full-width band), a clean control panel underneath. ---- */
   main.hl { display: block; padding: 0; gap: 0; max-width: none; }
   .hero { background: var(--n060608, #060608); border-bottom: 1px solid var(--line); padding: 24px 24px 0; }
@@ -358,7 +358,6 @@
 <main class="hl">
   <section class="hero">
     <div id="previewWrap"><canvas id="gl"></canvas><canvas id="ov"></canvas></div>
-    <div class="faderrow"><div id="intensity" title="How busy the picture is, calm to full on. Stays on the beat. (Arrow keys when focused)"></div></div>
     <div class="herobar">
       <span id="conn" class="pill">connecting</span>
       <span id="beat" title="Beat and bar"><i class="b1"></i><i></i><i></i><i></i></span>
@@ -371,6 +370,8 @@
         (<a id="editLink" data-port="8100" data-path="/edit">mapping editor</a>).</span>
     </div>
   </section>
+  <!-- Below the pinned display, so it scrolls with the controls. -->
+  <div class="faderrow"><div id="intensity" title="How strongly the picture reacts, calm to full on. Glides, stays on the beat. (Arrow keys when focused)"></div></div>
   <section class="panel tabbed">
     <div class="card">
       <h3>Sketch</h3>
