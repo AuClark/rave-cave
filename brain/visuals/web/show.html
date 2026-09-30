@@ -214,6 +214,20 @@
   .words input:focus { border-color: var(--border2); box-shadow: 0 0 0 3px var(--accent-soft); }
   .hint2 { margin: 6px 2px 0; font-size: 12px; color: var(--faint); }
   .under { margin-top: 10px; }
+  /* The way out to the full pages (the page for the screen you're on), and to the Launchpad */
+  .fullbtn { display: inline-flex; align-items: center; gap: 6px; height: var(--h-sm); padding: 0 12px; border-radius: var(--r);
+             background: var(--card); border: 1px solid var(--border); color: var(--text); text-decoration: none; font-size: 13px; font-weight: 500; white-space: nowrap; }
+  .fullbtn::before { content: "‹"; font-size: 16px; line-height: 1; color: var(--dim); }
+  .fullbtn:hover { background: var(--card2); }
+  body.focus .fullbtn { display: none; }
+  .padbtn { display: flex; align-items: center; gap: 12px; margin-top: 8px; padding: 10px 12px; border-radius: var(--r); text-decoration: none;
+            color: var(--text); background: var(--card); border: 1px solid var(--border); transition: background .12s, border-color .12s; }
+  .padbtn:hover { background: var(--card2); border-color: var(--border2); }
+  .padbtn span { flex: 1; min-width: 0; } .padbtn b { display: block; font-weight: 600; font-size: 14px; }
+  .padbtn small { display: block; color: var(--dim); font-size: 12px; } .padbtn i { font-style: normal; font-size: 20px; color: var(--faint); }
+  @media (max-width: 560px) { header { gap: 8px; } #pilot { min-width: 0; flex: 0 1 auto; max-width: none; } header .grow { flex: 1 1 0; min-width: 0; }
+    .logo svg { width: 60px; } .s5who.s5a-slot { width: 40px; height: 40px; } }
+  @media (max-width: 560px) { .fullbtn { font-size: 0; gap: 0; padding: 0 12px; } .fullbtn::before { font-size: 20px; } .fullbtn::after { content: "Full"; font-size: 13px; margin-left: 4px; } }
 
   /* ---------------------------------------------------------------- Decks */
   .decks { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; margin-top: 12px; }
@@ -637,6 +651,7 @@
   <span class="grow"></span>
   <button id="pilot" title="Everything follows the music. Tap to undo your changes."><i></i><span>Autopilot</span></button>
   <button class="pill exitfocus" id="exitFocus">Exit focus</button>
+  <a class="fullbtn" id="fullBtn" title="The full page for this screen: every setting, set-up and detail">Full controls</a>
   <span data-s5lock></span>
   <button class="round" id="gear" aria-label="Setup"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg></button>
 </header>
@@ -816,6 +831,7 @@
       <div class="label fgap">Presets <b id="pCount"></b></div>
       <div class="presets" id="presets"></div>
       <button class="randbtn" id="randPreset" title="A random preset for this look (R)"><span class="dice">⚄</span>Randomise<small>R</small></button>
+      <a class="padbtn" id="padBtn" href="pad.html"><span><b>Launchpad</b><small>Effects, push, chase: the visuals as pads</small></span><i>›</i></a>
       <div id="wordsBox" hidden>
         <div class="label">Words <span>this look draws them</span></div>
         <form class="words" id="wordsForm"><input id="words" placeholder="ONE | TWO | THREE" autocomplete="off" spellcheck="false" enterkeyhint="done"><button class="chipbtn" type="submit">Set</button></form>
@@ -887,7 +903,10 @@ const on = (sel, test) => document.querySelectorAll(sel).forEach(b => b.classLis
 const pulse = el => { el.classList.add("held"); setTimeout(() => el.classList.remove("held"), 140); };
 
 // ---------------------------------------------------------------- screens
+// The full page behind each screen: where "Full controls" goes from here.
+const FULL = { decks: [8080, "/"], lights: [8090, "/"], visuals: [8110, "/"], map: [8100, "/edit"], stage: [8100, "/stage.html"] };
 function show(name) {
+  const fp = FULL[name] || FULL.visuals; $("fullBtn").href = at(fp[0], fp[1]);
   on("#tabs button", b => b.dataset.s === name);
   document.querySelectorAll(".screen").forEach(s => s.classList.toggle("on", s.id === "s-" + name));
   localStorage.setItem("s5show", name);
