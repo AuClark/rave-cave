@@ -19,13 +19,14 @@
   // The top bar (.s5bar) is identical on every page: same height, logo and page links in the same
   // place, nothing wraps. Page-specific bits in the bar, and the page below it, fade in. Added here,
   // in <head>, so it applies before the first paint.
-  const FONT = `"Montserrat", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif`;
+  // System fonts: the brain is often offline at a gig, so nothing is fetched from the web.
+  const FONT = `"Inter", -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", Roboto, system-ui, sans-serif`;
   const barCss = `
   html { scrollbar-gutter: stable; }
   :root { --s5bar: 48px; }   /* top bar height: things pinned under it use this */
   .s5bar { box-sizing: border-box; position: sticky; top: 0; z-index: 40; display: flex; flex-wrap: nowrap; align-items: center; gap: 20px;
-    height: var(--s5bar); min-height: var(--s5bar); max-height: var(--s5bar); margin: 0; padding: 0 24px; background: #242424; border: 0; border-bottom: 1px solid #3e3e3e;
-    font: 500 14px/1 ${FONT}; letter-spacing: .01em; text-transform: none; backdrop-filter: none;
+    height: var(--s5bar); min-height: var(--s5bar); max-height: var(--s5bar); margin: 0; padding: 0 24px; background: var(--bg, #0c0c0e); border: 0; border-bottom: 1px solid var(--line, #26262b);
+    font: 500 14px/1 ${FONT}; letter-spacing: -.005em; text-transform: none; backdrop-filter: none;
     overflow-x: auto; overflow-y: hidden; scrollbar-width: none; }
   .s5bar::-webkit-scrollbar { display: none; }
   .s5bar > * { flex-shrink: 0; }
@@ -33,28 +34,29 @@
     cursor: pointer; user-select: none; font-size: 14px; line-height: 1; }
   .s5bar > .s5home .s5logo { display: flex; align-items: center; line-height: 1; }
   .s5bar > nav.pages { align-self: stretch; height: 100%; display: flex; gap: 2px; margin: 0; padding: 0; }
-  .s5bar > nav.pages a { display: flex; align-items: center; padding: 0 12px; margin: 0; font: 500 14px/1 ${FONT}; letter-spacing: .01em;
-    text-transform: none; color: #9a9a9a; text-decoration: none; border-top: 3px solid transparent; border-bottom: 3px solid transparent;
-    transition: color .15s, opacity .2s; }
-  .s5bar > nav.pages a:hover { color: #f2f2f2; }
-  .s5bar > nav.pages a.here { color: #f2f2f2; border-bottom-color: #ff5a1f; }
+  .s5bar > nav.pages { align-items: center; gap: 2px; }
+  .s5bar > nav.pages a { display: flex; align-items: center; height: 32px; padding: 0 12px; margin: 0; font: 500 13px/1 ${FONT}; letter-spacing: -.005em;
+    text-transform: none; color: #a1a1aa; text-decoration: none; border: 0; border-radius: 8px;
+    transition: color .15s, background .15s, opacity .2s; }
+  .s5bar > nav.pages a:hover { color: #fafafa; background: #1c1c20; }
+  .s5bar > nav.pages a.here { color: #09090b; background: #fafafa; }
   html.s5-fontwait .s5bar > nav.pages { visibility: hidden; }
   .s5bar > :not(.s5home):not(nav.pages):not(.s5who) { animation: s5in .45s ease; }
   .s5bar ~ :not(.s5tabs) { animation: s5in .35s ease; }   /* no fill: nothing lingers (stacking) once faded */
   /* Viewer / admin: a lock at the right end of the bar (stays in view if the bar scrolls sideways). */
   .s5bar > .s5who { margin-left: auto; position: sticky; right: 0; flex: none; width: 28px; height: 28px; padding: 0; display: none;
-    align-items: center; justify-content: center; cursor: pointer; background: #242424; color: #9a9a9a; border: 1px solid #555; }
+    align-items: center; justify-content: center; cursor: pointer; background: var(--bg, #0c0c0e); color: #a1a1aa; border: 1px solid #3a3a41; border-radius: 8px; }
   html.s5-viewer .s5bar > .s5who, html.s5-admin .s5bar > .s5who { display: flex; }
   html.s5-viewer .s5bar > .s5who { color: #ff5a1f; border-color: rgba(255,90,31,.55); }
   html.s5-admin .s5bar > .s5who { color: #7ccf8a; border-color: rgba(124,207,138,.55); }
   .s5who svg { width: 14px; height: 14px; }
   /* Section tabs under a page's display (S5AUTH.sectionTabs): only the chosen section shows. */
-  .s5sect { display: flex; overflow-x: auto; scrollbar-width: none; background: #1c1c1c; border-top: 1px solid #3e3e3e; }
+  .s5sect { display: flex; gap: 2px; overflow-x: auto; scrollbar-width: none; padding: 6px 12px; background: var(--bg, #0c0c0e); border-top: 1px solid var(--line, #26262b); border-bottom: 1px solid var(--line, #26262b); }
   .s5sect::-webkit-scrollbar { display: none; }
-  .s5sect button { flex: 1 0 auto; margin: 0; padding: 13px 16px; background: transparent; border: 0; border-bottom: 2px solid transparent; border-radius: 0;
-    color: #9a9a9a; cursor: pointer; white-space: nowrap; font: 600 11px/1 ${FONT}; letter-spacing: .12em; text-transform: uppercase; }
-  .s5sect button:hover { color: #f2f2f2; }
-  .s5sect button[aria-selected="true"] { color: #f2f2f2; border-bottom-color: #ff5a1f; }
+  .s5sect button { flex: 1 0 auto; margin: 0; height: 34px; padding: 0 14px; background: transparent !important; border: 0 !important; border-radius: 8px !important;
+    color: #a1a1aa !important; cursor: pointer; white-space: nowrap; font: 500 13px/1 ${FONT} !important; letter-spacing: -.005em !important; text-transform: none !important; transition: color .15s, background .15s; }
+  .s5sect button:hover { color: #fafafa !important; background: #1c1c20 !important; }
+  .s5sect button[aria-selected="true"] { color: #fafafa !important; background: #1f1f23 !important; box-shadow: inset 0 0 0 1px #3a3a41; }
   .s5-hide { display: none !important; }
   /* Phones: the page links move to a tab bar at the bottom (Decks in the middle). */
   .s5tabs { display: none; }
@@ -62,12 +64,13 @@
     .s5bar { padding: 0 12px; gap: 10px; }
     .s5bar > nav.pages, .s5bar #self, .s5bar .keys { display: none; }
     .s5tabs { display: grid; grid-template-columns: repeat(5, 1fr); position: fixed; left: 0; right: 0; bottom: 0; z-index: 45;
-      height: calc(60px + env(safe-area-inset-bottom)); padding: 0 0 env(safe-area-inset-bottom); background: #242424; border-top: 1px solid #3e3e3e; }
-    .s5tabs a { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 5px; color: #9a9a9a;
+      height: calc(60px + env(safe-area-inset-bottom)); padding: 0 0 env(safe-area-inset-bottom); background: rgba(12,12,14,.94); border-top: 1px solid var(--line, #26262b);
+      backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px); }
+    .s5tabs a { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 5px; color: #a1a1aa;
       text-decoration: none; font: 500 10px/1 ${FONT}; letter-spacing: .04em; -webkit-tap-highlight-color: transparent; }
     .s5tabs a svg { width: 22px; height: 22px; fill: none; stroke: currentColor; stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; }
     .s5tabs a.mid svg { width: 26px; height: 26px; }
-    .s5tabs a.here { color: #f2f2f2; } .s5tabs a.here svg { stroke: #ff5a1f; }
+    .s5tabs a.here { color: #fafafa; } .s5tabs a.here svg { stroke: #ff5a1f; }
     body { padding-bottom: calc(64px + env(safe-area-inset-bottom)) !important; }
   }
   @keyframes s5in { from { opacity: 0; } to { opacity: 1; } }`;
@@ -79,12 +82,58 @@
   document.documentElement.classList.toggle("s5-admin", S5.enabled && S5.admin);
   // Page links are drawn in Montserrat: wait for it (cached after the first page) so they don't
   // shift when it swaps in. Offline, fall back to the system font after a moment.
-  if (document.fonts && document.fonts.load) {
-    document.documentElement.classList.add("s5-fontwait");
-    const shown = () => document.documentElement.classList.remove("s5-fontwait");
-    Promise.race([document.fonts.load(`500 14px "Montserrat"`), new Promise(r => setTimeout(r, 700))]).then(shown, shown);
-  }
+
+  // The theme: one design system over every page's own styles (see docs/design.md). Last in <head>,
+  // so it wins over the page's blocks; moved there again once the page has parsed, in case a page
+  // adds styles after this script.
+  const theme = document.createElement("style");
+  theme.id = "s5theme";
+  theme.textContent = themeCss();
+  document.head.appendChild(theme);
+  document.addEventListener("DOMContentLoaded", () => document.head.appendChild(theme));
   let quietUntil = 0, pending = null;
+
+  function themeCss() { return `
+  :root:root { --bg: #0c0c0e; --panel: #131316; --card: #131316; --well: #08080a; --line: #26262b; --line2: #3a3a41;
+    --text: #fafafa; --dim: #a1a1aa; --faint: #6b6b74; --hover: #1c1c20;
+    --accent: #ff5a1f; --acc: #ff5a1f; --pink: #ff5a1f; --cyan: #ff5a1f; --violet: #d4d4d8;
+    --good: #4ade80; --warn: #fbbf24; --bad: #ef4444; --font: ${FONT}; color-scheme: dark; }
+  html, body { background: var(--bg) !important; }
+  html body { font-family: var(--font) !important; letter-spacing: -.005em; -webkit-font-smoothing: antialiased; font-feature-settings: "cv11", "ss01"; }
+  /* Sentence case everywhere, no shouting labels: what's written is what's shown. */
+  html body *:not(svg):not(svg *):not(canvas) { text-transform: none !important; }
+  /* Tracking was for uppercase labels; in sentence case it just looks spaced out. */
+  html body *:not(svg):not(svg *):not(canvas) { letter-spacing: normal !important; }
+  html body .s5bar .s5logo, html body .s5home * { letter-spacing: normal; }
+  html body h2, html body h3, html body th, html body legend { font-weight: 600 !important; }
+  html body :is(h2, h3) { color: var(--dim); }
+  /* Controls: soft corners, one height scale, a quiet hover, orange only when on. */
+  html body button, html body select, html body textarea,
+  html body input:not([type=range]):not([type=checkbox]):not([type=radio]):not([type=color]) {
+    border-radius: 8px !important; font-family: var(--font) !important; transition: background-color .12s, border-color .12s, color .12s, box-shadow .12s; }
+  html body button { font-weight: 500 !important; border-color: var(--line2); }
+  html body button:not(.on):not([aria-pressed=true]):not(:disabled):hover { border-color: #52525b !important; }
+  html body button:active:not(:disabled) { transform: translateY(.5px); }
+  html body button.on, html body button[aria-pressed=true] { background-color: var(--accent); border-color: var(--accent) !important; color: #fff; }
+  html body select, html body textarea,
+  html body input:not([type=range]):not([type=checkbox]):not([type=radio]):not([type=color]):not([type=button]):not([type=submit]) {
+    background-color: var(--well) !important; border: 1px solid var(--line2) !important; color: var(--text) !important; }
+  html body select:focus, html body textarea:focus, html body input:focus { outline: none; border-color: #52525b !important; box-shadow: 0 0 0 3px rgba(255,90,31,.18); }
+  html body :focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+  html body input[type=range] { accent-color: var(--accent); }
+  html body ::placeholder { color: var(--faint); }
+  /* Status tags and pills: small rounded chips. */
+  html body .pill, html body .tag, html body .badge, html body .chip { border-radius: 6px !important; }
+  /* Pictures (previews, canvases, the 3D view) get a soft corner where they sit in the page. */
+  html body #previewWrap, html body .preview, html body .pv { border-radius: 12px !important; overflow: hidden; }
+  /* Thin, quiet scrollbars. */
+  html body * { scrollbar-width: thin; scrollbar-color: #3a3a41 transparent; }
+  html body ::-webkit-scrollbar { width: 8px; height: 8px; } html body ::-webkit-scrollbar-thumb { background: #3a3a41; border-radius: 8px; }
+  html body ::-webkit-scrollbar-track { background: transparent; }
+  html body ::selection { background: rgba(255,90,31,.35); }
+  html body a:not([class]) { color: var(--accent); text-underline-offset: 2px; }
+  @media (hover: none) { html body button:not(.on):hover { border-color: var(--line2) !important; } }
+  `; }
 
   const css = `
   .s5who.s5a-float { position: fixed; top: 12px; right: 12px; z-index: 9998; width: 38px; height: 38px; padding: 0; display: flex;

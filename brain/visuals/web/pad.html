@@ -10,9 +10,9 @@
 <link rel="icon" type="image/svg+xml" href="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA2NCA2NCI+PHJlY3Qgd2lkdGg9IjY0IiBoZWlnaHQ9IjY0IiByeD0iMTIiIGZpbGw9IiMyNDI0MjQiLz48cGF0aCB0cmFuc2Zvcm09InRyYW5zbGF0ZSgxNC41IDcpIHNjYWxlKC41KSIgZD0iTTAsMCBMNzAsMCBMNzAsMjEgTDIxLDIxIEwyMSw0MCBMNTcsNDAgTDcwLDUzIEw3MCw4NyBMNTcsMTAwIEwwLDEwMCBMMCw3OSBMNDksNzkgTDQ5LDYxIEwwLDYxIFoiIGZpbGw9IiNGRjVBMUYiLz48L3N2Zz4=">
 <style>
   /* Same tokens as every other page: charcoal, hairline grid, one orange accent, Montserrat. */
-  :root { --bg:#242424; --panel:#2b2b2b; --line:#3e3e3e; --line2:#555; --text:#f2f2f2; --dim:#9a9a9a;
-          --accent:#ff5a1f; --good:#7ccf8a; --warn:#f2b84b; --bad:#ef5b5b; --well:#1f1f1f;
-          --font:"Montserrat", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif; }
+  :root { --bg:#0c0c0e; --panel:#131315; --line:#262628; --line2:#3a3a3c; --text:#fafafa; --dim:#a1a1a1;
+          --accent:#ff5a1f; --good:#7ccf8a; --warn:#f2b84b; --bad:#ef5b5b; --well:#08080a;
+          --font:"Inter", -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", Roboto, system-ui, sans-serif; }
   * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
   html, body { height: 100%; }
   body { margin: 0; background: var(--bg); color: var(--text); font: 14px/1.35 var(--font);
@@ -71,7 +71,7 @@
          border: 1px solid var(--line2); background: var(--panel); text-align: left; }
   .pad .nm { font-size: 14px; font-weight: 600; letter-spacing: .04em; overflow-wrap: anywhere; min-width: 0; }
   .pad .sub { font-size: 10px; letter-spacing: .14em; color: var(--dim); text-transform: uppercase; }
-  .pad:active { background: #3a3a3a; }
+  .pad:active { background: #222224; }
   .pad.live { border-color: var(--accent); }
   .pad.live .nm { color: var(--accent); }
   /* Queued: the pad fills up from the left as the bar comes round, then fires. */
@@ -84,10 +84,10 @@
   .pad.act { background: var(--accent); border-color: var(--accent); }
   .pad.act .nm, .pad.act .sub { color: #fff; }
   .sect b { color: var(--accent); font-weight: 600; }
-  .sect #focusHint { color: #6b6b6b; letter-spacing: .1em; }
+  .sect #focusHint { color: #525254; letter-spacing: .1em; }
 
   /* ---- the drawer: everything that is not a pad ---- */
-  #sheet { position: fixed; inset: 0; background: rgba(20,20,20,.55); display: none; z-index: 50; }
+  #sheet { position: fixed; inset: 0; background: rgba(6,6,8,.55); display: none; z-index: 50; }
   #sheet.show { display: block; }
   #sheet .panelbox { position: absolute; left: 0; right: 0; bottom: 0; max-height: 86%; overflow-y: auto;
                      background: var(--bg); border-top: 1px solid var(--line2);
@@ -114,7 +114,7 @@
   .mac .top label { flex: 1; font-size: 13px; }
   .mac .top span { color: var(--dim); font-size: 12px; font-variant-numeric: tabular-nums; }
   .mtr { position: relative; height: 44px; touch-action: none; }
-  .mtr::before { content: ""; position: absolute; left: 0; right: 0; top: 20px; height: 4px; background: #1b1b1b; border: 1px solid #444; }
+  .mtr::before { content: ""; position: absolute; left: 0; right: 0; top: 20px; height: 4px; background: #070709; border: 1px solid #2c2c2e; }
   .mtr .band { position: absolute; top: 20px; height: 4px; background: #5a3a2a; border-top: 1px solid #7a4a30; border-bottom: 1px solid #7a4a30; }
   .mtr .bar2 { position: absolute; top: 10px; width: 4px; height: 24px; background: var(--text); margin-left: -2px; }
   .mtr .mk2 { position: absolute; top: 7px; width: 14px; height: 30px; margin-left: -7px; border: 2px solid var(--accent); display: none; }
@@ -129,20 +129,18 @@
   .nextup button { padding: 8px 12px; }
   .hint b { color: var(--text); }
 </style>
-<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600&display=swap" rel="stylesheet">
 <script src="/s5auth.js"></script>
 </head>
 <body>
 <div class="bar">
   <a href="./" class="backlink" title="Back to the full controls">&#9664; FULL</a>
-  <span class="logo">SEKTOR<b>5</b></span>
+  <span class="logo">Sektor<b>5</b></span>
   <span id="beat"><i class="b1"></i><i></i><i></i><i></i></span>
   <span class="sp"></span>
   <span id="conn">···</span>
-  <button id="bQ" title="When a pad fires">1 BAR</button>
-  <button id="bFreeze">FREEZE</button>
-  <button id="bMore">MORE</button>
+  <button id="bQ" title="When a pad fires">1 Bar</button>
+  <button id="bFreeze">Freeze</button>
+  <button id="bMore">More</button>
 </div>
 <div id="pv"><canvas id="gl"></canvas><canvas id="ov"></canvas></div>
 <div class="padwrap">
@@ -165,7 +163,7 @@
 </div>
 
 <div id="sheet"><div class="panelbox">
-  <div class="shhead"><h2 id="shTitle">More</h2><span class="sp"></span><button id="shClose">CLOSE</button></div>
+  <div class="shhead"><h2 id="shTitle">More</h2><span class="sp"></span><button id="shClose">Close</button></div>
   <div class="shrow"><h3>Sketch</h3><select id="skSel"></select></div>
   <div class="shrow" id="shEveryRow"><h3>Shuffle every</h3><div class="chips" id="shEvery"></div></div>
   <div class="shrow"><h3>Words (for sketches that draw type)</h3>

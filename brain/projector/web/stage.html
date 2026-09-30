@@ -6,10 +6,10 @@
 <title>Sektor5 · Stage</title>
 <link rel="icon" type="image/svg+xml" href="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA2NCA2NCI+PHJlY3Qgd2lkdGg9IjY0IiBoZWlnaHQ9IjY0IiByeD0iMTIiIGZpbGw9IiMyNDI0MjQiLz48cGF0aCB0cmFuc2Zvcm09InRyYW5zbGF0ZSgxNC41IDcpIHNjYWxlKC41KSIgZD0iTTAsMCBMNzAsMCBMNzAsMjEgTDIxLDIxIEwyMSw0MCBMNTcsNDAgTDcwLDUzIEw3MCw4NyBMNTcsMTAwIEwwLDEwMCBMMCw3OSBMNDksNzkgTDQ5LDYxIEwwLDYxIFoiIGZpbGw9IiNGRjVBMUYiLz48L3N2Zz4=">
 <style>
-  /* Design system: charcoal, hairline grid, one orange accent, Montserrat (see docs/design.md). */
-  :root { --bg:#242424; --panel:#2b2b2b; --line:#3e3e3e; --line2:#555; --text:#f2f2f2; --dim:#9a9a9a;
-          --accent:#ff5a1f; --good:#7ccf8a; --warn:#f2b84b; --bad:#ef5b5b; --well:#1f1f1f;
-          --font:"Montserrat", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif; }
+  /* Design system: near-black, hairline grid, one orange accent, system type (see docs/design.md). */
+  :root { --bg:#0c0c0e; --panel:#131315; --line:#262628; --line2:#3a3a3c; --text:#fafafa; --dim:#a1a1a1;
+          --accent:#ff5a1f; --good:#7ccf8a; --warn:#f2b84b; --bad:#ef5b5b; --well:#08080a;
+          --font:"Inter", -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", Roboto, system-ui, sans-serif; }
   * { box-sizing: border-box; }
   html, body { margin: 0; height: 100%; background: var(--bg); color: var(--text); font: 400 14px/1.45 var(--font); overscroll-behavior: none; }
   button, input, select { font-family: var(--font); font-size: 12px; color: var(--text); border-radius: 0; }
@@ -34,40 +34,40 @@
   #viewsec select, #viewsec input[type=range] { width: 100%; }
   .cams { display: grid; grid-template-columns: repeat(4, 1fr); gap: 4px; }
   .cams button { padding: 8px 4px; }
-  #design { position: absolute; top: 12px; right: 12px; z-index: 3; background: rgba(20,20,20,.7); }
+  #design { position: absolute; top: 12px; right: 12px; z-index: 3; background: rgba(6,6,8,.7); }
   #design.on { background: var(--accent); }
   aside > .s5sect { position: sticky; top: 0; z-index: 2; }
   aside h2 { display: none; }   /* the tab says which section this is */
   main { display: grid; grid-template-columns: minmax(0, 1fr) 340px; flex: 1 1 auto; min-height: 0; }
   main.full { grid-template-columns: minmax(0, 1fr) 0; }
   main.full aside { display: none; }
-  #view { position: relative; min-width: 0; min-height: 0; overflow: hidden; background: #111; }
+  #view { position: relative; min-width: 0; min-height: 0; overflow: hidden; background: #050507; }
   #view canvas { display: block; width: 100%; height: 100%; }
   #hud { position: absolute; left: 16px; bottom: 14px; font-size: 12px; color: var(--dim); pointer-events: none; text-shadow: 0 1px 2px #000; }
   #hud b { color: var(--text); font-weight: 600; } #hud .scene { font-weight: 300; font-size: 34px; color: var(--text); display: block; line-height: 1; margin-bottom: 4px; }
   /* Connection: in the middle of the view while it (re)connects, gone once live. */
   #view > #conn { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); z-index: 2; padding: 10px 16px;
-    background: rgba(20,20,20,.75); pointer-events: none; }
+    background: rgba(6,6,8,.75); pointer-events: none; }
   #view > #conn.ok { display: none; }
   @media (max-width: 1300px) { #hint { display: none; } }   /* it collides with the track info on narrower screens */
-  #hint { position: absolute; right: 16px; bottom: 14px; font-size: 11px; color: #777; pointer-events: none; text-align: right; }
+  #hint { position: absolute; right: 16px; bottom: 14px; font-size: 11px; color: #646464; pointer-events: none; text-align: right; }
   aside { border-left: 1px solid var(--line); overflow: auto; background: var(--panel); counter-reset: sec; }
   aside section { padding: 18px 20px; border-bottom: 1px solid var(--line); }
   aside h2 { counter-increment: sec; margin: 0 0 12px; font-weight: 500; font-size: 12px; letter-spacing: .16em; color: var(--dim); text-transform: uppercase; }
   aside h2::before { content: counter(sec, decimal-leading-zero) "  —  "; color: var(--accent); }
   .list div { display: flex; gap: 10px; align-items: baseline; padding: 6px 8px; cursor: pointer; font-size: 13px; }
-  .list div:hover { background: #313131; }
-  .list div.sel { background: #353535; box-shadow: inset 3px 0 0 var(--accent); }
-  .list .n { color: #6b6b6b; font-size: 11px; width: 18px; }
+  .list div:hover { background: #19191b; }
+  .list div.sel { background: #1d1d1f; box-shadow: inset 3px 0 0 var(--accent); }
+  .list .n { color: #525254; font-size: 11px; width: 18px; }
   .list .src { margin-left: auto; font-size: 10px; letter-spacing: .1em; font-weight: 600; }
-  .src.live { color: var(--good); } .src.sim { color: #777; }
+  .src.live { color: var(--good); } .src.sim { color: #646464; }
   .add { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; }
   .row { display: grid; grid-template-columns: 70px 1fr; gap: 8px; align-items: center; margin-bottom: 8px; }
   .row > span { color: var(--dim); font-size: 12px; }
   .xyz { display: grid; grid-template-columns: repeat(3, 1fr); gap: 4px; }
   .xyz input { width: 100%; }
   .btns { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 10px; }
-  .note { color: #777; font-size: 11px; margin-top: 8px; line-height: 1.5; }
+  .note { color: #646464; font-size: 11px; margin-top: 8px; line-height: 1.5; }
   #props.empty > :not(h2):not(.note) { display: none; }
   @media (max-width: 760px) {   /* phones: less text over the view */
     #hint { display: none; }
@@ -83,11 +83,9 @@
     #design { display: none; }
   }
   .s5logo { display: inline-flex; align-items: center; vertical-align: middle; line-height: 1; }
-  .s5logo .s5word { color: var(--text, #f2f2f2); flex: none; display: block; }
+  .s5logo .s5word { color: var(--text, #fafafa); flex: none; display: block; }
   .s5logo .s5five { fill: var(--accent, #ff5a1f); }
 </style>
-<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;500;600&display=swap" rel="stylesheet">
 <script type="importmap">{ "imports": { "three": "./vendor/three.module.min.js", "three/addons/": "./vendor/addons/" } }</script>
 <script>if (new URLSearchParams(location.search).has("embed")) document.documentElement.classList.add("s5embed");</script>
 <style>
@@ -107,20 +105,20 @@
 <main id="main">
   <div id="view">
     <div id="hud"></div>
-    <div id="conn" class="pill">CONNECTING</div>
+    <div id="conn" class="pill">Connecting</div>
     <div id="hint">drag to orbit · scroll to zoom · right-drag to pan · click a fixture to select</div>
-    <button id="design" class="on" title="Hide the side panel">PANEL</button>
+    <button id="design" class="on" title="Hide the side panel">Panel</button>
   </div>
   <aside>
     <section id="viewsec">
       <h2>View</h2>
-      <div class="row"><span>Camera</span><div class="btns cams" style="margin:0"><button data-cam="audience" class="on">AUDIENCE</button><button data-cam="dj">DJ</button><button data-cam="top">TOP</button><button data-cam="side">SIDE</button></div></div>
+      <div class="row"><span>Camera</span><div class="btns cams" style="margin:0"><button data-cam="audience" class="on">Audience</button><button data-cam="dj">DJ</button><button data-cam="top">Top</button><button data-cam="side">Side</button></div></div>
       <div class="row"><span>Haze</span><input id="haze" type="range" min="0" max="1" step="0.05" value="0.55"></div>
       <div class="row"><span>Lasers</span><select id="laserLook" title="Laser show look (saved with the layout)"></select></div>
       <div class="row"><span>Section</span><select id="laserSec" title="Preview a section: the lasers and leg pyramids play it on a 128 BPM clock, whatever the show is doing">
-        <option value="">FOLLOW SHOW</option><option value="GROOVE">GROOVE</option><option value="BUILD">BUILD</option><option value="PREDROP">PREDROP</option><option value="DROP">DROP</option><option value="BREAKDOWN">BREAKDOWN</option><option value="INTRO">INTRO</option></select></div>
+        <option value="">Follow show</option><option value="GROOVE">Groove</option><option value="BUILD">Build</option><option value="PREDROP">Predrop</option><option value="DROP">Drop</option><option value="BREAKDOWN">Breakdown</option><option value="INTRO">Intro</option></select></div>
       <div class="row"><span>Daylight</span><input id="day" type="range" min="0" max="1" step="0.05" value="0" title="Night to dusk to day (saved with the layout)"></div>
-      <div class="row"><span>Glow</span><div><button id="bloom" class="on" title="Glow (turn off on slow machines)">GLOW</button></div></div>
+      <div class="row"><span>Glow</span><div><button id="bloom" class="on" title="Glow (turn off on slow machines)">Glow</button></div></div>
     </section>
     <section>
       <h2>Rig</h2>
@@ -142,18 +140,18 @@
       <div class="row" id="rowAngle"><span id="lAngle">Beam</span><input id="pAngle" type="range" min="2" max="70" step="1"></div>
       <div class="row" id="rowCount"><span id="lCount">Beams</span><input id="pCount" type="number" min="1" max="240" step="1"></div>
       <div class="row" id="rowSize"><span>Size</span><div class="xyz" style="grid-template-columns:1fr 1fr"><input id="sw" type="number" step="0.1" min="0.2" max="12"><input id="sh" type="number" step="0.1" min="0.2" max="8"></div></div>
-      <div class="row" id="rowLens"><span>Lens</span><div class="btns" style="margin:0;flex-wrap:wrap"><button id="bLook" title="See the set through this projector's lens">LOOK THROUGH</button><button id="bShot" title="Send the set as this projector sees it to the Projection editor, as a backdrop to map surfaces onto">SEND TO EDITOR</button></div></div>
-      <div class="row" id="rowMap"><span>Map onto</span><div style="display:flex;gap:6px;min-width:0"><select id="pMapPart" style="flex:1;min-width:0" title="A part of the set this projector sees"></select><button id="bMap" title="Add a surface for each face of it that this projector sees (triangles for a pyramid), in the projection layout">MAP</button></div></div>
+      <div class="row" id="rowLens"><span>Lens</span><div class="btns" style="margin:0;flex-wrap:wrap"><button id="bLook" title="See the set through this projector's lens">Look through</button><button id="bShot" title="Send the set as this projector sees it to the Projection editor, as a backdrop to map surfaces onto">Send to editor</button></div></div>
+      <div class="row" id="rowMap"><span>Map onto</span><div style="display:flex;gap:6px;min-width:0"><select id="pMapPart" style="flex:1;min-width:0" title="A part of the set this projector sees"></select><button id="bMap" title="Add a surface for each face of it that this projector sees (triangles for a pyramid), in the projection layout">Map</button></div></div>
       <div class="note" id="mapNote" style="margin:-2px 0 8px"></div>
       <div class="row" id="rowBright"><span>Brightness</span><div style="display:flex;gap:8px;align-items:center"><input id="pBright" type="range" min="0" max="1.5" step="0.05" style="flex:1"><span id="vBright" style="width:38px;text-align:right;color:var(--dim);font-size:12px"></span></div></div>
       <div class="row" id="rowCover"><span>Cover</span><label style="display:flex;gap:8px;align-items:center"><input id="pCover" type="checkbox"> White fabric over the frame</label></div>
       <div class="row" id="rowColour"><span>Colour</span><input id="pColour" type="color" style="padding:0;height:30px"></div>
-      <div class="note" id="laserNote" style="margin:-2px 0 8px">* Beams, spread and colour are for the CLASSIC look. The other laser looks (LASERS, top bar) draw their own beams, sheets and colours, mirrored left and right.</div>
+      <div class="note" id="laserNote" style="margin:-2px 0 8px">* Beams, spread and colour are for the classic look. The other laser looks (LASERS, top bar) draw their own beams, sheets and colours, mirrored left and right.</div>
       <div class="btns">
-        <button id="gMove" class="on" title="Drag the arrows to move it">MOVE</button>
-        <button id="gAim" title="Drag the orange dot to aim it">AIM</button>
-        <button id="bDup">DUPLICATE</button>
-        <button id="bDel" class="warn">DELETE</button>
+        <button id="gMove" class="on" title="Drag the arrows to move it">Move</button>
+        <button id="gAim" title="Drag the orange dot to aim it">Aim</button>
+        <button id="bDup">Duplicate</button>
+        <button id="bDel" class="warn">Delete</button>
       </div>
       <div class="note">X is left/right, Y is height, Z is towards the audience, in metres (0,0,0 is the front edge of the stage floor, centre; in a venue, wherever the venue puts it).</div>
     </section>
@@ -162,16 +160,16 @@
       <div class="row"><span>LEDs</span><input id="cLed" type="range" min="0.5" max="6" step="0.1"></div>
       <div class="row"><span>Wash</span><input id="cWash" type="range" min="0.3" max="3" step="0.1"></div>
       <div class="row"><span>Projectors</span><input id="cProj" type="range" min="0" max="1.5" step="0.05"></div>
-      <div class="row"><span>Gamma</span><select id="cGamma"><option value="1">1.0 · as sent (WLED realtime default)</option><option value="2.2">2.2</option><option value="2.8">2.8 · WLED gamma on</option></select></div>
+      <div class="row"><span>Gamma</span><select id="cGamma"><option value="1">1.0 · as sent (wled realtime default)</option><option value="2.2">2.2</option><option value="2.8">2.8 · Wled gamma on</option></select></div>
       <div class="note">Look at the real tubes and wash next to this view and nudge these until they match. Colours come from what the show actually sends each light; these only set how bright that looks on screen, and whether the fixture adds its own gamma.</div>
     </section>
     <section>
       <h2>Layout</h2>
       <div class="row"><span>Venue</span><select id="venueSel" title="The set the rig stands in: the built-in room, or a venue modelled elsewhere (venues/)"></select></div>
       <div class="btns" style="margin-top:0">
-        <button id="bExport">EXPORT</button>
-        <button id="bImport">IMPORT</button>
-        <button id="bReset" class="warn">RESET TO MY RIG</button>
+        <button id="bExport">Export</button>
+        <button id="bImport">Import</button>
+        <button id="bReset" class="warn">Reset to my rig</button>
       </div>
       <div class="note" id="saved">Changes save to the brain and show on every device.</div>
       <input id="file" type="file" accept="application/json" hidden>
@@ -186,6 +184,7 @@
 window.PROJ = window.S5AUTH ? S5AUTH.url(8100, "") : location.port === "8100" ? "" : `${location.protocol}//${location.hostname}:8100`;   // /projection over HTTPS
 </script>
 <script type="module">
+const SCENE_NAME = { IDLE: "Waiting", INTRO: "Intro", GROOVE: "Groove", BUILD: "Building", HOLD: "Holding", PREDROP: "Here it comes", DROP: "Drop", BREAKDOWN: "Break", OUTRO: "Outro" };   // the show engine's scenes, as the pages show them
 import * as THREE from "three";
 import { OrbitControls } from "three/addons/controls/OrbitControls.js";
 import { TransformControls } from "three/addons/controls/TransformControls.js";
@@ -1015,7 +1014,7 @@ function mapStrip(fx, p) {
 // ------------------------------------------------------------------ lasers
 // The look is saved with the layout; the section preview is just for this viewer.
 let laserSec = "", laserIdx = 0, laserCount = 0, laserCue = "", trackSeed = 0;
-for (const [id, l] of Object.entries(LOOKS)) $("#laserLook").add(new Option(l.label.toUpperCase(), id));
+for (const [id, l] of Object.entries(LOOKS)) $("#laserLook").add(new Option(l.label, id));
 $("#laserLook").onchange = e => { calib.laser = e.target.value; saveRig(); };
 $("#laserSec").onchange = e => { laserSec = e.target.value; };
 // With a section picked, the lasers play it on the show's clock (or 128 BPM with no deck playing):
@@ -1173,7 +1172,7 @@ function update(now) {
     p.lensTex.needsUpdate = true;
   }
   const s = show;
-  $("#hud").innerHTML = `<span class="scene">${s ? s.scene || "—" : "—"}</span>` +
+  $("#hud").innerHTML = `<span class="scene">${s ? SCENE_NAME[s.scene] || s.scene || "—" : "—"}</span>` +
     (s && s.live ? `deck <b>${s.live}</b> · <b>${(s.bpm || 0).toFixed(1)}</b> BPM · bar ${s.bar || 0}` + (s.title ? ` · ${esc(s.title)}` : "") : "no deck playing") +
     (laserCue && laserCue !== "off" ? ` · lasers <b>${esc(laserCue)}</b>${laserSec ? " (preview)" : ""}` : "") +
     ` · ${rig.filter(fx => fx.type !== "screen" && fx.source && fx.source !== "sim" && (fx.type === "projector" ? mapRenderer : livePixels(fx.source))).length} live / ${rig.filter(fx => fx.type !== "screen").length} fixtures`;
@@ -1224,13 +1223,13 @@ function renderList() {
     const live = fx.source && fx.source !== "sim";
     if (fx.type === "screen") return `<div data-id="${fx.id}" class="${fx.id === selected ? "sel" : ""}"><span class="n">${String(i + 1).padStart(2, "0")}</span>${esc(fx.name)}<span class="src sim">SURFACE</span></div>`;
     const tag = fx.type === "projector" ? (fx.source === "visuals" ? "LIVE · VISUALS" : fx.source === "off" ? "OFF" : "LIVE · PROJECTOR")
-      : live ? "LIVE · " + esc(fx.source).toUpperCase() : "SIMULATED";
+      : live ? "Live · " + esc(fx.source) : "Simulated";
     return `<div data-id="${fx.id}" class="${fx.id === selected ? "sel" : ""}"><span class="n">${String(i + 1).padStart(2, "0")}</span>${esc(fx.name)}` +
       `<span class="src ${live && fx.source !== "off" ? "live" : "sim"}">${tag}</span></div>`;
   }).join("");
 }
 $("#list").onclick = e => { const d = e.target.closest("[data-id]"); if (d) { select(d.dataset.id); showSelected(d.dataset.id); } };
-$("#add").innerHTML = Object.entries(TYPES).map(([k, t]) => `<button data-type="${k}">${t.label.toUpperCase()}</button>`).join("");
+$("#add").innerHTML = Object.entries(TYPES).map(([k, t]) => `<button data-type="${k}">${t.label}</button>`).join("");
 $("#add").onclick = e => {
   const b = e.target.closest("[data-type]"); if (!b) return;
   const type = b.dataset.type, T = TYPES[type], hang = !["tube", "projector", "ledbar", "screen", "pyramid"].includes(type);

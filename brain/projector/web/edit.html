@@ -38,12 +38,12 @@
   .hint { color: var(--dim); font-size: 12px; }
 
   /* ------------------------------------------------------------------ design system
-     Charcoal, hairline grid, one orange accent, light geometric type (Montserrat).
+     Near-black, hairline grid, one orange accent, system type (the shared theme in s5auth.js sits on top: docs/design.md).
      Same tokens and bottom tiles as the dashboard, Commander, mapping and visuals pages. */
-  :root { --bg:#242424; --panel:#2b2b2b; --card:#2b2b2b; --line:#3e3e3e; --line2:#555; --text:#f2f2f2; --dim:#9a9a9a;
-          --accent:#ff5a1f; --good:#7ccf8a; --warn:#f2b84b; --bad:#ef5b5b; --well:#1f1f1f;
-          --pink:#ff5a1f; --cyan:#ff5a1f; --acc:#ff5a1f; --violet:#bdbdbd;
-          --font:"Montserrat", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif; }
+  :root { --bg:#0c0c0e; --panel:#131315; --card:#131315; --line:#262628; --line2:#3a3a3c; --text:#fafafa; --dim:#a1a1a1;
+          --accent:#ff5a1f; --good:#7ccf8a; --warn:#f2b84b; --bad:#ef5b5b; --well:#08080a;
+          --pink:#ff5a1f; --cyan:#ff5a1f; --acc:#ff5a1f; --violet:#c4c4c4;
+          --font:"Inter", -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", Roboto, system-ui, sans-serif; }
   html, body { background: var(--bg); }
   body { font-family: var(--font); letter-spacing: .01em; }
   button, input, select { font-family: var(--font); border-radius: 0 !important; }
@@ -62,11 +62,11 @@
   nav.apps a { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 28px 30px; color: var(--dim);
                text-decoration: none; font-size: 17px; font-weight: 400; line-height: 1.3; border-left: 1px solid var(--line); }
   nav.apps a:first-child { border-left: 0; }
-  nav.apps a:hover { color: var(--text); background: #2e2e2e; }
+  nav.apps a:hover { color: var(--text); background: #171719; }
   nav.apps a .arr { font-size: 26px; font-weight: 300; color: var(--text); }
-  nav.apps a small { display: block; font-size: 11px; letter-spacing: .16em; color: #6b6b6b; margin-bottom: 4px; }
-  nav.apps a.here { background: var(--text); color: #222; }
-  nav.apps a.here small { color: #777; }
+  nav.apps a small { display: block; font-size: 11px; letter-spacing: .16em; color: #525254; margin-bottom: 4px; }
+  nav.apps a.here { background: var(--text); color: #0a0a0c; }
+  nav.apps a.here small { color: #646464; }
   nav.apps a.here .arr { background: var(--accent); color: #fff; align-self: stretch; display: grid; place-items: center; width: 80px; margin: -28px -30px -28px 0; }
   @media (max-width: 900px) { nav.apps { grid-template-columns: 1fr 1fr; } nav.apps a:nth-child(3) { border-left: 0; } }
 
@@ -78,8 +78,8 @@
   #stage { border-radius: 0; }
   .card { margin-bottom: 0; border: 0; border-bottom: 1px solid var(--line); padding: 18px 0; background: transparent; }
   .list div { border-radius: 0; }
-  .list div.sel { background: #333; outline: 0; box-shadow: inset 3px 0 0 var(--accent); }
-  .list div.selm { background: #333; outline: 0; box-shadow: inset 3px 0 0 #bdbdbd; }
+  .list div.sel { background: #1b1b1d; outline: 0; box-shadow: inset 3px 0 0 var(--accent); }
+  .list div.selm { background: #1b1b1d; outline: 0; box-shadow: inset 3px 0 0 #c4c4c4; }
   button.warn { border-color: var(--bad); color: var(--bad); }
   /* Page links in the top bar (Decks / Lighting / Projection / Visuals): the current one underlined. */
   nav.pages { display: flex; gap: 2px; align-self: stretch; }
@@ -88,12 +88,12 @@
   nav.pages a:hover { color: var(--text); }
   nav.pages a.here { color: var(--text); border-bottom-color: var(--accent); }
   .s5logo { display: inline-flex; align-items: center; vertical-align: middle; line-height: 1; }
-  .s5logo .s5word { color: var(--text, #f2f2f2); flex: none; display: block; }
+  .s5logo .s5word { color: var(--text, #fafafa); flex: none; display: block; }
   .s5logo .s5five { fill: var(--accent, #ff5a1f); }
 
   /* ---- Layout: the display is the hero (full-width band), a clean control panel underneath. ---- */
   main.hl { display: block; padding: 0; gap: 0; max-width: none; }
-  .hero { background: #161616; border-bottom: 1px solid var(--line); padding: 24px 24px 0; }
+  .hero { background: #060608; border-bottom: 1px solid var(--line); padding: 24px 24px 0; }
   .herobar { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; min-height: 56px; padding: 12px 0; }
   .herobar .hint { margin: 0; }
   .herobar .sp { flex: 1; }
@@ -125,8 +125,6 @@
   .projsel button { padding: 6px 10px; }
   #projUrl { font-family: ui-monospace, monospace; }
 </style>
-<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;500;600&display=swap" rel="stylesheet">
 <script src="/s5auth.js"></script>
 </head>
 <body>
