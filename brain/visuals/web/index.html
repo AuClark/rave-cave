@@ -353,6 +353,15 @@
   /* Transitions: a tidy form */
   #transCard .p label { display: block; font-size: 12px; font-weight: 600; color: var(--dim); margin: 14px 0 6px; }
   #transCard select { height: 40px; padding: 0 12px; font-size: 14px; }
+  .tpool { display: flex; flex-wrap: wrap; gap: 6px; margin: 10px 0 4px; }
+  .tpool button { display: inline-flex; align-items: center; gap: 7px; height: 32px; padding: 0 12px; border-radius: 99px !important; border-color: var(--line) !important;
+                  color: var(--dim); font-size: 13px; }
+  .tpool button::before { content: ""; width: 12px; height: 12px; border-radius: 4px; border: 1.5px solid var(--line2); box-sizing: border-box; }
+  .tpool button.on { background: rgba(255,90,31,.12) !important; border-color: rgba(255,90,31,.55) !important; color: var(--text) !important; }
+  .tpool button.on::before { border-color: var(--accent); background: var(--accent) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 12'%3E%3Cpath d='M2.5 6.2l2.2 2.2 4.8-4.8' fill='none' stroke='white' stroke-width='1.8' stroke-linecap='round'/%3E%3C/svg%3E") center/100% no-repeat; }
+  .tpool .hint { flex-basis: 100%; margin: 2px 0 0; }
+  /* The ? lists keyboard shortcuts: no use on a touch screen, so it goes and the counter takes the room. */
+  @media (hover: none), (max-width: 760px) { #bKeys { display: none !important; } }
   #transCard .row { gap: 8px; margin: 8px 0; }
   #transCard label.hint { display: flex; gap: 10px; align-items: flex-start; margin: 12px 0; font-size: 13px; color: var(--text); }
   #transCard input[type=checkbox] { width: 18px; height: 18px; margin: 1px 0 0; accent-color: var(--accent); flex: none; }
@@ -455,6 +464,7 @@
         through a build, slow dissolves in a breakdown, wipes and irises in the groove.</p>
       <div class="p"><label for="tType">Type</label></div>
       <select id="tType" class="big"></select>
+      <div class="tpool" id="tPool" hidden></div>
       <div class="row">
         <select id="tBeats" class="grow" title="Length">
           <option value="0">Length: auto</option><option value="1">1 beat</option><option value="2">2 beats</option>
@@ -1036,15 +1046,29 @@ addEventListener("keyup", e => {
 });
 
 // ---------- transitions
-const T_LABEL = { pick: "Pick from a selection (tick them in Live)", auto: "Auto (smart)", cut: "Cut", none: "None (instant)", crossfade: "Crossfade", wipe: "Wipe", iris: "Iris",
+const T_LABEL = { pick: "Pick from a selection", auto: "Auto (smart)", cut: "Cut", none: "None (instant)", crossfade: "Crossfade", wipe: "Wipe", iris: "Iris",
   dissolve: "Dissolve (burning edge)", luma: "Luma (bright parts first)", tiles: "Tiles", slices: "Glitch slices",
   zoom: "Zoom through", swirl: "Swirl", stutter: "Stutter (16ths)", flash: "Flash cut", pixelate: "Pixelate" };
+let TTYPES = [], TPOOL = [];
 function showTrans(st) {
+  TPOOL = st.pool || [];
+  // Pick: tick the transitions it may choose from; each change takes one at random (never twice running).
+  $("tPool").hidden = st.type !== "pick";
+  if (st.type === "pick") {
+    const all = TTYPES.filter(x => !["auto", "pick", "none"].includes(x));
+    $("tPool").innerHTML = all.map(x => `<button type="button" data-t="${x}" class="${TPOOL.includes(x) ? "on" : ""}" aria-pressed="${TPOOL.includes(x)}">${(T_LABEL[x] || x).replace(/ \(.*\)$/, "")}</button>`).join("")
+      + `<p class="hint">${TPOOL.length ? `Each change picks one of these ${TPOOL.length}.` : "Tick some: until you do, it picks from all of them."}</p>`;
+    $("tPool").querySelectorAll("[data-t]").forEach(b => b.onclick = () => {
+      const cur = new Set(TPOOL); cur.has(b.dataset.t) ? cur.delete(b.dataset.t) : cur.add(b.dataset.t);
+      TPOOL = all.filter(x => cur.has(x)); postTrans({ pool: TPOOL }); showTrans(Object.assign({}, st, { pool: TPOOL }));
+    });
+  }
   $("tType").value = st.type; $("tBeats").value = String(st.beats || 0); $("tSync").value = st.sync; $("tPresets").checked = !!st.presets;
 }
 function postTrans(d) { fetch("/api/transition", { method: "POST", body: JSON.stringify(d) }).catch(() => {}); }
 (async () => {
   const r = await (await fetch("/api/transition")).json();
+  TTYPES = r.types;
   $("tType").innerHTML = r.types.map(t => `<option value="${t}">${T_LABEL[t] || t}</option>`).join("");
   showTrans(r.settings);
 })();

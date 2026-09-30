@@ -240,7 +240,9 @@
   .tpool button.on::before { background: var(--accent) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 12'%3E%3Cpath d='M2.5 6.2l2.2 2.2 4.8-4.8' fill='none' stroke='white' stroke-width='1.8' stroke-linecap='round'/%3E%3C/svg%3E") center/100% no-repeat; border-color: var(--accent); }
   .tpool .hint3 { flex-basis: 100%; font-size: 12px; color: var(--faint); margin-top: 2px; }
   @media (max-width: 560px) { .tpool button { height: 40px; padding: 0 12px; font-size: 13px; } }
-  .trans select { height: var(--h-sm); padding: 0 10px; border-radius: 10px; background: var(--card); border: 1px solid var(--border); color: var(--text); font: 500 13px var(--font); }
+  /* More: the segment is the dropdown itself (an invisible native select over it), so one tap opens the phone's picker */
+  .trans .morebtn { position: relative; }
+  .trans .morebtn select { position: absolute; inset: 0; width: 100%; height: 100%; opacity: 0; cursor: pointer; font-size: 16px; }
   /* Phones: the picture stays put at the top; everything else scrolls under it. */
   @media (max-width: 560px) {
     #s-visuals .stagegrid .centre { display: contents; }
@@ -902,8 +904,7 @@
       <button class="randbtn" id="randPreset" title="A random preset for this look (R)"><span class="dice">⚄</span>Randomise<small>R</small></button>
       <div class="trans" id="trans">
         <div class="label">Changes <b id="tNow"></b></div>
-        <div class="seg sm" id="tType" title="How one look hands over to the next"><button data-v="auto">Auto</button><button data-v="cut">Cut</button><button data-v="crossfade">Fade</button><button data-v="pick" title="Each change picks one of the ones you tick">Pick</button><button data-v="more">More</button></div>
-        <select id="tMore" hidden title="Every transition"></select>
+        <div class="seg sm" id="tType" title="How one look hands over to the next"><button data-v="auto">Auto</button><button data-v="cut">Cut</button><button data-v="crossfade">Fade</button><button data-v="pick" title="Each change picks one of the ones you tick">Pick</button><button data-v="more" class="morebtn"><span id="tMoreLbl">More</span><select id="tMore" title="Every transition" aria-label="More transitions"></select></button></div>
         <div class="tpool" id="tPool" hidden></div>
         <div class="seg sm" id="tSync" title="When the change lands"><button data-v="now">Now</button><button data-v="beat">Beat</button><button data-v="bar">Bar</button><button data-v="drop">Drop</button></div>
       </div>
@@ -1310,16 +1311,16 @@ function paintTrans() {
     });
   }
   on("#tSync button", b => b.dataset.v === (TR.sync === "phrase" ? "bar" : TR.sync));
-  $("tMore").hidden = main; $("tMore").value = t;
+  $("tMoreLbl").textContent = main ? "More" : (T_NAME[t] || t) + " ▾"; $("tMore").value = main ? "" : t;
   $("tNow").textContent = "";
 }
 async function loadTrans() {
   try { const j = await (await fetch("/api/transition", { cache: "no-store" })).json(); TR = j.settings; TYPES = j.types;
-        $("tMore").innerHTML = j.types.filter(t => t !== "pick").map(t => `<option value="${t}">${T_NAME[t] || t}</option>`).join(""); paintTrans(); } catch (e) {}
+        $("tMore").innerHTML = `<option value="" disabled>More transitions</option>` + j.types.filter(t => !["pick", "auto", "cut", "crossfade"].includes(t)).map(t => `<option value="${t}">${T_NAME[t] || t}</option>`).join(""); paintTrans(); } catch (e) {}
 }
 async function setTrans(d) { if (await send("/api/transition", d, "Changes")) { Object.assign(TR, d); paintTrans(); } }
 $("tType").querySelectorAll("button").forEach(b => b.onclick = () => {
-  if (b.dataset.v === "more") { $("tMore").hidden = false; $("tPool").hidden = true; $("tMore").focus(); on("#tType button", x => x === b); return; }
+  if (b.dataset.v === "more") return;          // the select over it handles the tap
   if (b.dataset.v === "pick") { setTrans({ type: "pick", beats: 0 }); return; }
   setTrans({ type: b.dataset.v, beats: 0 });
   toast(b.dataset.v === "cut" ? "Looks cut straight over" : b.dataset.v === "auto" ? "Changes suit the song section" : "Looks fade over");

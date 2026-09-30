@@ -202,6 +202,12 @@
   html body select, html body textarea,
   html body input:not([type=range]):not([type=checkbox]):not([type=radio]):not([type=color]):not([type=button]):not([type=submit]) {
     background-color: var(--well) !important; border: 1px solid var(--line2) !important; color: var(--text) !important; }
+  /* Dropdowns: one clean chevron, with room (the browser's own sits jammed against the edge). */
+  html body select:not([multiple]) { -webkit-appearance: none; appearance: none; padding-right: 34px !important; background-repeat: no-repeat !important;
+    background-position: right 12px center !important; background-size: 12px 12px !important;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 12'%3E%3Cpath d='M2.5 4.5 6 8l3.5-3.5' fill='none' stroke='%23a1a1aa' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E") !important; }
+  html[data-theme=light] body select:not([multiple]) {
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 12'%3E%3Cpath d='M2.5 4.5 6 8l3.5-3.5' fill='none' stroke='%2352525b' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E") !important; }
   html body select:focus, html body textarea:focus, html body input:focus { outline: none; border-color: #52525b !important; box-shadow: 0 0 0 3px rgba(255,90,31,.18); }
   html body :focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
   html body input[type=range] { accent-color: var(--accent); }
