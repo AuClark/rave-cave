@@ -237,18 +237,22 @@
                                   box-shadow: 0 12px 18px -14px rgba(0,0,0,.7); }
     #s-stage .stagebox { height: 34vh; border-radius: 0; border-width: 0 0 1px; }
     #s-stage .stagebox .cap { display: none; }
-    /* Decks: pinned; scrolled down into the music they condense to a thin row each (number, title,
-       tempo, a thin progress line or waveform). Back near the top they open out again. */
-    #s-decks .decks { position: sticky; top: var(--hdr, 64px); z-index: 6; background: var(--bg); margin: 0 -14px; padding: 16px 14px 10px; }
-    body.dthin #s-decks .decks { gap: 4px; padding: 6px 14px 6px; box-shadow: 0 12px 18px -14px rgba(0,0,0,.7); }
-    body.dthin #s-decks .deck { padding: 6px 10px 6px 34px; gap: 4px; border-radius: 10px; }
-    body.dthin #s-decks .deck::before { content: attr(data-n); position: absolute; left: 12px; top: 7px; font-weight: 700; font-size: 14px; color: var(--dim); }
-    body.dthin #s-decks .deck.air::before { color: var(--accent); }
-    body.dthin #s-decks .deck .tag, body.dthin #s-decks .deck .art, body.dthin #s-decks .deck .ti span, body.dthin #s-decks .deck .times,
-    body.dthin #s-decks .deck .btns, body.dthin #s-decks .deck .wv.ovw, body.dthin #s-decks .deck .bpm span { display: none; }
-    body.dthin #s-decks .deck .top { grid-template-columns: minmax(0, 1fr) auto; gap: 8px; }
-    body.dthin #s-decks .deck .ti b { font-size: 13px; } body.dthin #s-decks .deck .bpm b { font-size: 14px; font-weight: 600; }
-    body.dthin #s-decks .deck .wv.det { height: 22px; } body.dthin #s-decks .deck .bar { height: 3px; }
+    /* Decks: the cards scroll up under the header until only the compact strip at their foot is left,
+       pinned (a sticky block with a negative top: the page never changes height, so nothing jumps).
+       On the way, the buttons fade first, then the cards, and the strip fades in (--dp, 0..1). */
+    #s-decks .dwrap { position: sticky; z-index: 6; margin: 0 -14px; padding: 16px 14px 0; background: var(--bg); }
+    #s-decks .dwrap .decks { margin-top: 0; }
+    #s-decks .dwrap .deck .btns { opacity: calc(1 - var(--dp, 0) * 2.5); }
+    #s-decks .dwrap .deck { opacity: calc(1.25 - var(--dp, 0) * 1.6); }
+    #s-decks .dstrip { display: grid; gap: 4px; margin: 0 -14px; padding: 6px 14px 8px; position: relative; background: var(--bg);
+                       opacity: calc(var(--dp, 0) * 2.2 - 1.1); box-shadow: 0 12px 18px -14px rgba(0,0,0, calc(var(--dp, 0) * .8)); }
+    #s-decks .dstrip .r { display: grid; grid-template-columns: 22px minmax(0, 1fr) auto; gap: 8px; align-items: center; height: 30px; padding: 0 10px;
+                          border-radius: 9px; background: var(--card); border: 1px solid var(--border); position: relative; overflow: hidden; }
+    #s-decks .dstrip .r b { font-weight: 700; color: var(--dim); } #s-decks .dstrip .r.air b { color: var(--accent); }
+    #s-decks .dstrip .r span { font-size: 13px; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    #s-decks .dstrip .r em { font-style: normal; font-size: 13px; font-weight: 600; font-variant-numeric: tabular-nums; }
+    #s-decks .dstrip .r i { position: absolute; left: 0; bottom: 0; height: 2px; background: var(--text); opacity: .7; }
+    #s-decks .dstrip .r.air i { background: var(--accent); opacity: 1; }
     #s-stage .stcap2 { display: block; order: 1; margin: 6px 2px 0; font-size: 13px; color: var(--dim); line-height: 1.4; }
     #s-stage .stcap2 b { color: var(--text); font-weight: 600; }
     #s-lights .strip { position: sticky; top: var(--hdr, 64px); z-index: 6; background: var(--bg); margin: 0 -14px; padding: 8px 14px 10px;
@@ -704,7 +708,7 @@
 <main>
   <!-- ======================= DECKS ======================= -->
   <section class="screen" id="s-decks">
-    <div class="decks" id="decks"></div>
+    <div class="dwrap"><div class="decks" id="decks"></div><div class="dstrip" id="dstrip" hidden title="Back to the full decks"></div></div>
     <div class="amix" id="amix">
       <div class="amrow">
         <button class="ampill" id="amOn" title="Mixes from deck to deck on its own. Keep both channel faders up."><i></i>Automix</button>
@@ -960,22 +964,23 @@ const pulse = el => { el.classList.add("held"); setTimeout(() => el.classList.re
 // ---------------------------------------------------------------- screens
 // The full page behind each screen: where "Full controls" goes from here.
 const FULL = { decks: [8080, "/"], lights: [8090, "/"], visuals: [8110, "/"], map: [8100, "/edit"], stage: [8100, "/stage.html"] };
-// Phones, Decks: thin the pinned decks once you've scrolled into the music (two thresholds, no flicker).
-document.documentElement.style.overflowAnchor = "none";
-// When they thin, the scroll moves up by exactly the height they gave up (and back down when they open
-// out), so the list and the automix buttons stay exactly where they were under your finger: only
-// the decks change. It thins once the full decks have scrolled by, so there's room to scroll back.
-let dthinFull = 0;
-addEventListener("scroll", () => {
-  const on = document.body.classList.contains("dthin"), want = innerWidth <= 560 && !!document.querySelector("#s-decks.on");
-  const decks = $("decks");
-  if (!want) { if (on) document.body.classList.remove("dthin"); return; }
-  if (!on) dthinFull = decks.offsetHeight;
-  const flip = add => { const h0 = decks.offsetHeight; document.body.classList.toggle("dthin", add);
-    const d = h0 - decks.offsetHeight; scrollTo({ top: scrollY - d, behavior: "instant" }); };
-  if (!on && scrollY > dthinFull + 40) flip(true);
-  else if (on && scrollY < 24) flip(false);
-}, { passive: true });
+// Phones, Decks: see .dwrap. A scroll-linked collapse, no switch point: --dp (0..1) is how far the full
+// cards have scrolled away, and drives the fades; the sticky top leaves only the strip pinned.
+function deckFold() {
+  const w = document.querySelector("#s-decks .dwrap"); if (!w) return;
+  const phone = innerWidth <= 560, strip = w.querySelector(".dstrip");
+  strip.hidden = !phone;
+  if (!phone) { w.style.position = "static"; w.style.removeProperty("--dp"); return; }
+  w.style.position = "";
+  strip.style.marginTop = -strip.offsetHeight + "px";   // over the foot of the last card, so no gap at the top
+  const hdr = document.querySelector("header").offsetHeight, fold = w.offsetHeight - strip.offsetHeight;
+  w.style.top = (hdr - fold) + "px";
+  const start = w.parentElement.offsetTop;           // where the block sits in the page, unscrolled
+  const dp = Math.max(0, Math.min(1, (scrollY - start + hdr) / Math.max(1, fold)));
+  w.style.setProperty("--dp", dp.toFixed(3)); strip.style.pointerEvents = dp > .6 ? "auto" : "none";
+}
+addEventListener("scroll", () => requestAnimationFrame(deckFold), { passive: true });
+addEventListener("resize", deckFold);
 // Phones: the stage's caption sits under the pinned 3D view (it scrolls), a copy of the one on it.
 { const c2 = document.createElement("div"); c2.className = "stcap2"; document.querySelector("#s-stage .centre").after(c2);
   const copy = () => { c2.innerHTML = $("stCap").innerHTML; }; copy();
@@ -1409,6 +1414,18 @@ function renderDecks() {
     el.querySelector("[data-a=sync]").classList.toggle("on", !!st.synced);
     const mb = el.querySelector("[data-a=master]"); mb.classList.toggle("on", !!st.tempoMaster);
   }
+  // The compact strip (phones, when scrolled into the music): one row a deck.
+  const ds = $("dstrip");
+  if (ds.dataset.sig !== sig) { ds.dataset.sig = sig; ds.innerHTML = players.map(p => `<div class="r" data-n="${p.number}"><b>${p.number}</b><span></span><em></em><i></i></div>`).join(""); }
+  for (const p of players) {
+    const r = ds.querySelector(`[data-n="${p.number}"]`); if (!r) continue;
+    const st = p.status || {}, t = p.track, loaded = !!(st.trackLoaded && t), dur = loaded ? t.durationSec || 0 : 0, pos = (p.position && p.position.ms || 0) / 1000;
+    r.classList.toggle("air", !!st.onAir && !!st.playing);
+    r.querySelector("span").textContent = loaded ? t.title : "Empty";
+    r.querySelector("em").textContent = loaded && st.effectiveBpm ? st.effectiveBpm.toFixed(1) : "–";
+    r.querySelector("i").style.width = dur ? Math.min(100, pos / dur * 100) + "%" : "0";
+  }
+  deckFold();
   if (masterBpm !== lastMasterBpm) { lastMasterBpm = masterBpm; renderTracks(); }
 }
 let lastMasterBpm = null;
@@ -1419,6 +1436,7 @@ async function pollDecks() {
   setTimeout(pollDecks, document.querySelector("#s-decks.on") || am.on ? 200 : 1500);   // automix needs fresh positions
 }
 pollDecks();
+$("dstrip").onclick = () => scrollTo({ top: 0, behavior: "smooth" });   // back to the full decks
 
 // The music: the first USB/SD that's ready, all tracks or one playlist, searchable, with what fits the mix marked.
 async function loadLibrary() {
