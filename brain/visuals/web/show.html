@@ -962,11 +962,19 @@ const pulse = el => { el.classList.add("held"); setTimeout(() => el.classList.re
 const FULL = { decks: [8080, "/"], lights: [8090, "/"], visuals: [8110, "/"], map: [8100, "/edit"], stage: [8100, "/stage.html"] };
 // Phones, Decks: thin the pinned decks once you've scrolled into the music (two thresholds, no flicker).
 document.documentElement.style.overflowAnchor = "none";
+// When they thin, the scroll moves up by exactly the height they gave up (and back down when they open
+// out), so the list and the automix buttons stay exactly where they were under your finger: only
+// the decks change. It thins once the full decks have scrolled by, so there's room to scroll back.
+let dthinFull = 0;
 addEventListener("scroll", () => {
   const on = document.body.classList.contains("dthin"), want = innerWidth <= 560 && !!document.querySelector("#s-decks.on");
+  const decks = $("decks");
   if (!want) { if (on) document.body.classList.remove("dthin"); return; }
-  if (!on && scrollY > 180) document.body.classList.add("dthin");
-  else if (on && scrollY < 30) document.body.classList.remove("dthin");
+  if (!on) dthinFull = decks.offsetHeight;
+  const flip = add => { const h0 = decks.offsetHeight; document.body.classList.toggle("dthin", add);
+    const d = h0 - decks.offsetHeight; scrollTo({ top: scrollY - d, behavior: "instant" }); };
+  if (!on && scrollY > dthinFull + 40) flip(true);
+  else if (on && scrollY < 24) flip(false);
 }, { passive: true });
 // Phones: the stage's caption sits under the pinned 3D view (it scrolls), a copy of the one on it.
 { const c2 = document.createElement("div"); c2.className = "stcap2"; document.querySelector("#s-stage .centre").after(c2);

@@ -387,6 +387,22 @@
       <div class="now"><b id="nowName">—</b><span id="nowPreset"></span></div>
 
       <div id="picker">
+      <p class="sec">Energy <span class="hint" style="font-weight:400">a fresh take at this energy</span></p>
+      <div class="energy">
+        <button id="bCalm" class="e1" title="A calm look, nothing hectic"><kbd>Q</kbd>Calm<small>breakdown</small></button>
+        <button id="bGroove" class="e2" title="A groove"><kbd>W</kbd>Groove<small>in the mix</small></button>
+        <button id="bDrop" class="e3" title="Full on, for the drop"><kbd>E</kbd>Drop<small>full on</small></button>
+      </div>
+
+      <p class="sec">Presets</p>
+      <div class="chips" id="presetChips"></div>
+      <div class="dice">
+        <button id="bRand" title="Anything, inside every range (R)">Randomise</button>
+        <button id="bNudge" title="A small push on everything">Nudge</button>
+        <button id="bUndo" title="Back to before the last new look (Shift+R)" disabled>Undo</button>
+        <button id="bReset" title="Every parameter to its default">Reset</button>
+      </div>
+      <p class="sec">Look <span class="hint" style="font-weight:400">pick one, or let Shuffle move through a theme</span></p>
       <div class="themes" id="themeChips" role="tablist"></div>
       <p class="blurb" id="themeBlurb"></p>
       <div class="choosebar"><span id="chooseText"></span><span class="sp"></span>
@@ -409,21 +425,6 @@
       <p class="hint" id="about" title="Click for the whole description"></p>
       <p id="err"></p>
 
-      <p class="sec">New look</p>
-      <div class="energy">
-        <button id="bCalm" class="e1" title="A calm look, nothing hectic"><kbd>Q</kbd>Calm<small>breakdown</small></button>
-        <button id="bGroove" class="e2" title="A groove"><kbd>W</kbd>Groove<small>in the mix</small></button>
-        <button id="bDrop" class="e3" title="Full on, for the drop"><kbd>E</kbd>Drop<small>full on</small></button>
-      </div>
-      <div class="dice">
-        <button id="bRand" title="Anything, inside every range (R)">Randomise</button>
-        <button id="bNudge" title="A small push on everything">Nudge</button>
-        <button id="bUndo" title="Back to before the last new look (Shift+R)" disabled>Undo</button>
-        <button id="bReset" title="Every parameter to its default">Reset</button>
-      </div>
-
-      <p class="sec">Presets</p>
-      <div class="chips" id="presetChips"></div>
       </div>
       <div class="row save"><input id="presetName" type="text" class="grow" placeholder="Save what's playing as…"><button id="bSave">Save</button></div>
 
