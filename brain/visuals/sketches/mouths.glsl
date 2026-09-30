@@ -134,8 +134,11 @@ vec4 lips(float x) {
   float bs = abs(s) - 0.2;
   float bow = 1.0 - 0.3 * exp(-s2 * 80.0) + 0.2 * exp(-bs * bs * 60.0);    // the Cupid's bow
   float pk = 1.0 - pin * pin * 0.7;                       // lips come to a point at the corners
-  float tU = gTh * 0.15 * pow(e0, 0.6) * bow * pk;
-  float tL = gTh * (0.19 + 0.1 * gPout) * pow(e0, 0.5) * pk * (1.0 - 0.5 * gBite * exp(-s2 * 3.0));
+  // Lip thickness: full in the middle, thinning to the corners -- but meeting them at an angle,
+  // not straight up (a sqrt does that), or the outline has no true distance there and spikes.
+  float fe = e0 * 1.6 / (e0 + 0.6);
+  float tU = gTh * 0.15 * fe * bow * pk;
+  float tL = gTh * (0.19 + 0.1 * gPout) * fe * pk * (1.0 - 0.5 * gBite * exp(-s2 * 3.0));
   return vec4(yu, yl, yu + tU, yl - tL);
 }
 
@@ -262,7 +265,10 @@ vec3 content(vec2 uv) {
   // ------------------------------------------------ the curves here, and their slopes
   float h = 0.004;
   vec4 c0 = lips(q.x), c1 = lips(q.x + h);
-  vec4 sl = clamp((c1 - c0) / h, -5.0, 5.0);
+  // Centred, and clamped loosely: the lips rise almost vertically out of the corners, and a tight
+  // clamp there overstates the distance, thinning the outline to a hairline spike.
+  vec4 cLo = lips(q.x - h);
+  vec4 sl = clamp((c1 - cLo) / (2.0 * h), -40.0, 40.0);
   vec4 D = (q.y - c0) * inversesqrt(1.0 + sl * sl);     // signed distance to each curve (+ above)
   float s = q.x / gW, s2 = s * s;
   float e0v = max(1.0 - s2, 0.0), se = sqrt(e0v);
@@ -347,8 +353,11 @@ vec3 content(vec2 uv) {
   float tx = 0.06 * shk * sin(u_beat * TAU) + 0.04 * tOut * sin(u_beat * PI);
   float tr = 0.25 * smoothstep(0.0, 0.3, tOut) * (0.8 + 0.2 * gW);
   vec2 tipC = vec2(tx, yl0 - 0.34 * tOut);
-  float dTo = sdSeg(q, vec2(tx * 0.5, yl0 + 0.05), tipC) - tr;
-  dTo = min(dTo, length((q - tipC) / vec2(1.18, 1.0)) - tr * 1.02);
+  // A narrower root blended smoothly into a wide rounded tip, so it swells as it comes out.
+  float dRoot = sdSeg(q, vec2(tx * 0.5, yl0 + 0.05), tipC) - tr * 0.8;
+  float dTip = length((q - tipC) / vec2(1.2, 1.0)) - tr * 1.05;
+  float kT = 0.09, hT = clamp(0.5 + 0.5 * (dTip - dRoot) / kT, 0.0, 1.0);
+  float dTo = mix(dTip, dRoot, hT) - kT * hT * (1.0 - hT);
   float tOutOn = fillA(dTo) * step(0.02, tOut) * (1.0 - fillA(dUL));
   float tol = clamp(0.8 - 0.8 * (-dTo / max(tr, 0.01)) * 0.0 + 0.3 * (q.y - tipC.y) - 0.7 * max(abs(q.x - tx) / max(tr, 0.01) - 0.55, 0.0), 0.0, 1.0);
   surf(tOutOn, TNGD, TNG, tol);
@@ -359,9 +368,13 @@ vec3 content(vec2 uv) {
   surf(upT, TTHD, TTH, tShU + 0.1);
   // A single cute fang, poking out over the lower lip.
   float fx = s - 0.36;
-  float fangL = (0.1 + min(ytop - ybt, 0.22) + gSn) * p_fang * (0.6 + 0.4 * gW);   // longer than the teeth round it
-  float dF = max(max(q.y - yu - 0.02, yu - fangL * (1.0 - abs(fx) / 0.075 * gW) - q.y), abs(fx) * gW - 0.075);
-  float fangOn = fillA(dF) * step(0.02, p_fang) * (1.0 - fillA(dUL));
+  // It grows from the tooth line, not the lip: under a sneer the lip lifts off the gum and the
+  // fang has to stay with the teeth, or it becomes a white spike up across the gum.
+  float fTop = ytop - 0.01;
+  float fangL = (0.1 + min(ytop - ybt, 0.22)) * p_fang * (0.6 + 0.4 * gW);   // longer than the teeth round it
+  float dF = max(max(q.y - fTop, fTop - fangL * (1.0 - abs(fx) / 0.075 * gW) - q.y), abs(fx) * gW - 0.075);
+  // Only the part that pokes out below the row shows: over the teeth it is one of the teeth.
+  float fangOn = fillA(dF) * step(0.02, p_fang) * (1.0 - fillA(dUL)) * (1.0 - upT);
   surf(fangOn, TTHD, TTH, 0.9);
   obj = max(obj, fangOn);
 
@@ -386,10 +399,11 @@ vec3 content(vec2 uv) {
   // Highlights: the lip gloss, the teeth's enamel, the wet tongue, saliva strings.
   float glossD = length(vec2((q.x + 0.18 * gW) / (0.3 * gW), (lipW - 0.45) / 0.2)) - 1.0;
   float gl2 = length(vec2((q.x - 0.28 * gW) / (0.08 * gW), (lipW - 0.5) / 0.14)) - 1.0;
-  float gloss = fillA(dLL) * p_gloss * dot(sw, vec4(fillA(min(glossD, gl2) * 0.1), fillA(glossD * 0.08) * 0.9,
+  float gloss = fillA(dLL) * (1.0 - tOutOn) * p_gloss * dot(sw, vec4(fillA(min(glossD, gl2) * 0.1), fillA(glossD * 0.08) * 0.9,
                   smoothstep(0.3, -0.6, glossD) * 0.75, fillA(min(glossD, gl2) * 0.1)));
   float glossU = fillA(dUL) * p_gloss * 0.6 * (1.0 - sw.w) * fillA(length(vec2((q.x + 0.25 * gW) / (0.16 * gW), (upW - 0.62) / 0.16)) * 0.07 - 0.07);
-  float enamel = (upT + loT) * (sw.z * smoothstep(0.1, 0.0, abs(tf - 0.3) - 0.02) * 0.6 * (1.0 - s2) + sw.x * 0.0);
+  float enamel = sw.z * 0.6 * (1.0 - s2) * (upT * smoothstep(0.1, 0.0, abs(tf - 0.3) - 0.02)
+               + loT * (1.0 - upT) * smoothstep(0.1, 0.0, abs(fract(ub) - 0.3) - 0.02));
   float tspec = tongAll * p_gloss * (sw.z * smoothstep(0.5, 0.0, length(vec2(q.x * 3.0 - 0.3, (q.y - yt) * 9.0 + 1.0))) * 0.8
               + (sw.x + sw.y) * fillA(length(vec2(q.x * 7.0 + 0.8, (q.y - yt) * 16.0 + 1.3)) * 0.02 - 0.02) * 0.9);
   // The tongue's centre groove, and its texture in the detailed hand.
@@ -398,7 +412,7 @@ vec3 content(vec2 uv) {
   float papil = tongAll * sw.z * step(0.82, hash(pi_)) * (1.0 - smoothstep(0.15, 0.3, length(fract(pc) - 0.5))) * 0.35;
   mcol = mix(mcol, gDk * 0.7, max(groove, papil) * (1.0 - upT) * (1.0 - loT));
   // Dark gaps between the teeth, in the detailed hand.
-  float gapDark = sw.z * (upT * (1.0 - smoothstep(0.0, gapW + gLp, gapD)) + loT * (1.0 - smoothstep(0.0, gapW + gLp, gapDb)));
+  float gapDark = sw.z * (upT * (1.0 - smoothstep(0.0, gapW + gLp, gapD)) + loT * (1.0 - upT) * (1.0 - smoothstep(0.0, gapW + gLp, gapDb)));
   mcol = mix(mcol, MOUD * 1.5, gapDark * 0.85);
   // Saliva strings across a wide-open mouth.
   float spitOn = p_spit * (sw.z + 0.35 * (1.0 - sw.z)) * smoothstep(0.4, 0.7, gOpen) * inO;
@@ -421,16 +435,19 @@ vec3 content(vec2 uv) {
   float ink = lineA(dSil, lwO);
   ink = max(ink, lineA(dIn, min(lw * (0.8 + 0.5 * step(gOpen, 0.05)), 0.028)));
   float tink = min(lw * 0.45, 0.011);
-  ink = max(ink, (upT + loT) * (lineA(gapD, tink) + lineA(dTU, tink) * 0.0));
+  float loV = loT * (1.0 - upT);                         // the lower teeth that can be seen
+  ink = max(ink, upT * lineA(gapD, tink) * (1.0 - fillA(dF) * step(0.02, p_fang)));
   ink = max(ink, upT * lineA(q.y - ybt, tink) * inO);
   ink = max(ink, onLip * lineA(dBite, tink * 1.3) * step(0.02, tt + cln) * step(q.y, yl));
-  ink = max(ink, loT * lineA(gapDb, tink));
+  ink = max(ink, loV * lineA(gapDb, tink));
   ink = max(ink, inO * lineA(dTU, tink) * step(0.02, tt + cln));
-  ink = max(ink, inO * lineA(dTL, tink) * step(0.02, bt + cln));
-  ink = max(ink, tongIn * lineA(dT, tink * 1.3) * (1.0 - fillA(dTL) * step(0.02, bt + cln)));
+  ink = max(ink, inO * lineA(dTL, tink) * step(0.02, bt + cln) * (1.0 - upT));
+  ink = max(ink, tongIn * lineA(dT, tink * 1.3) * (1.0 - fillA(dTL) * step(0.02, bt + cln)) * (1.0 - upT) * (1.0 - tOutOn));
+  // Whatever of the lower lip the tongue lies over is hidden under it, lines included.
+  ink *= 1.0 - tOutOn * step(q.y, yl + 0.01);
   ink = max(ink, lineA(dTo, lw * 0.9) * step(0.02, tOut) * (1.0 - fillA(dUL)) * (1.0 - upT) * (1.0 - fillA(dSil) * (1.0 - fillA(dLL))));
-  ink = max(ink, lineA(dF, tink * 1.4) * step(0.02, p_fang) * (1.0 - fillA(dUL)));
-  ink = max(ink, (puckL * fillA(dLL) + puckU * fillA(dUL)) * 0.8);
+  ink = max(ink, lineA(dF, tink * 1.4) * step(0.02, p_fang) * (1.0 - fillA(dUL)) * (1.0 - upT));
+  ink = max(ink, (puckL * fillA(dLL) * (1.0 - tOutOn) + puckU * fillA(dUL)) * 0.8);
   ink = max(ink, lineA(uvu * 0.04, tink) * inO * thrOn * (1.0 - tongIn) * (1.0 - fillA(dTU)));
 
   // Face hints: the creases round the corners, the nose above, the chin below.
