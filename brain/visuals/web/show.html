@@ -659,6 +659,9 @@
   .switch.on { background: var(--accent); } .switch.on::after { transform: translateX(18px); }
   .theme { display: grid; grid-template-columns: repeat(3, 1fr); gap: 2px; padding: 3px; margin: 0 0 8px; border-radius: var(--r); background: var(--card2); border: 1px solid var(--border); }
   .theme button { height: 34px; border-radius: 9px; font-weight: 500; font-size: 13px; color: var(--dim); }
+  /* The admin lock (from /s5auth.js; only there when a PIN is set) sits in the header by the gear */
+  .round.lockbtn { cursor: pointer; } .round.lockbtn svg { width: 16px; height: 16px; opacity: 1; }
+  html.s5-admin .lockbtn { color: var(--good); } html.s5-viewer .lockbtn { color: var(--accent); border-color: rgba(255,90,31,.5); }
   .theme button.on { background: var(--text); color: var(--on); }
 
   /* ---------------------------------------------------------------- phones: 44 px targets where it matters, nothing
@@ -2176,6 +2179,16 @@ requestAnimationFrame(function waveLoop(now) {
   }
   requestAnimationFrame(waveLoop);
 });
+
+// ---------------------------------------------------------------- the admin lock
+// /s5auth.js puts its lock at the end of a page's .s5bar, or floats it top right on pages without
+// one (which lands it on the gear here). Bring it into this header instead, next to the gear.
+function dockLock() {
+  const b = document.querySelector(".s5who.s5a-float"); if (!b) return false;
+  b.classList.remove("s5a-float"); b.classList.add("round", "lockbtn"); b.style.color = "";
+  document.querySelector("header").insertBefore(b, $("gear")); return true;
+}
+if (!dockLock()) document.addEventListener("DOMContentLoaded", () => { if (!dockLock()) setTimeout(dockLock, 0); });
 
 // ---------------------------------------------------------------- keys (same as the Lighting page, plus visuals)
 const KEY_HOLD = { s: "strobe", w: "blinder" };
