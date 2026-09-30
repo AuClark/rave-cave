@@ -219,6 +219,7 @@
   .words input:focus { border-color: var(--border2); box-shadow: 0 0 0 3px var(--accent-soft); }
   .hint2 { margin: 6px 2px 0; font-size: 12px; color: var(--faint); }
   .under { margin-top: 10px; }
+  .stcap2 { display: none; }   /* phones: the stage caption, under the pinned view instead of on it */
   .trans { display: grid; gap: 6px; }
   .trans .seg { display: grid; width: 100%; grid-auto-columns: minmax(0, 1fr); }
   .trans select { height: var(--h-sm); padding: 0 10px; border-radius: 10px; background: var(--card); border: 1px solid var(--border); color: var(--text); font: 500 13px var(--font); }
@@ -236,6 +237,20 @@
                                   box-shadow: 0 12px 18px -14px rgba(0,0,0,.7); }
     #s-stage .stagebox { height: 34vh; border-radius: 0; border-width: 0 0 1px; }
     #s-stage .stagebox .cap { display: none; }
+    /* Decks: pinned; scrolled down into the music they condense to a thin row each (number, title,
+       tempo, a thin progress line or waveform). Back near the top they open out again. */
+    #s-decks .decks { position: sticky; top: var(--hdr, 64px); z-index: 6; background: var(--bg); margin: 0 -14px; padding: 16px 14px 10px; }
+    body.dthin #s-decks .decks { gap: 4px; padding: 6px 14px 6px; box-shadow: 0 12px 18px -14px rgba(0,0,0,.7); }
+    body.dthin #s-decks .deck { padding: 6px 10px 6px 34px; gap: 4px; border-radius: 10px; }
+    body.dthin #s-decks .deck::before { content: attr(data-n); position: absolute; left: 12px; top: 7px; font-weight: 700; font-size: 14px; color: var(--dim); }
+    body.dthin #s-decks .deck.air::before { color: var(--accent); }
+    body.dthin #s-decks .deck .tag, body.dthin #s-decks .deck .art, body.dthin #s-decks .deck .ti span, body.dthin #s-decks .deck .times,
+    body.dthin #s-decks .deck .btns, body.dthin #s-decks .deck .wv.ovw, body.dthin #s-decks .deck .bpm span { display: none; }
+    body.dthin #s-decks .deck .top { grid-template-columns: minmax(0, 1fr) auto; gap: 8px; }
+    body.dthin #s-decks .deck .ti b { font-size: 13px; } body.dthin #s-decks .deck .bpm b { font-size: 14px; font-weight: 600; }
+    body.dthin #s-decks .deck .wv.det { height: 22px; } body.dthin #s-decks .deck .bar { height: 3px; }
+    #s-stage .stcap2 { display: block; order: 1; margin: 6px 2px 0; font-size: 13px; color: var(--dim); line-height: 1.4; }
+    #s-stage .stcap2 b { color: var(--text); font-weight: 600; }
     #s-lights .strip { position: sticky; top: var(--hdr, 64px); z-index: 6; background: var(--bg); margin: 0 -14px; padding: 8px 14px 10px;
                        box-shadow: 0 12px 18px -14px rgba(0,0,0,.7); }
     #s-visuals .under { order: 2; }
@@ -945,6 +960,18 @@ const pulse = el => { el.classList.add("held"); setTimeout(() => el.classList.re
 // ---------------------------------------------------------------- screens
 // The full page behind each screen: where "Full controls" goes from here.
 const FULL = { decks: [8080, "/"], lights: [8090, "/"], visuals: [8110, "/"], map: [8100, "/edit"], stage: [8100, "/stage.html"] };
+// Phones, Decks: thin the pinned decks once you've scrolled into the music (two thresholds, no flicker).
+document.documentElement.style.overflowAnchor = "none";
+addEventListener("scroll", () => {
+  const on = document.body.classList.contains("dthin"), want = innerWidth <= 560 && !!document.querySelector("#s-decks.on");
+  if (!want) { if (on) document.body.classList.remove("dthin"); return; }
+  if (!on && scrollY > 180) document.body.classList.add("dthin");
+  else if (on && scrollY < 30) document.body.classList.remove("dthin");
+}, { passive: true });
+// Phones: the stage's caption sits under the pinned 3D view (it scrolls), a copy of the one on it.
+{ const c2 = document.createElement("div"); c2.className = "stcap2"; document.querySelector("#s-stage .centre").after(c2);
+  const copy = () => { c2.innerHTML = $("stCap").innerHTML; }; copy();
+  new MutationObserver(copy).observe($("stCap"), { childList: true, subtree: true, characterData: true }); }
 function show(name) {
   const fp = FULL[name] || FULL.visuals; $("fullBtn").href = at(fp[0], fp[1]);
   on("#tabs button", b => b.dataset.s === name);
@@ -1333,7 +1360,7 @@ function renderDecks() {
   const sig = players.map(p => p.number).join();
   if (sig !== deckSig) {
     deckSig = sig;
-    $("decks").innerHTML = players.length ? players.map(p => `<div class="deck" id="dk${p.number}">
+    $("decks").innerHTML = players.length ? players.map(p => `<div class="deck" id="dk${p.number}" data-n="${p.number}">
         <div class="tag"><i>Deck ${p.number}</i></div>
         <div class="top"><div class="art"></div><div class="ti"><b></b><span></span></div><div class="bpm"><b></b><span></span></div></div>
         <canvas class="wv det" data-n="${p.number}"></canvas><canvas class="wv ovw" data-n="${p.number}"></canvas>

@@ -203,6 +203,12 @@
   main.tabbed { grid-template-columns: minmax(0, 1fr); }   /* never wider than the screen */
   .deckhero { position: sticky; top: var(--s5bar, 48px); z-index: 30; min-width: 0; background: var(--bg); border-bottom: 1px solid var(--line); }
   .deckhero canvas { max-width: 100%; }
+  body.decks-compact .deckhero .showline, body.decks-compact .lanectl { display: none; }
+  html { overflow-anchor: none; }   /* the browser mustn't re-anchor the scroll when the pinned decks change height */
+  /* While condensed the page must stay taller than the window, or it would flip straight back; the
+     library takes the room the full decks gave up. */
+  body.decks-compact { min-height: calc(100vh + 220px); }
+  body.decks-compact .tscroll { max-height: calc(100vh - 260px); }
   .deckhero > section.stack { border: 0; }
   .showline { display: flex; align-items: center; flex-wrap: wrap; gap: 8px 16px; max-width: 1680px; margin: 0 auto; padding: 10px 24px 6px; }
   .showline .showscene { font-size: 22px; font-weight: 300; letter-spacing: .04em; }
@@ -706,8 +712,12 @@ function drawStack() {
   // Narrow screens (phones): slimmer lanes, so the pinned display leaves room for the controls.
   const slim = cv.clientWidth < 560;
   const CTLW = slim ? 124 : 108;                // the deck buttons' width (CSS px), see .lanectl
-  const HEADc = slim ? 44 : 52, WAVEc = slim ? 62 : 104, OVc = slim ? 24 : 30, laneCss = HEADc + WAVEc + OVc + 6;
-  const meterCss = Math.max(34, 16 * loaded.length + 6);
+  // Compact (scrolled down into the library): each lane is just a thin waveform with its deck and
+  // tempo on it, so the decks stay in view without taking the screen. See the scroll listener below.
+  const cmp = document.body.classList.contains("decks-compact");
+  const HEADc = cmp ? 0 : slim ? 44 : 52, WAVEc = cmp ? (slim ? 30 : 38) : slim ? 62 : 104, OVc = cmp ? 0 : slim ? 24 : 30,
+        laneCss = HEADc + WAVEc + OVc + (cmp ? 2 : 6);
+  const meterCss = cmp ? 0 : Math.max(34, 16 * loaded.length + 6);
   const Wc = cv.clientWidth, Hc = Math.max(1, players.length) * laneCss + meterCss;
   if (cv.width !== Math.round(Wc * dpr) || cv.height !== Math.round(Hc * dpr)) {
     cv.width = Math.round(Wc * dpr); cv.height = Math.round(Hc * dpr); cv.style.height = Hc + "px";
@@ -734,7 +744,7 @@ function drawStack() {
     const tl = timelines[p.number] && timelines[p.number].data;
     const wy = y0 + HEAD, wh = WAVE, mid = wy + wh / 2;
     g.fillStyle = "#131315"; g.fillRect(0, y0, W, HEAD);
-    g.fillStyle = rgba(rgb, 1); g.fillRect(0, y0, 4 * dpr, LH - 6 * dpr);
+    g.fillStyle = rgba(rgb, 1); g.fillRect(0, y0, 4 * dpr, LH - (cmp ? 2 : 6) * dpr);
 
     // --- scrolling waveform, grid, cues, playhead
     g.fillStyle = "#08080a"; g.fillRect(0, wy, W, wh);
@@ -750,6 +760,15 @@ function drawStack() {
     g.fillStyle = "#fff"; g.fillRect(W / 2 - dpr, wy, 2 * dpr, wh);
     g.beginPath(); g.moveTo(W / 2 - 6 * dpr, wy); g.lineTo(W / 2 + 6 * dpr, wy); g.lineTo(W / 2, wy + 7 * dpr); g.fill();
 
+    if (cmp) {                                   // compact: deck number and tempo on the strip, nothing else
+      const lbl = `${p.number}`, bpm = s.effectiveBpm ? s.effectiveBpm.toFixed(1) : "—";
+      g.font = `600 ${12 * dpr}px ${CANVAS_FONT}`;
+      const w1 = g.measureText(lbl).width; g.font = `500 ${11 * dpr}px ${CANVAS_FONT}`; const w2 = g.measureText(bpm).width;
+      g.fillStyle = "rgba(8,8,10,.82)"; g.fillRect(6 * dpr, mid - 9 * dpr, w1 + w2 + 22 * dpr, 18 * dpr);
+      g.font = `600 ${12 * dpr}px ${CANVAS_FONT}`; g.fillStyle = rgba(rgb, 1); g.fillText(lbl, 11 * dpr, mid + 4 * dpr);
+      g.font = `500 ${11 * dpr}px ${CANVAS_FONT}`; g.fillStyle = s.playing ? "#fafafa" : "#a1a1aa"; g.fillText(bpm, 19 * dpr + w1, mid + 4 * dpr);
+      return;
+    }
     // --- overview: whole track, sections, drops, cues, playhead; elapsed · bar · remaining
     drawOverview(g, p, 0, wy + wh + 2 * dpr, W, OV, dpr, pos[p.number], tl);
 
@@ -813,6 +832,7 @@ function drawStack() {
     }
   });
 
+  if (cmp) return;
   // Phase meter (rekordbox style): each deck's beat in the bar, and a marker sweeping left to right
   // through each beat on every deck that's playing. When two decks play, their markers move together
   // if they're in phase; the text gives the offset against the master.
@@ -845,6 +865,15 @@ function drawStack() {
   });
   drawDropHint(g, dpr, W);
 }
+
+// Scrolled down into the library, the pinned decks condense to thin strips (and the show line and deck
+// buttons tuck away); back near the top they open out again. Two thresholds, so it doesn't flicker.
+// The part of the page under the strips' edge stays where it was: nothing jumps.
+addEventListener("scroll", () => {
+  const on = document.body.classList.contains("decks-compact");
+  if (!on && scrollY > 160) document.body.classList.add("decks-compact");
+  else if (on && scrollY < 24) document.body.classList.remove("decks-compact");
+}, { passive: true });
 
 // Wheel and trackpad pinch zoom (pinch arrives as ctrl+wheel); two-finger pinch on touch.
 (() => {
