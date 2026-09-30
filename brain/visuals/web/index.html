@@ -197,8 +197,12 @@
              color: var(--text); font-weight: 600; font-size: 11px; letter-spacing: .1em; }
   .padlink:hover { border-color: var(--accent); }
   .herobar > button { padding: 7px 14px; }
-  #shout { color: var(--accent); font-size: 11px; font-weight: 600; letter-spacing: .16em; text-transform: uppercase;
-           opacity: 0; transition: opacity .25s; }
+  /* Status ("mixing", "randomised"...): a pill floating on the preview's corner. It's page chrome over the
+     preview, not part of the picture, so it never reaches the projectors, and it moves nothing. */
+  #shout { position: absolute; top: 10px; left: 10px; z-index: 3; pointer-events: none; display: inline-flex; align-items: center; gap: 6px;
+           height: 24px; padding: 0 10px; border-radius: 99px; background: rgba(8,8,10,.78); border: 1px solid rgba(255,90,31,.55);
+           color: #fff; font-size: 12px; font-weight: 600; opacity: 0; transform: translateY(-4px); transition: opacity .2s, transform .2s; }
+  #shout::before { content: ""; width: 6px; height: 6px; border-radius: 50%; background: var(--accent); }
   .herobar .hint { margin-left: auto !important; text-align: right; font-size: 11.5px; }
 
   /* ---- the Sketch tab: what's playing, the three energies, the presets, then the rest ---- */
@@ -366,7 +370,7 @@
 </header>
 <main class="hl">
   <section class="hero">
-    <div id="previewWrap"><canvas id="gl"></canvas><canvas id="ov"></canvas></div>
+    <div id="previewWrap"><canvas id="gl"></canvas><canvas id="ov"></canvas><span id="shout" aria-live="polite"></span></div>
     <div class="herobar">
       <span id="conn" class="pill">connecting</span>
       <span id="beat" title="The bar's four beats (the 1 in orange)"><i class="b1"></i><i></i><i></i><i></i></span>
@@ -374,7 +378,6 @@
       <button id="bFreeze" title="Freeze all automation (Space)">Freeze</button>
       <a href="pad.html" class="padlink">Launchpad<span class="long"> →</span></a>
       <button id="bKeys" title="Keyboard shortcuts (?)">?</button>
-      <span id="shout"></span>
       <span class="hint">Live on every projector surface set to <b>generative</b>
         (<a id="editLink" data-port="8100" data-path="/edit">mapping editor</a>).</span>
     </div>
@@ -769,9 +772,9 @@ function energise(e, label) {
 let flashTimer = null;
 function flash(msg) {
   const el = $("shout");
-  el.textContent = msg; el.style.opacity = "1";
+  el.textContent = msg[0].toUpperCase() + msg.slice(1); el.style.opacity = "1"; el.style.transform = "none";
   clearTimeout(flashTimer);
-  flashTimer = setTimeout(() => (el.style.opacity = "0"), 900);
+  flashTimer = setTimeout(() => { el.style.opacity = "0"; el.style.transform = ""; }, 1400);
 }
 $("bCalm").onclick = () => energise(0.22, "calm");
 $("bGroove").onclick = () => energise(0.55, "groove");
@@ -864,7 +867,7 @@ function paintPicker() {
     el.querySelector(".go").onclick = async () => {
       if (CHOOSE) return toggleSketchOut(n);
       const r = await postJson("/api/select", { sketch: n });           // through a transition, on the beat
-      if (r) { noteTrans(r.trans, "Mixing to " + (TITLES[n] || n)); flash("mixing"); }
+      if (r) { noteTrans(r.trans, "Mixing to " + (TITLES[n] || n)); flash("mixing to " + (TITLES[n] || n)); }
     };
     el.querySelector(".nx").onclick = () => queue(n);
   });
