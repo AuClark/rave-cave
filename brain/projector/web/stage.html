@@ -89,6 +89,14 @@
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;500;600&display=swap" rel="stylesheet">
 <script type="importmap">{ "imports": { "three": "./vendor/three.module.min.js", "three/addons/": "./vendor/addons/" } }</script>
+<script>if (new URLSearchParams(location.search).has("embed")) document.documentElement.classList.add("s5embed");</script>
+<style>
+  /* Embedded in the Show app: only the 3D view; the app has the controls. */
+  html.s5embed header, html.s5embed aside, html.s5embed #design, html.s5embed #hint, html.s5embed #hud,
+  html.s5embed .s5tabs, html.s5embed .s5who { display: none !important; }
+  html.s5embed main, html.s5embed main.full { grid-template-columns: minmax(0, 1fr); height: 100vh; }
+  html.s5embed #view { position: relative; top: 0; height: 100vh; background: #000; }
+</style>
 <script src="/s5auth.js"></script>
 </head>
 <body>
@@ -1386,10 +1394,13 @@ const showSelected = id => { if (id && window.stageTabs) stageTabs.select("Selec
 $("#design").onclick = () => { $("#main").classList.toggle("full"); $("#design").classList.toggle("on", !$("#main").classList.contains("full")); if (!$("#design").classList.contains("on")) select(null); setTimeout(resize, 0); };
 
 // ------------------------------------------------------------------ go
+let paused = false;   // the Show app pauses the view while its Stage screen is hidden
 function frame(now) {
-  update(now);
-  orbit.update();
-  if (useBloom) composer.render(); else renderer.render(scene, camera);
+  if (!paused) {
+    update(now);
+    orbit.update();
+    if (useBloom) composer.render(); else renderer.render(scene, camera);
+  }
   requestAnimationFrame(frame);
 }
 resize();
@@ -1398,6 +1409,35 @@ showCalib();
 await loadRenderJs();
 connect();
 requestAnimationFrame(frame);
+// ------------------------------------------------------------------ embedded in the Show app
+// It sends {s5stage: "set", ...} and gets {s5stage: "state", ...} back. Everything goes through this
+// page's own controls, so what's saved (Daylight, the laser look) is saved just as it is from here.
+if (document.documentElement.classList.contains("s5embed")) {
+  const tagOf = fx => fx.type === "screen" ? "surface" : fx.type === "projector" ? (fx.source === "visuals" ? "visuals" : fx.source === "off" ? "off" : "mapped")
+    : fx.source && fx.source !== "sim" ? "live" : "simulated";
+  const post = () => parent.postMessage({ s5stage: "state",
+    cam: (document.querySelector("[data-cam].on") || {}).dataset?.cam || "", cams: Object.keys(CAMS),
+    haze, day: dayLevel(), glow: useBloom, laser: LOOKS[calib.laser] ? calib.laser : "auto", sec: laserSec, cue: laserCue,
+    looks: Object.entries(LOOKS).map(([k, l]) => [k, l.label]), selected,
+    rig: rig.map(fx => ({ id: fx.id, name: fx.name, type: fx.type, source: fx.source || "sim", tag: tagOf(fx) })),
+    venue: $("#venueSel").selectedOptions[0]?.textContent || "" }, "*");
+  const fire = (el, v, ev) => { el.value = v; el.dispatchEvent(new Event(ev)); };
+  addEventListener("message", e => {
+    const m = e.data || {};
+    if (m.s5stage !== "set") return;
+    if (m.cam && CAMS[m.cam]) setCam(m.cam);
+    if (m.haze != null) fire($("#haze"), m.haze, "input");
+    if (m.day != null) fire($("#day"), m.day, "input");
+    if (m.laser) fire($("#laserLook"), m.laser, "change");
+    if (m.sec != null) fire($("#laserSec"), m.sec, "change");
+    if (m.glow != null && m.glow !== useBloom) $("#bloom").click();
+    if ("select" in m) select(m.select);
+    if ("pause" in m) paused = !!m.pause;
+    post();
+  });
+  setInterval(post, 700);
+  post();
+}
 window.stage = { scene, camera, orbit, rig: () => rig, built, show: () => show, map: () => mapRenderer, projCanvas, frames: () => ({ buffered: frameBuf.length, delayS: +(lagSpread + BASE_DELAY).toFixed(3), spreadS: +lagSpread.toFixed(3), timed: timedFrames() }) };   // for poking at from the console
 </script>
 </body>

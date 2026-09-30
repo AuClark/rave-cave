@@ -1,0 +1,1831 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#0b0b0d">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<title>Sektor5</title>
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA2NCA2NCI+PHJlY3Qgd2lkdGg9IjY0IiBoZWlnaHQ9IjY0IiByeD0iMTIiIGZpbGw9IiMyNDI0MjQiLz48cGF0aCB0cmFuc2Zvcm09InRyYW5zbGF0ZSgxNC41IDcpIHNjYWxlKC41KSIgZD0iTTAsMCBMNzAsMCBMNzAsMjEgTDIxLDIxIEwyMSw0MCBMNTcsNDAgTDcwLDUzIEw3MCw4NyBMNTcsMTAwIEwwLDEwMCBMMCw3OSBMNDksNzkgTDQ5LDYxIEwwLDYxIFoiIGZpbGw9IiNGRjVBMUYiLz48L3N2Zz4=">
+<!--
+  Sektor5 · the show app. Three screens, one job each:
+
+    Now      what's happening and the three moves you make most (drop, build, flash)
+    Lights   scene, hits, colour, level
+    Visuals  the picture, its energy, presets, level
+
+  Autopilot is the normal state: lights, colour and visuals follow the music. Anything pressed here
+  is an override, listed in the pill at the top until you tap it to go back to auto. Everything you
+  set up before the night (mapping, the rig, fixtures, strobe rate, designing looks) sits behind
+  the gear, on the existing pages.
+
+  It drives the rig through the existing APIs: showbrain /api/cmd (:8090), this visuals service
+  (:8110) and the projector's layout (:8100). Nothing on the servers changes.
+-->
+<style>
+  :root {
+    --bg: #0b0b0d; --glass: rgba(255,255,255,.055); --glass2: rgba(255,255,255,.10); --stroke: rgba(255,255,255,.08);
+    --text: #f5f5f7; --dim: rgba(245,245,247,.55); --faint: rgba(245,245,247,.32);
+    --accent: #ff5a1f; --good: #7ccf8a; --bad: #ef5b5b;
+    --on: #000; --on-dim: rgba(0,0,0,.6);          /* text on something selected (which is filled with --text) */
+    --navbg: rgba(30,30,34,.72); --sheet: #18181b; --toast: rgba(40,40,44,.92); --tagbg: #2a2a30; --stroke2: rgba(255,255,255,.22);
+    --r: 22px; --font: "Montserrat", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+    color-scheme: dark;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; min-height: 100%; background: var(--bg); color: var(--text); font: 400 15px/1.4 var(--font); }
+  body { -webkit-tap-highlight-color: transparent; -webkit-font-smoothing: antialiased; overscroll-behavior: none; }
+  button { font: inherit; color: inherit; background: none; border: 0; padding: 0; cursor: pointer; touch-action: manipulation;
+           user-select: none; -webkit-user-select: none; }
+
+  /* The room's light, behind everything: the live picture, tiny and blurred, so the app glows with the show. */
+  #amb { position: fixed; inset: -10%; width: 120%; height: 120%; z-index: -2; filter: blur(80px) saturate(1.5); opacity: .42; transition: opacity 1s; }
+  body::before { content: ""; position: fixed; inset: 0; z-index: -1; pointer-events: none;
+                 background: radial-gradient(120% 90% at 50% 0%, transparent 30%, color-mix(in srgb, var(--bg) 78%, transparent) 78%), linear-gradient(transparent 60%, var(--bg)); }
+  /* ...and the lights' colour, rising from the bottom, brighter as the energy goes up. */
+  body::after { content: ""; position: fixed; inset: 0; z-index: -1; pointer-events: none; transition: background 1.2s;
+                background: radial-gradient(90% 60% at 50% 110%, var(--glow, transparent), transparent 70%); }
+  body.dark #amb { opacity: .08; } body.dark::after { opacity: 0; }
+
+  /* ---- top */
+  header { position: sticky; top: 0; z-index: 10; display: flex; align-items: center; gap: 12px;
+           padding: max(14px, env(safe-area-inset-top)) 20px 10px; }
+  .logo { color: var(--text); display: flex; opacity: .9; }
+  .logo .five { fill: var(--accent); }
+  .grow { flex: 1; }
+  #pilot { display: flex; align-items: center; gap: 8px; height: 36px; padding: 0 14px 0 12px; border-radius: 99px; max-width: 60vw;
+           background: var(--glass); border: 1px solid var(--stroke); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
+           font-weight: 500; font-size: 13px; white-space: nowrap; overflow: hidden; }
+  #pilot i { flex: none; width: 8px; height: 8px; border-radius: 50%; background: var(--good); box-shadow: 0 0 10px var(--good); }
+  #pilot span { overflow: hidden; text-overflow: ellipsis; }
+  #pilot.man { color: var(--text); background: rgba(255,90,31,.18); border-color: rgba(255,90,31,.5); }
+  #pilot.man i { background: var(--accent); box-shadow: 0 0 10px var(--accent); }
+  #pilot.man::after { content: "↺"; font-size: 15px; margin-left: 2px; }
+  .round { width: 36px; height: 36px; border-radius: 50%; display: grid; place-items: center; flex: none;
+           background: var(--glass); border: 1px solid var(--stroke); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); }
+  .round svg { width: 18px; height: 18px; opacity: .8; }
+  #off { display: none; margin: 0 20px 8px; padding: 10px 14px; border-radius: 14px; background: rgba(239,91,91,.14); color: #ffb3b3; font-size: 13px; }
+  #off.show { display: block; }
+
+  /* ---- screens */
+  main { max-width: 940px; margin: 0 auto; padding: 4px 20px calc(110px + env(safe-area-inset-bottom)); }
+  .screen { display: none; animation: in .35s ease; }
+  .screen.on { display: block; }
+  @keyframes in { from { opacity: 0; transform: translateY(6px); } }
+  .label { font-size: 12px; font-weight: 500; letter-spacing: .06em; color: var(--dim); margin: 26px 4px 10px; display: flex; justify-content: space-between; align-items: baseline; }
+  .label b { color: var(--text); font-weight: 500; letter-spacing: 0; }
+
+  /* tiles: the one kind of button */
+  .tile { position: relative; display: flex; flex-direction: column; justify-content: flex-end; align-items: flex-start; gap: 3px;
+          min-height: 92px; padding: 16px 18px; border-radius: var(--r); text-align: left;
+          background: var(--glass); border: 1px solid var(--stroke); backdrop-filter: blur(24px); -webkit-backdrop-filter: blur(24px);
+          font-size: 17px; font-weight: 500; transition: background .15s, transform .08s, color .15s; }
+  .tile small { font-size: 12px; font-weight: 400; color: var(--dim); }
+  .tile:hover { background: var(--glass2); }
+  .tile:active { transform: scale(.97); }
+  .tile.on { background: var(--accent); border-color: transparent; color: #fff; }
+  .tile.on small { color: rgba(255,255,255,.8); }
+  .tile.held { background: var(--text); color: var(--on); } .tile.held small { color: var(--on-dim); }
+  .tile.big { min-height: 140px; font-size: 22px; }
+  .tile.wide { grid-column: 1 / -1; }
+  .tile .ic { position: absolute; top: 16px; right: 18px; font-size: 20px; opacity: .7; }
+  .tile.warn.on { background: var(--bad); }
+  .g2 { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+  .g3 { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
+
+  /* segmented pill */
+  .seg { display: grid; grid-auto-flow: column; grid-auto-columns: minmax(0, 1fr); gap: 4px; padding: 5px; border-radius: 99px;
+         background: var(--glass); border: 1px solid var(--stroke); backdrop-filter: blur(24px); -webkit-backdrop-filter: blur(24px); }
+  .seg button { height: 50px; border-radius: 99px; font-weight: 500; font-size: 15px; color: var(--dim); transition: .15s; }
+  .seg button:hover { color: var(--text); }
+  .seg button.on { background: var(--text); color: var(--on); }
+
+  /* level: the whole bar is the slider */
+  .level { position: relative; height: 64px; border-radius: 20px; overflow: hidden; background: var(--glass); border: 1px solid var(--stroke);
+           backdrop-filter: blur(24px); -webkit-backdrop-filter: blur(24px); touch-action: none; cursor: ew-resize; }
+  .level .fill { position: absolute; inset: 0 auto 0 0; width: 50%; background: var(--text); }
+  .level .t { position: absolute; inset: 0; display: flex; align-items: center; justify-content: space-between; padding: 0 20px;
+              font-weight: 500; mix-blend-mode: difference; color: #fff; pointer-events: none; }
+  .row2 { display: grid; grid-template-columns: minmax(0, 1fr) 150px; gap: 12px; align-items: stretch; }
+  .row2 .tile { min-height: 64px; justify-content: center; align-items: center; padding: 0 12px; }
+
+  /* ---- Now */
+  .hero { padding: 30px 6px 10px; }
+  .hero .scene { font-weight: 300; font-size: clamp(56px, 12vw, 104px); line-height: .95; letter-spacing: -.02em; }
+  .hero .meta { color: var(--dim); margin-top: 12px; font-size: 16px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .hero .meta b { color: var(--text); font-weight: 500; }
+  .beat { display: flex; gap: 8px; margin-top: 22px; }
+  .beat i { width: 10px; height: 10px; border-radius: 50%; background: var(--glass2); transition: background .06s; }
+  .beat i.on { background: var(--text); }
+  .beat i.on:first-child { background: var(--accent); }
+  .drop { display: flex; align-items: center; gap: 16px; margin: 26px 0 6px; min-height: 64px; }
+  .drop svg { width: 64px; height: 64px; transform: rotate(-90deg); flex: none; }
+  .drop circle { fill: none; stroke-width: 5; }
+  .drop .bg { stroke: var(--glass2); } .drop .fg { stroke: var(--accent); stroke-linecap: round; transition: stroke-dashoffset .15s linear; }
+  .drop .txt b { display: block; font-size: 22px; font-weight: 500; }
+  .drop .txt span { color: var(--dim); font-size: 13px; }
+  .drop.idle { opacity: .45; }
+
+  /* ---- Lights */
+  .strip { display: grid; gap: 5px; margin-top: 18px; }
+  .strip canvas { width: 100%; height: 10px; border-radius: 99px; display: block; background: var(--glass); }
+  .ringwrap { display: grid; grid-template-columns: auto 1fr; gap: 24px; align-items: center; }
+  .ring { position: relative; width: 210px; height: 210px; border-radius: 50%; touch-action: none; cursor: crosshair;
+          background: conic-gradient(hsl(0,100%,55%), hsl(60,100%,55%), hsl(120,100%,50%), hsl(180,100%,50%), hsl(240,100%,60%), hsl(300,100%,58%), hsl(360,100%,55%));
+          -webkit-mask: radial-gradient(circle, transparent 57%, #000 58%); mask: radial-gradient(circle, transparent 57%, #000 58%); }
+  .ringbox { position: relative; width: 210px; height: 210px; }
+  .ringbox .dot { position: absolute; width: 30px; height: 30px; margin: -15px 0 0 -15px; border-radius: 50%; border: 3px solid #fff;
+                  box-shadow: 0 2px 10px rgba(0,0,0,.5); pointer-events: none; display: none; }
+  .ringbox .mid { position: absolute; inset: 44px; border-radius: 50%; display: grid; place-items: center; text-align: center;
+                  font-weight: 500; font-size: 14px; line-height: 1.25; background: var(--glass); border: 1px solid var(--stroke); transition: .15s; }
+  .ringbox .mid.on { background: var(--text); color: var(--on); }
+  .ringside { display: grid; gap: 10px; }
+  .ringside p { margin: 0 0 4px; color: var(--dim); font-size: 13px; }
+
+  /* ---- Visuals */
+  .pv { position: relative; aspect-ratio: 16 / 9; max-width: calc(52vh * 16 / 9); margin: 0 auto; border-radius: var(--r); overflow: hidden; background: #000; border: 1px solid var(--stroke); }
+  .pv canvas { position: absolute; inset: 0; width: 100%; height: 100%; }
+  .pv .cap { position: absolute; left: 0; right: 0; bottom: 0; display: flex; align-items: center; gap: 12px; padding: 40px 16px 14px;
+             background: linear-gradient(transparent, rgba(0,0,0,.7)); }
+  .pv .cap b { font-weight: 500; font-size: 18px; flex: 1; }
+  .pill { height: 40px; padding: 0 16px; border-radius: 99px; background: rgba(255,255,255,.14); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);
+          font-weight: 500; font-size: 14px; }
+  .pill:hover { background: rgba(255,255,255,.22); }
+  .pill.on { background: var(--text); color: var(--on); }
+  .presets { display: flex; gap: 10px; overflow-x: auto; scroll-snap-type: x mandatory; padding: 2px 2px 6px; margin: 0 -2px; scrollbar-width: none; }
+  .presets::-webkit-scrollbar { display: none; }
+  .presets .tile { flex: 0 0 150px; min-height: 76px; scroll-snap-align: start; font-size: 15px; }
+  .presets .none { color: var(--dim); padding: 14px 4px; }
+
+  /* ---- Decks */
+  .decks { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; margin-top: 8px; }
+  .deck { position: relative; padding: 16px; border-radius: var(--r); background: var(--glass); border: 1px solid var(--stroke);
+          backdrop-filter: blur(24px); -webkit-backdrop-filter: blur(24px); display: grid; gap: 14px; transition: border-color .3s; }
+  .deck.air { border-color: var(--stroke2); }
+  .deck .top { display: grid; grid-template-columns: 64px minmax(0, 1fr) auto; gap: 14px; align-items: center; }
+  .deck .art { width: 64px; height: 64px; border-radius: 14px; background: var(--glass2) center / cover; display: grid; place-items: center;
+               font-size: 22px; font-weight: 300; color: rgba(255,255,255,.85); }
+  .deck .ti { min-width: 0; }
+  .deck .ti b { display: block; font-weight: 500; font-size: 16px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .deck .ti span { display: block; color: var(--dim); font-size: 13px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .deck .bpm { text-align: right; } .deck .bpm b { display: block; font-weight: 300; font-size: 30px; line-height: 1; font-variant-numeric: tabular-nums; }
+  .deck .bpm span { color: var(--dim); font-size: 12px; }
+  .deck .tag { position: absolute; top: -9px; left: 16px; display: flex; gap: 6px; }
+  .deck .tag i { font-style: normal; font-size: 11px; font-weight: 600; letter-spacing: .04em; padding: 3px 9px; border-radius: 99px; background: var(--tagbg); color: var(--dim); }
+  .deck .tag i.air { background: var(--text); color: var(--on); } .deck .tag i.mst { background: var(--accent); color: #fff; }
+  .deck .bar { position: relative; height: 6px; border-radius: 99px; background: var(--glass2); }
+  .deck .bar .pos { position: absolute; inset: 0 auto 0 0; width: 0; border-radius: 99px; background: var(--text); transition: width .25s linear; }
+  .deck .bar .cue { position: absolute; top: -4px; width: 3px; height: 14px; margin-left: -1px; border-radius: 2px; background: var(--accent); }
+  .deck .times { display: flex; justify-content: space-between; color: var(--dim); font-size: 12px; font-variant-numeric: tabular-nums; margin-top: -6px; }
+  .deck .btns { display: grid; grid-template-columns: 1.4fr 1fr 1fr; gap: 8px; }
+  .deck .btns .tile { min-height: 56px; justify-content: center; align-items: center; padding: 0 8px; font-size: 15px; }
+  .deck .btns [data-a=sync].on, .deck .btns [data-a=master].on { background: var(--text); color: var(--on); }
+  .deck.empty .btns, .deck.empty .bar, .deck.empty .times { opacity: .35; pointer-events: none; }
+  .search { display: flex; gap: 10px; align-items: center; height: 52px; padding: 0 18px; border-radius: 99px; background: var(--glass); border: 1px solid var(--stroke); }
+  .search input { flex: 1; min-width: 0; height: 100%; background: none; border: 0; outline: 0; color: var(--text); font: 400 16px var(--font); }
+  .search input::placeholder { color: var(--faint); }
+  .search svg { width: 18px; height: 18px; opacity: .55; flex: none; }
+  .chips { display: flex; gap: 8px; overflow-x: auto; scrollbar-width: none; margin: 12px 0 4px; }
+  .chips::-webkit-scrollbar { display: none; }
+  .chips button { flex: none; height: 36px; padding: 0 14px; border-radius: 99px; background: var(--glass); border: 1px solid var(--stroke); color: var(--dim); font-weight: 500; font-size: 13px; }
+  .chips button.on { background: var(--text); color: var(--on); border-color: transparent; }
+  .tracks { margin-top: 6px; }
+  .trk { display: grid; grid-template-columns: minmax(0, 1fr) auto auto; gap: 14px; align-items: center; padding: 10px 6px 10px 12px; border-radius: 16px; }
+  .trk:hover { background: var(--glass); }
+  .trk .nm b { display: block; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .trk .nm span { display: block; color: var(--dim); font-size: 13px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .trk .kb { color: var(--dim); font-size: 13px; text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
+  .trk .kb .fit { color: var(--good); }
+  .trk .ld { display: flex; gap: 6px; }
+  .trk .ld button { width: 40px; height: 40px; border-radius: 12px; background: var(--glass2); font-weight: 600; font-size: 14px; }
+  .trk .ld button:hover { background: var(--text); color: var(--on); }
+  .trk .ld button:disabled { opacity: .25; pointer-events: none; }
+  .trk.played .nm b { color: var(--dim); }
+  .tracks .none { color: var(--dim); padding: 14px 12px; }
+
+  /* ---- Mapping */
+  .projs { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; margin: 10px 0 0; }
+  .projs button, .toggles button, .chipbtn { height: 38px; padding: 0 16px; border-radius: 99px; background: var(--glass); border: 1px solid var(--stroke); color: var(--dim); font-weight: 500; font-size: 13px; }
+  .projs button.on, .toggles button.on, .chipbtn.on { background: var(--text); color: var(--on); border-color: transparent; }
+  .projs input { height: 38px; width: 170px; padding: 0 14px; border-radius: 99px; background: var(--glass2); border: 1px solid var(--stroke); color: var(--text); font: 500 13px var(--font); outline: 0; }
+  .wallbox { padding: 16px; margin: -16px; touch-action: none; }
+  .wall { position: relative; width: 100%; border-radius: 18px; overflow: hidden; background: #000; border: 1px solid var(--stroke); touch-action: none; }
+  .wall canvas { position: absolute; inset: 0; width: 100%; height: 100%; }
+  .wall .hint { position: absolute; left: 12px; bottom: 10px; right: 12px; font-size: 12px; color: rgba(255,255,255,.6); pointer-events: none; text-shadow: 0 1px 4px #000; }
+  .drawbar { display: none; align-items: center; gap: 8px; margin-top: 10px; padding: 8px 8px 8px 16px; border-radius: 99px; background: rgba(255,90,31,.16); border: 1px solid rgba(255,90,31,.5); }
+  .drawbar.show { display: flex; }
+  .drawbar span { flex: 1; font-size: 13px; font-weight: 500; }
+  .drawbar button { height: 36px; padding: 0 14px; border-radius: 99px; background: var(--glass2); font-weight: 500; font-size: 13px; }
+  .drawbar button.go { background: var(--text); color: var(--on); }
+  .toggles { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 10px; }
+  .cards { display: flex; gap: 10px; overflow-x: auto; scrollbar-width: none; padding: 2px; margin: 0 -2px; }
+  .cards::-webkit-scrollbar { display: none; }
+  .cards .tile { flex: 0 0 160px; min-height: 76px; font-size: 15px; }
+  .cards .tile.on, .shows .tile.on { background: var(--text); color: var(--on); } .cards .tile.on small, .shows .tile.on small { color: var(--on-dim); }
+  .cards .tile.add { color: var(--dim); border-style: dashed; background: transparent; }
+  .cards .tile.mask { flex-basis: 140px; }
+  .editor { margin-top: 12px; padding: 16px; border-radius: var(--r); background: var(--glass); border: 1px solid var(--stroke); display: grid; gap: 14px; }
+  .editor .nm { height: 48px; padding: 0 16px; border-radius: 14px; background: var(--glass2); border: 1px solid var(--stroke); color: var(--text); font: 500 16px var(--font); outline: 0; width: 100%; }
+  .editor .sub { font-size: 12px; font-weight: 500; letter-spacing: .06em; color: var(--dim); margin: 2px 2px -6px; }
+  .shows { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; }
+  .shows .tile { min-height: 64px; padding: 10px 12px; font-size: 14px; }
+  .editor select { height: 46px; padding: 0 14px; border-radius: 14px; background: var(--glass2); border: 1px solid var(--stroke); color: var(--text); font: 500 14px var(--font); width: 100%; }
+  .editor .pair { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  .editor .level { height: 52px; }
+  .editor .acts { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; }
+  .editor .acts .tile { min-height: 52px; justify-content: center; align-items: center; padding: 0 8px; font-size: 14px; }
+  .editor details summary { cursor: pointer; color: var(--dim); font-size: 13px; font-weight: 500; list-style: none; }
+  .editor details summary::before { content: "＋ "; } .editor details[open] summary::before { content: "－ "; }
+  .editor details .inner { display: grid; gap: 8px; margin-top: 10px; }
+  .saved { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+  .saved input { height: 38px; width: 200px; padding: 0 14px; border-radius: 99px; background: var(--glass2); border: 1px solid var(--stroke); color: var(--text); font: 500 13px var(--font); outline: 0; }
+  #toast .undo { pointer-events: auto; margin-left: 12px; color: var(--accent); font-weight: 600; }
+  #toast.withundo { pointer-events: auto; }
+
+  /* ---- the picture in the middle, its controls either side (wide screens); stacked in order on phones */
+  .stagegrid { display: flex; flex-direction: column; }
+  .stagegrid .side { display: contents; }
+  .o1 { order: 1; } .o2 { order: 2; } .o3 { order: 3; } .o4 { order: 4; }
+  .stagegrid .side.o2 > * { order: 2; } .stagegrid .side.o3 > * { order: 3; }   /* phones: a side's contents keep its place */
+  .stagegrid .side.o2 > .fhud { order: 0; }
+  .stagegrid .centre > .projs:first-child { margin-top: 0; }
+  @media (min-width: 1100px) and (min-height: 600px) {
+    :root { --chrome: 168px; }            /* header above, the tab bar below */
+    main { max-width: 1440px; padding-bottom: 100px; }
+    .screen:not(.stage):not(#s-decks) { max-width: 940px; margin: 0 auto; }
+    .stagegrid { display: grid; gap: 24px; height: calc(100vh - var(--chrome)); align-items: stretch; }
+    .stagegrid.map { grid-template-columns: 260px minmax(0, 1fr) 360px; }
+    .stagegrid.vis { grid-template-columns: 240px minmax(0, 1fr) 260px; }
+    body.focus { --chrome: 78px; } body.focus main { padding-bottom: 16px; }
+    body.focus .stagegrid.vis { grid-template-columns: 280px minmax(0, 1fr) 280px; }
+    body.focus .side .fmoves .g3.now { grid-template-columns: 1fr 1fr; } body.focus .side .fenergy { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+    body.focus .side .fenergy .tile { min-height: 64px; font-size: 15px; }
+    body.focus .side .tile.big { min-height: 92px; }
+    .stagegrid.stg { grid-template-columns: 240px minmax(0, 1fr) 280px; }
+    .stagegrid.stg .centre { justify-content: stretch; } .stagegrid.stg .stagebox { flex: 1; height: auto; min-height: 0; }
+    .stagegrid .side { display: block; order: 0; min-height: 0; overflow-y: auto; scrollbar-width: thin; padding: 2px 6px 16px 2px; }
+    .stagegrid .centre { order: 0; min-height: 0; min-width: 0; display: flex; flex-direction: column; justify-content: center; }
+    .stagegrid .label { line-height: 16px; height: 16px; } .stagegrid .label b { font-size: 11px; }
+    .stagegrid .label.first { margin-top: 4px; }
+    /* the picture starts level with the first row of buttons either side: under a heading's height */
+    .stagegrid .centre { justify-content: flex-start !important; padding-top: 30px; }
+    .stagegrid .side .fhud { padding-top: 28px; }
+    .stagegrid .side .cards, .stagegrid .side .presets { padding: 0; }
+    .side .editor { margin-top: 0; }
+    .side .cards { flex-direction: column; overflow: visible; margin: 0; }
+    .side .cards .tile, .side .cards .tile.mask { flex: none; min-height: 64px; }
+    .side .g3 { grid-template-columns: 1fr; } .side .g3 .tile { min-height: 110px; font-size: 19px; }
+    .side .presets { flex-direction: column; overflow: visible; margin: 0; }
+    .side .presets .tile { flex: none; min-height: 58px; }
+    .side .saved input { width: 100%; }
+    .side .editor { margin-top: 4px; }
+    .side .editor .shows { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .side .editor .acts { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .side .editor .pair { grid-template-columns: 1fr; }
+    .stagegrid .side .label span { display: none; }
+    .stagegrid.vis .centre .pv { width: 100%; max-width: calc((100vh - var(--chrome) - 90px) * 16 / 9); }
+    .stagegrid.vis .centre .level { width: 100%; max-width: calc((100vh - var(--chrome) - 90px) * 16 / 9); margin-left: auto; margin-right: auto; }
+    /* Decks: both decks up top, the music scrolls in the space left, not the page */
+    #s-decks.on { display: flex; flex-direction: column; height: calc(100vh - var(--chrome)); max-width: 1100px; margin: 0 auto; }
+    #s-decks .tracks { flex: 1; min-height: 0; overflow-y: auto; scrollbar-width: thin; }
+  }
+  /* Short laptop screens: Lights tightens up so the level stays above the tab bar */
+  @media (min-width: 1100px) and (max-height: 820px) {
+    #s-lights .label { margin: 14px 4px 8px; } #s-lights .strip { margin-top: 4px; }
+    #s-lights .seg button { height: 44px; } #s-lights .g2 .tile { min-height: 70px; padding: 12px 16px; }
+    #s-lights .ring, #s-lights .ringbox { width: 160px; height: 160px; } #s-lights .ringbox .mid { inset: 34px; font-size: 13px; }
+    #s-lights .level { height: 54px; }
+  }
+
+
+  /* ---- Stage */
+  .stagebox { position: relative; width: 100%; height: 46vh; border-radius: var(--r); overflow: hidden; background: #000; border: 1px solid var(--stroke); }
+  .stagebox iframe { position: absolute; inset: 0; width: 100%; height: 100%; border: 0; display: block; }
+  .stagebox .cap { position: absolute; left: 0; right: 0; bottom: 0; padding: 30px 16px 12px; font-size: 12px; color: rgba(255,255,255,.65);
+                   background: linear-gradient(transparent, rgba(0,0,0,.6)); pointer-events: none; }
+  .stagebox .cap b { color: #fff; font-weight: 500; font-size: 14px; }
+  .cams .tile { min-height: 56px; justify-content: center; padding: 0 14px; font-size: 15px; }
+  .looks { display: grid; gap: 8px; }
+  .looks .tile { min-height: 56px; padding: 10px 14px; font-size: 14px; }
+  .looks .tile.on, .cams .tile.on, #stGlow.on { background: var(--text); color: var(--on); } .looks .tile.on small, #stGlow.on small { color: var(--on-dim); }
+  .chips.wrap { flex-wrap: wrap; overflow: visible; margin: 0; }
+  .rig { display: grid; gap: 4px; }
+  .rig button { display: flex; align-items: center; gap: 10px; padding: 9px 12px; border-radius: 12px; text-align: left; font-size: 14px; }
+  .rig button:hover { background: var(--glass); } .rig button.on { background: var(--glass2); }
+  .rig button span { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .rig button i { font-style: normal; font-size: 11px; font-weight: 600; padding: 2px 8px; border-radius: 99px; background: var(--glass2); color: var(--dim); }
+  .rig button i.live { background: rgba(124,207,138,.16); color: var(--good); }
+  .editrig { margin-top: 12px; min-height: 64px; text-decoration: none; color: var(--text); }
+  .editrig::after { content: "›"; position: absolute; right: 18px; top: 50%; transform: translateY(-50%); font-size: 22px; color: var(--faint); }
+
+  /* ---- bottom nav */
+  /* ---- Visuals: normal and Focus */
+  .fonly { display: none; }
+  body.focus .fonly { display: block; } body.focus .nonly { display: none !important; }
+  body.focus nav.tabs, body.focus #gear { display: none; }
+  .exitfocus { display: none; height: 32px; white-space: nowrap; flex: none; background: var(--glass); border: 1px solid var(--stroke); }
+  body.focus .exitfocus { display: block; }
+  body.focus main { padding-bottom: 24px; }
+  body.focus .focusbtn { display: none; }
+  .fhud { padding: 4px 4px 0; }
+  .fhud.hero .scene { font-size: 46px; line-height: 1; overflow-wrap: anywhere; }
+  .fhud .meta { font-size: 14px; white-space: normal; }
+  .fhud .beat { margin-top: 14px; } .fhud .drop { margin: 16px 0 0; }
+  .fmoves .g3.now { grid-template-columns: 1fr 1fr; } .fmoves .g3.now > :first-child, .fmoves #blackF { grid-column: 1 / -1; }
+  .fenergy { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  body.focus .fgap { margin-top: 16px; }
+  .stagegrid .side .fhud { order: 0; }       /* phones: what the show is doing sits above the picture */
+  #blackF.on { background: var(--bad); border-color: transparent; color: #fff; }
+
+  /* ---- colour palettes (Focus) */
+  .palettes { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; }
+  .palettes button { display: flex; flex-direction: column; gap: 6px; align-items: flex-start; padding: 8px 10px; border-radius: 14px;
+                     background: var(--glass); border: 1px solid var(--stroke); font-size: 12px; font-weight: 500; color: var(--dim); text-align: left; }
+  .palettes button:hover { background: var(--glass2); color: var(--text); }
+  .palettes button.on { background: var(--text); color: var(--on); }
+  .palettes .sw2 { display: flex; width: 100%; height: 16px; border-radius: 99px; overflow: hidden; }
+  .palettes .sw2 i { flex: 1; }
+  .palettes .auto .sw2 { background: conic-gradient(from 90deg, #f44, #fd4, #4f8, #4df, #84f, #f4c, #f44); }
+
+  nav.tabs { position: fixed; left: 50%; bottom: max(16px, env(safe-area-inset-bottom)); transform: translateX(-50%); z-index: 20;
+             display: flex; gap: 4px; padding: 6px; border-radius: 99px;
+             background: var(--navbg); border: 1px solid var(--stroke); backdrop-filter: blur(24px) saturate(1.4); -webkit-backdrop-filter: blur(24px) saturate(1.4);
+             box-shadow: 0 10px 40px rgba(0,0,0,.45); }
+  nav.tabs button { display: flex; align-items: center; gap: 8px; height: 48px; padding: 0 20px; border-radius: 99px; color: var(--dim); font-weight: 500; transition: .15s; }
+  nav.tabs button svg { width: 20px; height: 20px; }
+  nav.tabs button.on { background: var(--text); color: var(--on); }
+
+  /* ---- setup sheet */
+  #sheet { position: fixed; inset: 0; z-index: 30; display: none; background: rgba(0,0,0,.5); backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px); }
+  #sheet.show { display: flex; align-items: flex-end; justify-content: center; }
+  #sheet .panel { width: min(560px, 100%); max-height: 86vh; overflow: auto; margin: 0 12px max(12px, env(safe-area-inset-bottom)); padding: 22px 18px 14px;
+                  border-radius: 28px; background: var(--sheet); border: 1px solid var(--stroke); animation: up .25s ease; }
+  @keyframes up { from { transform: translateY(30px); opacity: 0; } }
+  #sheet h2 { margin: 0 6px 4px; font-weight: 500; font-size: 20px; }
+  #sheet .sub { margin: 0 6px 16px; color: var(--dim); font-size: 13px; }
+  #sheet a { display: flex; align-items: center; gap: 14px; padding: 14px 12px; border-radius: 16px; color: var(--text); text-decoration: none; }
+  #sheet a:hover { background: var(--glass); }
+  #sheet a b { display: block; font-weight: 500; }
+  #sheet a span { color: var(--dim); font-size: 13px; }
+  #sheet a::after { content: "›"; margin-left: auto; color: var(--faint); font-size: 22px; }
+  #sheet .close { width: 100%; height: 48px; margin-top: 10px; border-radius: 16px; background: var(--glass); font-weight: 500; }
+
+  #toast { position: fixed; left: 50%; bottom: calc(96px + env(safe-area-inset-bottom)); transform: translate(-50%, 12px); opacity: 0; z-index: 40;
+           padding: 12px 18px; border-radius: 16px; background: var(--toast); color: var(--text); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
+           font-weight: 500; font-size: 14px; pointer-events: none; transition: .2s; white-space: nowrap; }
+  #toast.show { opacity: 1; transform: translate(-50%, 0); }
+
+  @media (min-width: 900px) {
+    .desk-2 { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 0 28px; align-items: start; }
+  }
+  @media (max-width: 560px) {
+    header { padding-left: 16px; padding-right: 16px; }
+    main { padding-left: 14px; padding-right: 14px; }
+    .g3 { gap: 10px; } .g2 { gap: 10px; }
+    .tile { min-height: 84px; padding: 14px; font-size: 16px; }
+    .tile.big { min-height: 118px; font-size: 19px; }
+    .g3.now { grid-template-columns: 1fr 1fr; } .g3.now > :first-child { grid-column: 1 / -1; min-height: 132px; font-size: 24px; }
+    .seg button { font-size: 13px; height: 46px; }
+    .ringwrap { grid-template-columns: 1fr; justify-items: center; gap: 16px; } .ringside { width: 100%; }
+    .row2 { grid-template-columns: minmax(0, 1fr) 118px; }
+    nav.tabs { gap: 2px; padding: 5px; } nav.tabs button { padding: 0 12px; gap: 6px; height: 46px; } nav.tabs button span { font-size: 13px; }
+    nav.tabs button:not(.on) span { display: none; } nav.tabs button { padding: 0 14px; }
+    .shows { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .editor .acts { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .decks { grid-template-columns: 1fr; gap: 20px; margin-top: 16px; }
+    .trk { grid-template-columns: minmax(0, 1fr) auto; } .trk .kb { display: none; }
+    .logo svg { width: 64px; }
+  }
+
+  /* ---- Desktop density: a notch smaller everywhere, so every screen fits a laptop or desktop
+     without scrolling (phones keep the big touch sizes above). */
+  @media (min-width: 1100px) {
+    :root { --r: 18px; --chrome: 138px; }
+    html, body { font-size: 14px; }
+    header { padding: 10px 20px 6px; }
+    #pilot { height: 32px; font-size: 12px; } .round { width: 32px; height: 32px; } .round svg { width: 16px; height: 16px; }
+    main { padding-bottom: 84px; }
+    .label { font-size: 11px; margin: 16px 4px 8px; }
+    .tile { min-height: 70px; padding: 12px 14px; font-size: 15px; border-radius: 16px; } .tile small { font-size: 11px; }
+    .tile.big { min-height: 112px; font-size: 19px; } .tile .ic { top: 12px; right: 14px; font-size: 17px; }
+    .g2, .g3 { gap: 10px; }
+    .seg { padding: 4px; } .seg button { height: 40px; font-size: 14px; }
+    .level { height: 48px; border-radius: 16px; } .level .t { padding: 0 16px; font-size: 13px; }
+    .row2 .tile { min-height: 48px; }
+    nav.tabs { bottom: 12px; padding: 5px; } nav.tabs button { height: 40px; padding: 0 16px; font-size: 14px; } nav.tabs button svg { width: 18px; height: 18px; }
+    #toast { bottom: 76px; }
+    /* Now */
+    .hero { padding: 18px 6px 6px; } .hero .scene { font-size: clamp(56px, 8vw, 88px); } .hero .meta { font-size: 15px; margin-top: 8px; }
+    .beat { margin-top: 16px; } .drop { margin: 18px 0 4px; } .drop svg { width: 54px; height: 54px; } .drop .txt b { font-size: 19px; }
+    /* Lights */
+    .strip { margin-top: 6px; gap: 4px; } .strip canvas { height: 8px; }
+    .ring, .ringbox { width: 176px; height: 176px; } .ringbox .mid { inset: 38px; font-size: 13px; } .ringbox .dot { width: 26px; height: 26px; margin: -13px 0 0 -13px; }
+    #s-lights .g2 .tile { min-height: 64px; }
+    /* Visuals */
+    .pv .cap { padding: 30px 14px 12px; } .pv .cap b { font-size: 16px; } .pill { height: 34px; padding: 0 14px; font-size: 13px; }
+    .side .g3 .tile { min-height: 88px; font-size: 17px; }
+    .side .presets .tile { min-height: 46px; padding: 10px 14px; font-size: 14px; }
+    /* Decks */
+    .decks { gap: 10px; } .deck { padding: 14px; gap: 10px; } .deck .top { grid-template-columns: 52px minmax(0, 1fr) auto; gap: 12px; }
+    .deck .art { width: 52px; height: 52px; border-radius: 12px; } .deck .bpm b { font-size: 26px; } .deck .ti b { font-size: 15px; }
+    .deck .btns .tile { min-height: 44px; font-size: 14px; }
+    .search { height: 44px; } .search input { font-size: 15px; } .chips { margin: 10px 0 2px; } .chips button { height: 32px; font-size: 12px; }
+    .trk { padding: 6px 6px 6px 12px; } .trk .ld button { width: 34px; height: 34px; border-radius: 10px; font-size: 13px; }
+    /* Mapping */
+    .projs { margin: 8px 0 0; } .projs button, .toggles button, .chipbtn, .projs input { height: 32px; font-size: 12px; }
+    .toggles { margin-top: 8px; }
+    .side .cards .tile, .side .cards .tile.mask { min-height: 52px; padding: 10px 14px; font-size: 14px; }
+    .editor { padding: 12px; gap: 10px; } .editor .nm { height: 40px; font-size: 15px; border-radius: 12px; }
+    .shows { gap: 6px; } .shows .tile { min-height: 46px; padding: 8px 10px; font-size: 13px; } .shows .tile small { font-size: 10px; }
+    .editor select { height: 38px; font-size: 13px; border-radius: 12px; } .editor .level { height: 40px; }
+    .editor .acts { gap: 6px; } .editor .acts .tile { min-height: 40px; font-size: 13px; }
+    .saved input { height: 32px; }
+    /* Stage */
+    .cams .tile { min-height: 44px; font-size: 14px; }
+    .looks { gap: 6px; grid-template-columns: 1fr 1fr; } .looks .tile { min-height: 50px; padding: 7px 10px; font-size: 13px; } .looks .tile small { font-size: 10px; }
+    .rig { gap: 2px; } .rig button { padding: 6px 10px; font-size: 13px; }
+    .editrig { min-height: 52px; margin-top: 10px; }
+  }
+  @media (min-width: 1100px) and (max-height: 820px) {
+    .side .presets { gap: 6px; } .side .presets .tile { min-height: 38px; padding: 8px 14px; }
+    .palettes button { padding: 6px 9px; gap: 5px; } .palettes .sw2 { height: 13px; }
+    .randbtn { padding: 9px 14px; margin-top: 8px; }
+    #s-lights .label { margin: 10px 4px 6px; } #s-lights .g2 .tile { min-height: 56px; padding: 10px 14px; }
+    .ring, .ringbox { width: 150px; height: 150px; } .ringbox .mid { inset: 32px; font-size: 12px; }
+    .looks .tile { min-height: 40px; } .looks .tile small { display: none; }
+    .rig button { padding: 4px 10px; } .editrig { min-height: 44px; } .cams .tile { min-height: 40px; }
+    .shows .tile small { display: none; }
+  }
+
+  /* ---- Light mode (Setup → Appearance). The pictures (preview, wall, stage) stay dark: they're what the room sees. */
+  html[data-theme=light] {
+    --bg: #eeeef1; --glass: #ffffff; --glass2: #e3e3e9; --stroke: rgba(0,0,0,.08); --stroke2: rgba(0,0,0,.28);
+    --text: #141417; --dim: rgba(20,20,23,.58); --faint: rgba(20,20,23,.34);
+    --good: #2e9a4d; --bad: #d94343;
+    --on: #fff; --on-dim: rgba(255,255,255,.72);
+    --navbg: rgba(255,255,255,.82); --sheet: #ffffff; --toast: rgba(255,255,255,.96); --tagbg: #e3e3e9;
+    color-scheme: light;
+  }
+  html[data-theme=light] #amb { display: none; }
+  html[data-theme=light] body::after { opacity: .55; }
+  html[data-theme=light] .tile, html[data-theme=light] .deck, html[data-theme=light] .seg, html[data-theme=light] .level,
+  html[data-theme=light] .search, html[data-theme=light] .editor, html[data-theme=light] .palettes button, html[data-theme=light] #pilot,
+  html[data-theme=light] .round, html[data-theme=light] .chips button, html[data-theme=light] .projs button,
+  html[data-theme=light] .toggles button { box-shadow: 0 1px 2px rgba(0,0,0,.06); }
+  html[data-theme=light] .tile.add { background: transparent; box-shadow: none; }
+  html[data-theme=light] nav.tabs { box-shadow: 0 10px 30px rgba(0,0,0,.12); }
+  html[data-theme=light] #sheet { background: rgba(0,0,0,.25); }
+  html[data-theme=light] #pilot.man { background: rgba(255,90,31,.12); }
+  html[data-theme=light] .trk .kb .fit, html[data-theme=light] .rig button i.live { color: var(--good); }
+  html[data-theme=light] .rig button i.live { background: rgba(46,154,77,.12); }
+  html[data-theme=light] #off { color: var(--bad); }
+  /* On top of a picture it's always light text, in either theme */
+  .pv .cap, .pv .cap b, .pv .cap .pill { color: #fff; } .pv .cap .pill.on { background: #fff; color: #000; }
+  /* A stack of bars and buttons: evenly spaced, a little thinner than a lone bar */
+  .stack { display: grid; gap: 10px; }
+  .stack .level { height: 42px; border-radius: 14px; } .stack .level .t { font-size: 13px; }
+  .stack .tile { min-height: 52px; width: 100%; justify-content: center; padding: 8px 16px; border-radius: 14px; }
+  /* Randomise: sits under the presets, dashed so it doesn't read as one more preset */
+  .randbtn { display: flex; align-items: center; gap: 10px; width: 100%; margin-top: 10px; padding: 12px 14px; border-radius: 16px;
+             border: 1.5px dashed var(--stroke2); color: var(--text); font-weight: 500; font-size: 14px; text-align: left; transition: background .15s, transform .08s; }
+  .randbtn:hover { background: var(--glass); border-color: var(--accent); }
+  .randbtn:active { transform: scale(.98); }
+  .randbtn small { margin-left: auto; color: var(--dim); font-size: 11px; font-weight: 400; }
+  .randbtn .dice { font-size: 20px; line-height: 1; display: inline-block; transition: transform .4s cubic-bezier(.3,1.6,.5,1); }
+  .randbtn.spin .dice { transform: rotate(360deg) scale(1.15); }
+  /* Automix (Decks) */
+  .amix { margin-top: 12px; padding: 10px 12px; border-radius: var(--r); background: var(--glass); border: 1px solid var(--stroke); }
+  .amrow { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+  .ampill { display: flex; align-items: center; gap: 8px; height: 36px; padding: 0 16px 0 12px; border-radius: 99px; background: var(--glass2); font-weight: 600; font-size: 13px; }
+  .ampill i { width: 8px; height: 8px; border-radius: 50%; background: var(--faint); }
+  .ampill.on { background: var(--accent); color: #fff; } .ampill.on i { background: #fff; animation: ampulse 1s ease-in-out infinite; }
+  @keyframes ampulse { 50% { opacity: .35; } }
+  .seg.sm { display: inline-grid; grid-auto-columns: auto; padding: 3px; } .seg.sm button { height: 30px; padding: 0 12px; font-size: 12px; }
+  .amstatus { margin-top: 8px; font-size: 13px; color: var(--dim); line-height: 1.4; } .amstatus b { color: var(--text); font-weight: 500; }
+  .amix.mixing { border-color: rgba(255,90,31,.5); }
+  .amline { margin-top: 12px; font-size: 12px; color: var(--dim); line-height: 1.35; } .amline b { color: var(--text); font-weight: 500; }
+  .amline:empty { display: none; }
+  /* Waveforms on the deck cards (Setup → Track waveforms). Dark in either theme, like the other pictures. */
+  .wv { display: none; width: 100%; border-radius: 10px; background: #0e0e11; }
+  body.waves .wv { display: block; } body.waves .deck .bar { display: none; }
+  .wv.det { height: 72px; } .wv.ovw { height: 26px; margin-top: -4px; }
+  /* Setup rows with a switch */
+  .setrow { display: flex; align-items: center; gap: 14px; margin: 0 6px 14px; padding: 12px 14px; border-radius: 16px; background: var(--glass); }
+  .setrow b { display: block; font-weight: 500; } .setrow span { color: var(--dim); font-size: 13px; }
+  .switch { flex: none; position: relative; width: 50px; height: 30px; border-radius: 99px; background: var(--glass2); transition: background .2s; }
+  .switch::after { content: ""; position: absolute; top: 3px; left: 3px; width: 24px; height: 24px; border-radius: 50%; background: #fff; box-shadow: 0 1px 3px rgba(0,0,0,.3); transition: transform .2s; }
+  .switch.on { background: var(--accent); } .switch.on::after { transform: translateX(20px); }
+  .theme { display: grid; grid-template-columns: repeat(3, 1fr); gap: 4px; padding: 4px; margin: 4px 6px 14px; border-radius: 99px; background: var(--glass2); }
+  .theme button { height: 38px; border-radius: 99px; font-weight: 500; font-size: 13px; color: var(--dim); }
+  .theme button.on { background: var(--text); color: var(--on); }
+
+  /* ---- Phones: bigger touch targets (44 px where it matters), nothing crammed on the pictures,
+     long lists folded into two columns. Last in the file so it wins over everything above. */
+  @media (max-width: 560px) {
+    #pilot { height: 40px; } .round { width: 40px; height: 40px; } .exitfocus { height: 40px; }
+    .label span { display: none; }                       /* the hints; the headings and counts stay */
+    /* the preview: its name on one line, the buttons on the next */
+    .pv .cap { flex-wrap: wrap; gap: 8px; padding: 36px 12px 12px; }
+    .pv .cap b { flex: 1 0 100%; font-size: 16px; }
+    .pv .cap .pill { height: 40px; padding: 0 16px; font-size: 13px; }
+    .pv .cap .focusbtn { margin-left: auto; }
+    /* automix: on/off, Skip and Mix now on one row; the choices full width under it */
+    .amix { padding: 12px; }
+    .amrow .ampill { height: 44px; }
+    .amrow .grow { display: none; }
+    #amSkip, #amNow { height: 44px; padding: 0 16px; }
+    #amNow { margin-left: auto; }
+    .amrow .seg.sm { order: 2; width: 100%; display: grid; grid-auto-flow: column; grid-auto-columns: minmax(0, 1fr); }
+    .seg.sm button { height: 40px; font-size: 13px; }
+    /* chips and small pills */
+    .chips button, .projs button, .toggles button, .chipbtn, .saved input, .projs input { height: 42px; font-size: 13px; }
+    .trk { padding: 8px 4px 8px 10px; } .trk .ld button { width: 44px; height: 44px; }
+    /* mapping */
+    .editor .pair { grid-template-columns: 1fr; }
+    .cards .tile { flex-basis: 150px; }
+    /* stage */
+    .looks { grid-template-columns: 1fr 1fr; } .looks .tile { min-height: 60px; }
+    .rig button { padding: 12px; }
+    .cams .tile { min-height: 50px; }
+  }
+</style>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;500;600&display=swap" rel="stylesheet">
+<script>
+  // Appearance: dark (default), light, or whatever the device is set to. Remembered per device.
+  function s5theme() {
+    const t = localStorage.getItem("s5theme") || "dark";
+    const light = t === "light" || (t === "auto" && matchMedia("(prefers-color-scheme: light)").matches);
+    document.documentElement.dataset.theme = light ? "light" : "dark";
+    const m = document.querySelector('meta[name="theme-color"]'); if (m) m.content = light ? "#eeeef1" : "#0b0b0d";
+    return t;
+  }
+  s5theme();
+</script>
+<script src="/s5auth.js"></script>
+</head>
+<body>
+<canvas id="amb" width="32" height="18"></canvas>
+
+<header>
+  <span class="logo" aria-label="SEKTOR5"><svg viewBox="0 0 568 100" width="80" height="14" aria-hidden="true"><path d="M13,0 L70,0 L70,21 L21,21 L21,40 L57,40 L70,53 L70,87 L57,100 L0,100 L0,79 L49,79 L49,61 L13,61 L0,48 L0,13 ZM96,0 L104,0 L104,100 L96,100 L83,87 L83,13 ZM108,0 L153,0 L153,21 L108,21 ZM108,40 L145,40 L145,61 L108,61 ZM108,79 L153,79 L153,100 L108,100 ZM179,0 L187,0 L187,100 L179,100 L166,87 L166,13 ZM191,34 L209,0 L236,0 L215,50 L236,100 L209,100 L191,66 ZM262,0 L306,0 L319,13 L319,21 L249,21 L249,13 ZM273.5,25 L294.5,25 L294.5,100 L273.5,100 ZM365,0 L350,0 L332,18 L332,82 L350,100 L365,100 L365,79 L358,79 L353,74 L353,26 L358,21 L365,21 ZM369,0 L384,0 L402,18 L402,82 L384,100 L369,100 L369,79 L376,79 L381,74 L381,26 L376,21 L369,21 ZM428,0 L436,0 L436,100 L428,100 L415,87 L415,13 ZM440,0 L472,0 L485,13 L485,48 L473,60 L440,60 L440,39 L464,39 L464,21 L440,21 ZM440,64 L463,64 L485,100 L462,100 Z" fill="currentColor"/><path class="five" d="M498,0 L568,0 L568,21 L519,21 L519,40 L555,40 L568,53 L568,87 L555,100 L498,100 L498,79 L547,79 L547,61 L498,61 Z"/></svg></span>
+  <span class="grow"></span>
+  <button id="pilot" title="Everything follows the music. Tap to undo your changes."><i></i><span>Autopilot</span></button>
+  <button class="pill exitfocus" id="exitFocus">Exit focus</button>
+  <button class="round" id="gear" aria-label="Setup"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg></button>
+</header>
+<div id="off">Can't reach the lighting brain. Lights will come back when it does.</div>
+
+<main>
+  <!-- ======================= DECKS ======================= -->
+  <section class="screen" id="s-decks">
+    <div class="decks" id="decks"></div>
+    <div class="amix" id="amix">
+      <div class="amrow">
+        <button class="ampill" id="amOn" title="Mixes from deck to deck on its own. Keep both channel faders up."><i></i>Automix</button>
+        <div class="seg sm" id="amMode" title="How the next track is chosen"><button data-v="queue">Next in list</button><button data-v="harmonic">Best match</button></div>
+        <div class="seg sm" id="amStyle" title="Where the mix lands"><button data-v="drop">Land the drop</button><button data-v="overlap">Overlap</button></div>
+        <div class="seg sm" id="amOverlap" title="How long both tracks play together"><button data-v="16">16</button><button data-v="32">32</button><button data-v="64">64 beats</button></div>
+        <span class="grow"></span>
+        <button class="chipbtn" id="amSkip" title="Choose a different next track">Skip</button>
+        <button class="chipbtn" id="amNow" title="Start the mix on the next bar">Mix now</button>
+      </div>
+      <div class="amstatus" id="amStatus">Automix is off.</div>
+    </div>
+    <div class="label">Music <b id="libCount"></b></div>
+    <label class="search"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg>
+      <input id="q" type="search" placeholder="Search tracks, artists, genres, keys" autocomplete="off" spellcheck="false"></label>
+    <div class="chips" id="chips"></div>
+    <div class="tracks" id="tracks"></div>
+  </section>
+
+  <!-- ======================= MAPPING ======================= -->
+  <section class="screen stage" id="s-map"><div class="stagegrid map">
+    <div class="side left">
+      <div class="o2"><div class="label first">Surfaces <span>tap one to change it</span></div>
+      <div class="cards" id="surfs"></div></div>
+      <div class="o4"><div class="label">Hidden areas <span>black out what the projector shouldn't hit</span></div>
+      <div class="cards" id="maskCards"></div>
+      <div class="label">Saved layouts</div>
+      <div class="saved" id="saved"></div></div>
+    </div>
+    <div class="centre o1">
+    <div class="wallbox" id="wallBox"><div class="wall" id="wall"><canvas id="mgl"></canvas><canvas id="mov"></canvas>
+      <div class="hint" id="wallHint">Drag a corner to pin it to the wall · drag the middle to move · arrow keys nudge</div></div></div>
+    <div class="drawbar" id="drawbar"><span id="drawMsg">Tap around the area to hide</span>
+      <button id="drawUndo">Undo point</button><button id="drawCancel">Cancel</button><button class="go" id="drawDone">Done</button></div>
+    <div class="projs" id="projs"></div>
+    <div class="toggles">
+      <button id="tEdit" title="Shows the corner handles on the real projector, so you can line them up by eye">Corners on the wall</button>
+      <button id="tTest" title="A test grid on every projector">Test grid on the wall</button>
+      <span id="scrInfo" style="align-self:center;color:var(--dim);font-size:12px;margin-left:auto"></span>
+    </div>
+    </div>
+    <div class="side right o3"><div class="label first">Selected surface</div><div class="editor" id="editor"></div></div>
+  </div></section>
+
+  <!-- ======================= STAGE ======================= -->
+  <section class="screen stage" id="s-stage"><div class="stagegrid stg">
+    <div class="side left o2">
+      <div class="label first">View</div>
+      <div class="g2 cams" id="cams"></div>
+      <div class="label">Look</div>
+      <div class="stack">
+        <div class="level" id="stHaze"><div class="fill"></div><div class="t"><span>Haze</span><span class="v">–</span></div></div>
+        <div class="level" id="stDay"><div class="fill"></div><div class="t"><span>Daylight</span><span class="v">–</span></div></div>
+        <button class="tile" id="stGlow">Glow<small>Turn off on slow machines</small></button>
+      </div>
+      <div class="label">Preview a section</div>
+      <div class="chips wrap" id="secs"></div>
+    </div>
+    <div class="centre o1">
+      <div class="stagebox" id="stageBox"><iframe id="stageFrame" title="The stage in 3D" allow="fullscreen"></iframe>
+        <div class="cap" id="stCap">Loading the stage…</div></div>
+    </div>
+    <div class="side right o3">
+      <div class="label first">Lasers <b id="stCue"></b></div>
+      <div class="looks" id="looks"></div>
+      <div class="label">Rig <b id="rigCount"></b></div>
+      <div class="rig" id="rig"></div>
+      <a class="tile editrig" id="editRig">Edit the rig<small>Add, move and aim fixtures · venues</small></a>
+    </div>
+  </div></section>
+
+  <!-- ======================= LIGHTS ======================= -->
+  <section class="screen" id="s-lights">
+    <div class="strip" id="strip"></div>
+    <div class="label">Scene <b id="lScene"></b></div>
+    <div class="seg" id="scenes">
+      <button data-look="AUTO">Auto</button><button data-look="INTRO">Ambient</button><button data-look="GROOVE">Groove</button>
+      <button data-look="BREAKDOWN">Break</button><button data-look="DROP">Drop</button>
+    </div>
+    <div class="desk-2">
+      <div>
+        <div class="label">Hits <span>hold to keep them on</span></div>
+        <div class="g2">
+          <button class="tile" data-hold="strobe">Strobe<small>Hold</small></button>
+          <button class="tile" data-hold="blinder">Blinder<small>Hold</small></button>
+          <button class="tile" id="flash">Flash<small>Tap</small></button>
+          <button class="tile warn" id="black">Blackout<small>Tap on, tap off</small></button>
+        </div>
+      </div>
+      <div>
+        <div class="label">Colour</div>
+        <div class="ringwrap">
+          <div class="ringbox"><div class="ring" id="ring"></div><div class="dot" id="ringDot"></div><button class="mid" id="follow">Follow<br>the music</button></div>
+          <div class="ringside"><p id="colourNote">Colours follow the track's key.</p><button class="tile" id="cycle" style="min-height:64px">Cycle<small>Slowly through them all</small></button></div>
+        </div>
+      </div>
+    </div>
+    <div class="label">Level</div>
+    <div class="level" id="lvLights"><div class="fill"></div><div class="t"><span>Lights</span><span class="v">–</span></div></div>
+  </section>
+
+  <!-- ======================= VISUALS ======================= -->
+  <!-- Two views: the normal one for choosing the look, and Focus, the one you leave open while you
+       play: bigger picture, what the show is doing, and the moves you make mid-set. No tab bar. -->
+  <section class="screen stage" id="s-visuals"><div class="stagegrid vis">
+    <div class="side left o2">
+      <div class="fonly fhud hero">
+        <div class="scene" id="scene">—</div>
+        <div class="meta" id="meta">&nbsp;</div>
+        <div class="beat" id="beat"><i></i><i></i><i></i><i></i></div>
+        <div class="drop idle" id="drop">
+          <svg viewBox="0 0 64 64"><circle class="bg" cx="32" cy="32" r="28"/><circle class="fg" id="dropArc" cx="32" cy="32" r="28" stroke-dasharray="175.9" stroke-dashoffset="175.9"/></svg>
+          <div class="txt"><b id="dropBig">No drop ahead</b><span id="dropSmall">Autopilot will catch the next one</span></div>
+        </div>
+        <div class="amline" id="amLine"></div>
+      </div>
+      <div class="fonly fmoves">
+        <div class="label">Moments</div>
+        <div class="g3 now">
+          <button class="tile big" id="dropNow"><span class="ic">↯</span>Drop now<small>Everything hits · D</small></button>
+          <button class="tile" id="build"><span class="ic">↗</span>Build up<small>Drops in 4 bars</small></button>
+          <button class="tile" id="flashNow"><span class="ic">✦</span>Flash<small>Tap on the beat · space</small></button>
+          <button class="tile warn" id="blackF">Blackout<small>Lights · tap on, tap off · B</small></button>
+        </div>
+      </div>
+      <div class="nonly">
+        <div class="label first">Energy <span>a fresh take on this look</span></div>
+        <div class="g3">
+          <button class="tile" data-energy="0.22">Calm<small>Breakdowns</small></button>
+          <button class="tile" data-energy="0.55">Groove<small>Most of the set</small></button>
+          <button class="tile" data-energy="0.92">Drop<small>Full on</small></button>
+        </div>
+      </div>
+    </div>
+    <div class="centre o1">
+      <div class="pv" id="pv"><canvas id="gl"></canvas><canvas id="ov"></canvas>
+        <div class="cap"><b id="skName">—</b><button class="pill" id="freeze">Freeze</button><button class="pill" id="next">Next look ›</button>
+          <button class="pill focusbtn" id="focusBtn" title="The view to leave open while you play">⤢ Focus</button></div>
+      </div>
+      <div class="level nonly" id="lvVis" style="margin-top:12px"><div class="fill"></div><div class="t"><span>Projectors</span><span class="v">–</span></div></div>
+    </div>
+    <div class="side right o3">
+      <div class="fonly">
+        <div class="label first">Energy</div>
+        <div class="g3 fenergy">
+          <button class="tile" data-energy="0.22">Calm<small>Z</small></button>
+          <button class="tile" data-energy="0.55">Groove<small>X</small></button>
+          <button class="tile" data-energy="0.92">Drop<small>C</small></button>
+        </div>
+      </div>
+      <div class="fonly">
+        <div class="label fgap">Colours <b id="palName"></b></div>
+        <div class="palettes" id="palettes"></div>
+      </div>
+      <div class="label first fgap">Presets <b id="pCount"></b></div>
+      <div class="presets" id="presets"></div>
+      <button class="randbtn" id="randPreset" title="A random preset for this look (R)"><span class="dice">⚄</span>Randomise<small>a random preset · R</small></button>
+    </div>
+  </div></section>
+</main>
+
+<nav class="tabs" id="tabs">
+  <button data-s="decks"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="7.5" cy="12" r="4.5"/><circle cx="16.5" cy="12" r="4.5"/><circle cx="7.5" cy="12" r="1" fill="currentColor"/><circle cx="16.5" cy="12" r="1" fill="currentColor"/></svg><span>Decks</span></button>
+  <button data-s="lights"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M9 18h6M10 21h4M12 3a6 6 0 0 0-4 10.5c.8.8 1 1.5 1 2.5h6c0-1 .2-1.7 1-2.5A6 6 0 0 0 12 3z"/></svg><span>Lights</span></button>
+  <button data-s="visuals"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><path d="M12 3l9 16H3z"/><circle cx="12" cy="13.5" r="2"/></svg><span>Visuals</span></button>
+  <button data-s="map"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><path d="M4 6l16-2v16L4 18z"/><circle cx="4" cy="6" r="1.4" fill="currentColor"/><circle cx="20" cy="4" r="1.4" fill="currentColor"/><circle cx="20" cy="20" r="1.4" fill="currentColor"/><circle cx="4" cy="18" r="1.4" fill="currentColor"/></svg><span>Mapping</span></button>
+  <button data-s="stage"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><path d="M3 20h18M5 20l2-9h10l2 9"/><path d="M9 11l-2-6M15 11l2-6" stroke-linecap="round"/></svg><span>Stage</span></button>
+</nav>
+
+<div id="sheet">
+  <div class="panel">
+    <h2>Setup</h2>
+    <p class="sub">Appearance</p>
+    <div class="theme" id="theme"><button data-t="dark">Dark</button><button data-t="light">Light</button><button data-t="auto">Match device</button></div>
+    <div class="setrow"><div><b>Track waveforms</b><span>On the Decks screen: a scrolling waveform and an overview of each track</span></div>
+      <button class="switch" id="wavesT" role="switch" aria-checked="false" aria-label="Show track waveforms"></button></div>
+    <p class="sub">Things you set before the night. They open the full pages.</p>
+    <a data-port="8080" data-path="/"><div><b>Decks &amp; automix</b><span>Automix, tempo, waveforms, the full library</span></div></a>
+    <a data-port="8090" data-path="/"><div><b>Lighting setup</b><span>Fixtures, strobe rate, tap tempo, latency</span></div></a>
+    <a data-port="8110" data-path="/"><div><b>Design looks</b><span>Sketches, every setting, saving presets, transitions</span></div></a>
+    <a data-port="8100" data-path="/edit"><div><b>Projection output</b><span>Latency, render resolution, every border setting</span></div></a>
+    <a data-port="8100" data-path="/stage.html"><div><b>Stage design</b><span>Add, move and aim fixtures · venues · match real lights</span></div></a>
+    <button class="close" id="closeSheet">Done</button>
+  </div>
+</div>
+<div id="toast"></div>
+
+<script src="render.js"></script>
+<script src="vj.js"></script>
+<script>
+"use strict";
+const $ = id => document.getElementById(id);
+const at = (port, path) => window.S5AUTH && S5AUTH.url ? S5AUTH.url(port, path) : `${location.protocol}//${location.hostname}:${port}${path}`;
+const LIGHTS = at(8090, "/api/cmd"), LSTATE = at(8090, "/api/state"), LAYOUT = at(8100, "/api/layout");
+
+let tt;
+function toast(msg, undo) {
+  const t = $("toast"); t.textContent = msg; t.classList.toggle("withundo", !!undo);
+  if (undo) { const b = document.createElement("button"); b.className = "undo"; b.textContent = "Undo"; b.onclick = () => { undo(); t.classList.remove("show"); }; t.appendChild(b); }
+  t.classList.add("show"); clearTimeout(tt); tt = setTimeout(() => t.classList.remove("show"), undo ? 5000 : 2200);
+}
+
+// Every command says when it didn't work: a locked browser or a refused cue shouldn't look like it went.
+async function send(url, body, what) {
+  try {
+    const r = await fetch(url, { method: "POST", body: JSON.stringify(body) });
+    const j = await r.json().catch(() => ({}));
+    if (!r.ok || j.ok === false) { toast(`${what}: ${j.error || "didn't go through"}`); return null; }
+    return j;
+  } catch (e) { toast(`${what}: can't reach it`); return null; }
+}
+const cmd = (c, v, what = c) => send(LIGHTS, { cmd: c, value: v }, what);
+const on = (sel, test) => document.querySelectorAll(sel).forEach(b => b.classList.toggle("on", !!test(b)));
+const pulse = el => { el.classList.add("held"); setTimeout(() => el.classList.remove("held"), 140); };
+
+// ---------------------------------------------------------------- screens
+function show(name) {
+  on("#tabs button", b => b.dataset.s === name);
+  document.querySelectorAll(".screen").forEach(s => s.classList.toggle("on", s.id === "s-" + name));
+  localStorage.setItem("s5show", name);
+  document.body.classList.toggle("focus", name === "visuals" && localStorage.getItem("s5focus") === "1");
+  requestAnimationFrame(() => { resize(); if (name === "map") sizeWall(); });
+  if (name === "stage" && !$("stageFrame").src) $("stageFrame").src = at(8100, "/stage.html?embed=1");
+  if ($("stageFrame").src) stSend({ pause: name !== "stage" });
+}
+document.querySelectorAll("#tabs button").forEach(b => b.onclick = () => show(b.dataset.s));
+if (localStorage.getItem("s5show") === "now") { localStorage.setItem("s5show", "visuals"); localStorage.setItem("s5focus", "1"); }
+show(localStorage.getItem("s5show") || "visuals");
+
+$("gear").onclick = () => $("sheet").classList.add("show");
+$("closeSheet").onclick = () => $("sheet").classList.remove("show");
+$("sheet").onclick = e => { if (e.target.id === "sheet") $("sheet").classList.remove("show"); };
+document.querySelectorAll("#sheet a[data-port]").forEach(a => a.href = at(a.dataset.port, a.dataset.path));
+
+// ---------------------------------------------------------------- lights
+let S = {};
+document.querySelectorAll("[data-look]").forEach(b => b.onclick = () => cmd("look", b.dataset.look, "Scene"));
+$("dropNow").onclick = () => { pulse($("dropNow")); cmd("drop_now", undefined, "Drop now"); };
+$("build").onclick = () => { pulse($("build")); cmd("build", 4, "Build up"); };
+
+function holdPad(el, name) {
+  const set = v => { if (el.classList.contains("held") === v) return; el.classList.toggle("held", v); cmd(name, v, el.firstChild.textContent); };
+  el.addEventListener("pointerdown", e => { el.setPointerCapture(e.pointerId); set(true); });
+  for (const ev of ["pointerup", "pointercancel", "lostpointercapture"]) el.addEventListener(ev, () => set(false));
+  return set;
+}
+const holds = {};
+document.querySelectorAll("[data-hold]").forEach(b => holds[b.dataset.hold] = holdPad(b, b.dataset.hold));
+const flash = () => { cmd("flash", undefined, "Flash"); pulse($("flash")); pulse($("flashNow")); };
+$("flash").addEventListener("pointerdown", flash);
+$("flashNow").addEventListener("pointerdown", flash);
+$("black").onclick = () => cmd("mode", S.mode === "blackout" ? "auto" : "blackout", "Blackout");
+
+// Colour ring: the angle is the hue (0 at the top, clockwise), the middle hands colour back to the music.
+function ringHue(e) {
+  const r = $("ring").getBoundingClientRect(), x = e.clientX - r.left - r.width / 2, y = e.clientY - r.top - r.height / 2;
+  return ((Math.atan2(x, -y) / (2 * Math.PI)) + 1) % 1;
+}
+let ringT = 0, ringBusy = false;
+$("ring").addEventListener("pointerdown", e => { ringBusy = true; $("ring").setPointerCapture(e.pointerId); pickHue(e); });
+for (const ev of ["pointerup", "pointercancel"]) $("ring").addEventListener(ev, () => setTimeout(() => ringBusy = false, 400));
+$("ring").addEventListener("pointermove", e => { if (e.buttons) pickHue(e); });
+function pickHue(e) {
+  const h = ringHue(e); placeDot(h, true);
+  const now = performance.now(); if (now - ringT < 60) return; ringT = now;
+  cmd("palette", { mode: "lock", hue: Math.round(h * 1000) / 1000 }, "Colour");
+}
+function placeDot(h, show) {
+  const d = $("ringDot"), c = ($("ring").clientWidth || 210) / 2, rad = c * 0.79, a = h * 2 * Math.PI;
+  d.style.left = c + rad * Math.sin(a) + "px"; d.style.top = c - rad * Math.cos(a) + "px";
+  d.style.background = `hsl(${h * 360},100%,55%)`; d.style.display = show ? "block" : "none";
+}
+$("follow").onclick = () => cmd("palette", { mode: "auto" }, "Colour");
+$("cycle").onclick = () => cmd("palette", { mode: S.palette && S.palette.mode === "cycle" ? "auto" : "cycle" }, "Colour");
+
+// Levels: drag anywhere on the bar. While a finger is on it, the live value doesn't fight it.
+function level(el, onSet) {
+  let busy = false, t, v = 0;
+  const paint = x => { v = x; el.querySelector(".fill").style.width = x * 100 + "%"; el.querySelector(".v").textContent = Math.round(x * 100) + "%"; };
+  const at = e => { const r = el.getBoundingClientRect(); return Math.max(0, Math.min(1, (e.clientX - r.left) / r.width)); };
+  const move = e => { paint(Math.round(at(e) * 100) / 100); clearTimeout(t); t = setTimeout(() => onSet(v), 50); };
+  el.addEventListener("pointerdown", e => { busy = true; el.setPointerCapture(e.pointerId); move(e); });
+  el.addEventListener("pointermove", e => { if (busy) move(e); });
+  for (const ev of ["pointerup", "pointercancel"]) el.addEventListener(ev, () => setTimeout(() => busy = false, 500));
+  el.tabIndex = 0;
+  el.addEventListener("keydown", e => { const d = { ArrowRight: .05, ArrowLeft: -.05 }[e.key]; if (d) { e.preventDefault(); e.stopPropagation(); paint(Math.max(0, Math.min(1, v + d))); onSet(v); } });
+  return x => { if (!busy && x != null) paint(x); };
+}
+const showLights = level($("lvLights"), v => cmd("intensity", v, "Lights level"));
+
+// What the room is doing that the music didn't ask for, in plain words.
+function overrides() {
+  const o = [];
+  if (S.look) o.push(`${{ INTRO: "Ambient", GROOVE: "Groove", BREAKDOWN: "Break", DROP: "Drop" }[S.look]} scene`);
+  if (S.palette && S.palette.mode === "lock") o.push("colour locked");
+  if (S.palette && S.palette.mode === "cycle") o.push("colour cycling");
+  if (S.speed && S.speed !== 1) o.push(`${S.speed}× speed`);
+  if (S.mode === "blackout") o.push("blackout");
+  else if (S.mode === "manual") o.push("manual");
+  if (S.hold) o.push("build held");
+  if (FREEZE) o.push("visuals frozen");
+  return o;
+}
+$("pilot").onclick = async () => {
+  if (!overrides().length && !PAL) return toast("Already on autopilot");
+  if (PAL) { PAL = ""; localStorage.setItem("s5pal", ""); paintPalettes(); if (SK) send("/api/params", palValues(""), "Colours"); }
+  await cmd("clear", undefined, "Back to auto");
+  if (FREEZE) setFreeze(false);
+  toast("Back on autopilot");
+};
+function renderPilot() {
+  const o = overrides(), p = $("pilot");
+  p.classList.toggle("man", o.length > 0);
+  const t = o.length ? o[0][0].toUpperCase() + o.join(", ").slice(1) : "Autopilot";
+  if (p.querySelector("span").textContent !== t) p.querySelector("span").textContent = t;
+}
+
+const NICE = { IDLE: "Waiting", INTRO: "Ambient", GROOVE: "Groove", BUILD: "Building", HOLD: "Holding", PREDROP: "Here it comes", DROP: "Drop", BREAKDOWN: "Break", OUTRO: "Outro" };
+const nice = s => NICE[s] || (s ? s[0] + s.slice(1).toLowerCase() : "—");
+let strips = "";
+function renderLights() {
+  $("scene").textContent = S.mode === "blackout" ? "Blackout" : nice(S.scene);
+  const bpm = S.bpm ? `${S.bpm.toFixed(S.bpm % 1 ? 1 : 0)} BPM` : "";
+  const deck = !S.free && S.live && S.title;
+  $("meta").innerHTML = deck ? `<b></b> · ${bpm}` : S.free ? `No deck playing · ${bpm} on the tap clock` : "No deck playing";
+  if (deck) $("meta").querySelector("b").textContent = S.title;
+
+  // The drop: a ring that fills as it gets close (over the last 32 beats), or the build's progress.
+  const b2d = S.beats_to_drop, building = S.scene === "BUILD" || S.scene === "HOLD";
+  let frac = 0, big = "No drop ahead", small = S.free ? "Play a track or tap Build up" : "Autopilot will catch the next one";
+  if (building) { frac = S.progress || 0; big = S.hold ? "Build held" : "Building"; small = b2d != null ? `Drop in ${Math.ceil(b2d)} beats` : ""; }
+  else if (b2d != null) { frac = Math.max(0, 1 - b2d / 32); big = `Drop in ${Math.ceil(b2d)}`; small = `beats · bar ${S.next_drop_bar || "–"}`; }
+  else if (S.scene === "DROP") { frac = 1; big = "Drop!"; small = "Full on"; }
+  $("dropArc").style.strokeDashoffset = 175.9 * (1 - frac);
+  $("drop").classList.toggle("idle", !frac);
+  if ($("dropBig").textContent !== big) $("dropBig").textContent = big;
+  $("dropSmall").textContent = small;
+
+  on("[data-look]", b => (S.look || "AUTO") === b.dataset.look);
+  $("lScene").textContent = S.look ? "" : `following the music · ${nice(S.scene)}`;
+  $("black").classList.toggle("on", S.mode === "blackout"); $("blackF").classList.toggle("on", S.mode === "blackout");
+  document.body.classList.toggle("dark", S.mode === "blackout");
+  const pm = S.palette ? S.palette.mode : "auto";
+  $("follow").classList.toggle("on", pm === "auto");
+  $("cycle").classList.toggle("on", pm === "cycle");
+  $("colourNote").textContent = pm === "lock" ? "Locked to this colour. Tap the middle to hand it back." : pm === "cycle" ? "Cycling through every colour." : "Colours follow the track's key.";
+  if (!ringBusy) placeDot(S.palette ? S.palette.hue : 0, pm === "lock");
+  showLights(S.intensity);
+  if (S.hue != null) document.body.style.setProperty("--glow", `hsla(${Math.round(S.hue * 360)},100%,55%,${(0.18 + 0.3 * (S.energy ?? 0.5)).toFixed(2)})`);
+
+  // One thin bar per fixture, showing what it's putting out right now.
+  const pv = S.preview || {}, names = Object.keys(pv);
+  if (names.join() !== strips) { strips = names.join(); $("strip").innerHTML = names.map(n => `<canvas data-fx="${n}" title="${n}"></canvas>`).join(""); }
+  $("strip").querySelectorAll("canvas").forEach(cv => {
+    const px = pv[cv.dataset.fx] || [], w = Math.max(1, px.length);
+    if (cv.width !== w) { cv.width = w; cv.height = 1; }
+    const g = cv.getContext("2d"); px.forEach((c, i) => { g.fillStyle = c; g.fillRect(i, 0, 1, 1); });
+  });
+  renderPilot();
+}
+
+async function poll() {
+  try {
+    S = await (await fetch(LSTATE, { cache: "no-store" })).json();
+    $("off").classList.remove("show");
+    renderLights();
+  } catch (e) { $("off").classList.add("show"); }
+  setTimeout(poll, 150);
+}
+poll();
+
+// ---------------------------------------------------------------- visuals
+let SK = null, AU = {}, FREEZE = false, lastPreset = "";
+const R = new MapRenderer($("gl"), $("ov"));
+R.layout = { lead_ms: 60, brightness: 1, masks: [], surfaces: [
+  { id: "p", content: "gen", opacity: 1, hue_shift: 0, corners: [[0, 0], [1, 0], [1, 1], [0, 1]] }] };
+// Only resize while the preview is showing; hidden, it keeps rendering small for the room glow.
+function resize() { const r = $("pv").getBoundingClientRect(), d = Math.min(2, devicePixelRatio || 1); if (r.width) R.resize(Math.round(r.width * d), Math.round(r.height * d)); }
+addEventListener("resize", resize);
+
+connectEvents(R, {
+  onSketch: sk => { SK = sk; $("skName").textContent = sk.title || sk.name; refreshPresets(); },
+  onAuto: (a, frz) => { AU = a; FREEZE = !!frz; $("freeze").classList.toggle("on", FREEZE); $("freeze").textContent = FREEZE ? "Frozen" : "Freeze"; renderPilot(); },
+});
+
+const params = () => SK ? SK.groups.flatMap(g => g.params) : [];
+const loOf = p => (AU[p.id] && AU[p.id].lo !== undefined) ? AU[p.id].lo : p.min;
+const hiOf = p => (AU[p.id] && AU[p.id].hi !== undefined) ? AU[p.id].hi : p.max;
+document.querySelectorAll("[data-energy]").forEach(b => b.onclick = () => energy(+b.dataset.energy, b));
+function energy(e, b) {
+  if (!SK) return;
+  if (b) pulse(b);
+  const v = VJ.energyValues(params(), loOf, hiOf, e);
+  if (PAL) Object.assign(v, palValues(PAL));
+  send("/api/params", v, "Visuals").then(r => { if (r) { lastPreset = ""; paintPresets(); } });
+}
+$("next").onclick = async () => { const r = await send("/api/next", {}, "Next look"); if (r) toast("Mixing to " + r.sketch); };
+function setFreeze(f) { send("/api/auto", { _freeze: f }, "Freeze"); }
+$("freeze").onclick = () => setFreeze(!FREEZE);
+
+let PRESETS = [];
+async function refreshPresets() {
+  try { PRESETS = (await (await fetch("/api/presets", { cache: "no-store" })).json()).presets || []; } catch (e) { PRESETS = []; }
+  if (!PRESETS.includes(lastPreset)) lastPreset = "";
+  $("pCount").textContent = PRESETS.length ? `${PRESETS.length} for ${SK ? SK.title || SK.name : "this look"}` : "";
+  $("presets").innerHTML = PRESETS.length ? PRESETS.map(() => `<button class="tile"></button>`).join("")
+    : `<div class="none">No presets for this look yet. Save some in Setup → Design looks.</div>`;
+  [...$("presets").children].forEach((b, i) => {
+    if (!b.classList.contains("tile")) return;
+    const n = PRESETS[i]; b.dataset.p = n;
+    b.textContent = n.replace(/[-_]+/g, " ").replace(/^./, c => c.toUpperCase());
+    b.onclick = async () => { if (await send(`/api/presets/${encodeURIComponent(n)}/load`, {}, "Preset")) { lastPreset = n; paintPresets(); if (PAL) setTimeout(palVisuals, 400); } };
+  });
+  paintPresets();
+}
+const paintPresets = () => on("#presets [data-p]", b => b.dataset.p === lastPreset);
+
+// Randomise: a random preset for this look (never the one that's on). A look with no presets gets a
+// fresh random take instead, inside each setting's range. The colour palette, if one's on, stays.
+async function randomise() {
+  const b = $("randPreset"); b.classList.remove("spin"); void b.offsetWidth; b.classList.add("spin");
+  const pool = PRESETS.filter(n => n !== lastPreset);
+  if (pool.length) {
+    const n = pool[Math.floor(Math.random() * pool.length)];
+    if (await send(`/api/presets/${encodeURIComponent(n)}/load`, {}, "Randomise")) {
+      lastPreset = n; paintPresets(); if (PAL) setTimeout(palVisuals, 400);
+      const el = [...$("presets").querySelectorAll("[data-p]")].find(x => x.dataset.p === n);
+      if (el) el.scrollIntoView({ block: "nearest", behavior: "smooth" });
+      toast(`Randomised: ${el ? el.textContent : n}`);
+    }
+  } else if (SK) {
+    const v = VJ.energyValues(params(), loOf, hiOf, Math.random());
+    if (PAL) Object.assign(v, palValues(PAL));
+    if (await send("/api/params", v, "Randomise")) toast("Randomised this look");
+  }
+}
+$("randPreset").onclick = randomise;
+
+// One loop: the preview, the room glow behind the app, and the beat.
+const amb = $("amb").getContext("2d"), dots = [...$("beat").children];
+requestAnimationFrame(function frame(now) {
+  R.draw(now);
+  try { amb.drawImage($("gl"), 0, 0, 32, 18); } catch (e) {}
+  if (mOn() && ML) M.draw(now, { handles: true, draft, projector: pid() });
+  const f = R.lastFrame;
+  if (f) dots.forEach((d, i) => d.classList.toggle("on", i === Math.round(f.bwb) - 1 && 1 - f.frac > 0.4));
+  requestAnimationFrame(frame);
+});
+
+// ---------------------------------------------------------------- projector level
+// The mapping layout's brightness is the real output of every projector. Change only that.
+let LAY = null;
+const showVis = level($("lvVis"), async v => { const l = ML || LAY; if (!l) return; l.brightness = v; await send(LAYOUT, l, "Projector level"); });
+async function pollLayout() {
+  try { LAY = ML || await (await fetch(LAYOUT, { cache: "no-store" })).json(); showVis(LAY.brightness); } catch (e) {}
+  setTimeout(pollLayout, 2000);
+}
+pollLayout();
+
+// ---------------------------------------------------------------- decks
+// The same deck commands as the Decks page (/api/deck on :8080): play, stop, sync, master, load.
+const DECKS = at(8080, "/api/state"), DECK_CMD = at(8080, "/api/deck"), LIB = at(8080, "/api/library");
+let D = null, libSrc = null, playlists = [], plist = 0, TRACKS = [], filter = "all";
+const played = new Set(JSON.parse(localStorage.getItem("s5played") || "[]"));
+const esc = t => String(t ?? "").replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+const mmss = sec => { sec = Math.max(0, Math.round(sec)); return `${Math.floor(sec / 60)}:${String(sec % 60).padStart(2, "0")}`; };
+const COLOURS = { Pink: "#ff4fa3", Red: "#ef4444", Orange: "#ff8a1f", Yellow: "#facc15", Green: "#34d399", Aqua: "#22d3ee", Blue: "#3b82f6", Purple: "#a855f7" };
+const deckCmd = (deck, action, extra, what) => send(DECK_CMD, Object.assign({ deck, action }, extra || {}), what || `Deck ${deck}`);
+
+// Camelot keys: the same number, or one step round the wheel in the same letter, mix cleanly.
+const camelot = k => { const m = /^(\d{1,2})([AB])$/.exec(k || ""); return m ? [+m[1], m[2]] : null; };
+function keyFits(a, b) {
+  const x = camelot(a), y = camelot(b); if (!x || !y) return false;
+  const d = Math.min((x[0] - y[0] + 12) % 12, (y[0] - x[0] + 12) % 12);
+  return x[0] === y[0] || (x[1] === y[1] && d <= 1);
+}
+const bpmFits = (bpm, m) => !!bpm && !!m && [1, 0.5, 2].some(f => Math.abs(bpm * f / m - 1) <= 0.06);
+
+let deckSig = "";
+function renderDecks() {
+  const players = (D && D.players || []).filter(p => p.number <= 4).sort((a, b) => a.number - b.number);
+  const sig = players.map(p => p.number).join();
+  if (sig !== deckSig) {
+    deckSig = sig;
+    $("decks").innerHTML = players.length ? players.map(p => `<div class="deck" id="dk${p.number}">
+        <div class="tag"><i>Deck ${p.number}</i></div>
+        <div class="top"><div class="art"></div><div class="ti"><b></b><span></span></div><div class="bpm"><b></b><span></span></div></div>
+        <canvas class="wv det" data-n="${p.number}"></canvas><canvas class="wv ovw" data-n="${p.number}"></canvas>
+        <div class="bar"><div class="pos"></div></div><div class="times"><span class="el"></span><span class="rm"></span></div>
+        <div class="btns"><button class="tile" data-a="play"></button><button class="tile" data-a="sync">Sync</button><button class="tile" data-a="master">Master</button></div>
+      </div>`).join("") : `<div class="deck empty"><div class="ti"><b>No decks found</b><span>Turn the players on, or start the simulation from Setup → Decks &amp; music.</span></div></div>`;
+    players.forEach(p => {
+      const el = $("dk" + p.number);
+      el.querySelector("[data-a=play]").onclick = () => { const st = cur(p.number); if (st) deckCmd(p.number, st.status.playing ? "stop" : "play"); };
+      el.querySelector("[data-a=sync]").onclick = () => { const st = cur(p.number); if (st) deckCmd(p.number, st.status.synced ? "sync_off" : "sync_on", null, "Sync"); };
+      el.querySelector("[data-a=master]").onclick = () => deckCmd(p.number, "master", null, "Master");
+    });
+  }
+  const masterBpm = D && D.master && D.master.bpm;
+  for (const p of players) {
+    const el = $("dk" + p.number); if (!el) continue;
+    const st = p.status || {}, t = p.track, loaded = !!(st.trackLoaded && t);
+    el.classList.toggle("empty", !loaded);
+    el.classList.toggle("air", !!st.onAir && !!st.playing);
+    el.querySelector(".tag").innerHTML = `<i>Deck ${p.number}</i>` + (st.playing && st.onAir ? `<i class="air">On air</i>` : "") + (st.tempoMaster ? `<i class="mst">Master</i>` : "");
+    const art = el.querySelector(".art");
+    if (loaded && p.hasArt) { const u = at(8080, `/api/art/${p.number}?r=${encodeURIComponent(t.ref)}`); if (art.dataset.u !== u) { art.dataset.u = u; art.style.backgroundImage = `url("${u}")`; art.textContent = ""; } }
+    else { art.dataset.u = ""; art.style.backgroundImage = loaded ? `linear-gradient(135deg, ${COLOURS[t.color] || "#ff5a1f"}, #1b1b20)` : ""; art.textContent = loaded ? "" : p.number; }
+    el.querySelector(".ti b").textContent = loaded ? t.title : "Empty";
+    el.querySelector(".ti span").textContent = loaded ? [t.artist, t.key, t.genre].filter(Boolean).join(" · ") : "Load a track from the list below";
+    el.querySelector(".bpm b").textContent = loaded && st.effectiveBpm ? st.effectiveBpm.toFixed(1) : "–";
+    el.querySelector(".bpm span").textContent = loaded ? (st.pitchPct ? `${st.pitchPct > 0 ? "+" : ""}${st.pitchPct.toFixed(1)}%` : "BPM") : "";
+    const dur = loaded ? t.durationSec || 0 : 0, pos = (p.position && p.position.ms || 0) / 1000;
+    el.querySelector(".pos").style.width = dur ? Math.min(100, pos / dur * 100) + "%" : "0";
+    el.querySelector(".el").textContent = dur ? mmss(pos) : "";
+    el.querySelector(".rm").textContent = dur ? "−" + mmss(dur - pos) : "";
+    const bar = el.querySelector(".bar"), cues = loaded && dur ? (t.cues || []).filter(c => /drop/i.test(c.comment || "")) : [];
+    const csig = cues.map(c => c.ms).join() + "/" + (t && t.ref);
+    if (bar.dataset.c !== csig) { bar.dataset.c = csig; bar.querySelectorAll(".cue").forEach(c => c.remove());
+      cues.forEach(c => { const m = document.createElement("i"); m.className = "cue"; m.title = "Drop"; m.style.left = c.ms / 10 / dur + "%"; bar.appendChild(m); }); }
+    const pb = el.querySelector("[data-a=play]");
+    pb.textContent = st.playing ? "■  Stop" : "▶  Play"; pb.classList.toggle("on", !!st.playing);
+    el.querySelector("[data-a=sync]").classList.toggle("on", !!st.synced);
+    const mb = el.querySelector("[data-a=master]"); mb.classList.toggle("on", !!st.tempoMaster);
+  }
+  if (masterBpm !== lastMasterBpm) { lastMasterBpm = masterBpm; renderTracks(); }
+}
+let lastMasterBpm = null;
+const cur = n => D && D.players.find(p => p.number === n);
+
+async function pollDecks() {
+  try { D = await (await fetch(DECKS, { cache: "no-store" })).json(); D.rx = performance.now(); renderDecks(); } catch (e) { D = null; renderDecks(); }
+  setTimeout(pollDecks, document.querySelector("#s-decks.on") || am.on ? 200 : 1500);   // automix needs fresh positions
+}
+pollDecks();
+
+// The music: the first USB/SD that's ready, all tracks or one playlist, searchable, with what fits the mix marked.
+async function loadLibrary() {
+  try {
+    const j = await (await fetch(LIB, { cache: "no-store" })).json();
+    const src = (j.sources || []).find(x => x.ready);
+    if (!src) { TRACKS = []; $("libCount").textContent = ""; $("tracks").innerHTML = `<div class="none">No USB or SD in the players yet.</div>`; return setTimeout(loadLibrary, 5000); }
+    if (src.src !== libSrc) {
+      libSrc = src.src; plist = 0;
+      playlists = (await (await fetch(at(8080, `/api/library/tree?src=${encodeURIComponent(libSrc)}`))).json()).items.filter(i => !i.folder);
+      renderChips();
+    }
+    TRACKS = (await (await fetch(at(8080, `/api/library/tracks?src=${encodeURIComponent(libSrc)}&playlist=${plist}`))).json()).tracks || [];
+    $("libCount").textContent = `${src.name || "USB"} · ${TRACKS.length} tracks`;
+    renderTracks();
+  } catch (e) { $("tracks").innerHTML = `<div class="none">The music library isn't available.</div>`; setTimeout(loadLibrary, 8000); }
+}
+function renderChips() {
+  $("chips").innerHTML = `<button data-f="all">All tracks</button><button data-f="fit">Fits the mix</button>` +
+    playlists.map(p => `<button data-pl="${p.id}">${esc(p.name)}</button>`).join("");
+  $("chips").querySelectorAll("[data-f]").forEach(b => b.onclick = () => { filter = b.dataset.f; if (plist) { plist = 0; loadLibrary(); } paintChips(); renderTracks(); });
+  $("chips").querySelectorAll("[data-pl]").forEach(b => b.onclick = () => { filter = "all"; plist = +b.dataset.pl; paintChips(); loadLibrary(); });
+  paintChips();
+}
+const paintChips = () => $("chips").querySelectorAll("button").forEach(b => b.classList.toggle("on", b.dataset.pl ? +b.dataset.pl === plist : !plist && b.dataset.f === filter));
+
+function masterKey() { const m = D && D.master && cur(D.master.player); return m && m.track && m.track.key; }
+function renderTracks() {
+  if (!libSrc) return;
+  const q = $("q").value.trim().toLowerCase(), mb = D && D.master && D.master.bpm, mk = masterKey();
+  let list = TRACKS.filter(t => !q || [t.title, t.artist, t.genre, t.key, t.album].some(x => (x || "").toLowerCase().includes(q)));
+  if (filter === "fit") list = list.filter(t => bpmFits(t.bpm, mb) && (!mk || keyFits(t.key, mk)));
+  const playing = n => { const p = cur(n); return !!(p && p.status && p.status.playing); };
+  $("tracks").innerHTML = list.length ? list.slice(0, 200).map((t, i) => {
+    const fit = bpmFits(t.bpm, mb) && keyFits(t.key, mk);
+    return `<div class="trk${played.has(libSrc + "/" + t.id) ? " played" : ""}" data-i="${i}">
+      <div class="nm"><b>${esc(t.title)}</b><span>${esc(t.artist)}${t.genre ? " · " + esc(t.genre) : ""}</span></div>
+      <div class="kb">${fit ? `<span class="fit">● fits</span> · ` : ""}${t.bpm ? t.bpm.toFixed(1) : "–"} · ${esc(t.key || "–")} · ${mmss(t.dur || 0)}</div>
+      <div class="ld"><button data-d="1" title="Load on deck 1"${playing(1) ? " disabled" : ""}>1</button><button data-d="2" title="Load on deck 2"${playing(2) ? " disabled" : ""}>2</button></div></div>`;
+  }).join("") : `<div class="none">${filter === "fit" ? "Nothing in this list fits the mix right now." : "No tracks match."}</div>`;
+  const shown = list.slice(0, 200);
+  $("tracks").querySelectorAll(".trk").forEach(row => {
+    const t = shown[+row.dataset.i];
+    row.querySelectorAll("[data-d]").forEach(b => b.onclick = e => { e.stopPropagation(); loadTrack(+b.dataset.d, t); });
+    row.onclick = () => { const free = [1, 2].find(n => !playing(n)); if (free) loadTrack(free, t); else toast("Both decks are playing. Stop one first."); };
+  });
+}
+async function loadTrack(deck, t) {
+  if (await deckCmd(deck, "load", { src: libSrc, id: t.id }, `Deck ${deck}`)) {
+    played.add(libSrc + "/" + t.id); localStorage.setItem("s5played", JSON.stringify([...played].slice(-2000)));
+    toast(`“${t.title}” → deck ${deck}`); renderTracks();
+  }
+}
+$("q").addEventListener("input", renderTracks);
+$("q").addEventListener("keydown", e => { if (e.key === "Escape") { $("q").value = ""; renderTracks(); $("q").blur(); } });
+loadLibrary();
+
+// ---------------------------------------------------------------- mapping
+// The projector's layout (:8100), edited here the way the mapping editor does it: surfaces are quads
+// per projector, pinned by their corners; hidden areas are polygons drawn over the top.
+const M = new MapRenderer($("mgl"), $("mov"));
+let ML = null, mScreens = {}, mScreen = { w: 1920, h: 1080 }, mDrag = null, draft = null, selCorner = 0, mTimer = null, mLast = 0, addingProj = false;
+let curP = localStorage.getItem("s5proj") || "";
+const pid = () => M.projectorId(curP), mine = x => (x.projector || "main") === pid();
+const mOn = () => !!document.querySelector("#s-map.on");
+connectEvents(M, { url: at(8100, "/api/events"), reload: false,
+  onLayout: l => { if (!mDrag) { ML = l; M.layout = ML; if (mOn()) renderMap(); } },
+  onScreen: x => { mScreen = x; sizeWall(); }, onScreens: x => { mScreens = x || {}; sizeWall(); } });
+connectVisuals(M);
+function mPush(now) {
+  M.layout = ML; clearTimeout(mTimer);
+  const go = () => { mLast = performance.now(); send(LAYOUT, ML, "Mapping"); };
+  if (now || performance.now() - mLast > 60) go(); else mTimer = setTimeout(go, 60);
+}
+const scr = () => mScreens[pid()] || (pid() === M.projectorId("") ? mScreen : { w: 1920, h: 1080 });
+function sizeWall() {
+  const box = $("wallBox").parentElement, w = box.clientWidth; if (!w) return;
+  // Wide: whatever height the centre column has left after the bits above and below the picture.
+  const wide = getComputedStyle(box).display === "flex" && box.classList.contains("centre") && box.clientHeight > 0 && matchMedia("(min-width: 1100px) and (min-height: 600px)").matches;
+  const rest = [...box.children].filter(e => e.id !== "wallBox" && e.offsetParent).reduce((a, e) => a + e.offsetHeight + 12, 0);
+  const sc = scr(), h = Math.max(120, Math.min(Math.round(w * sc.h / sc.w), wide ? box.clientHeight - rest - 8 : Math.round(innerHeight * 0.5)));
+  const ww = Math.round(h * sc.w / sc.h);
+  $("wall").style.height = h + "px"; $("wall").style.width = ww + "px"; $("wall").style.margin = "0 auto";
+  const d = Math.min(2, devicePixelRatio || 1); M.resize(Math.round(ww * d), Math.round(h * d));
+  $("scrInfo").textContent = `${sc.w}×${sc.h}` + (sc.fps != null ? ` · ${Math.round(sc.fps)} fps` : "");
+}
+addEventListener("resize", () => { if (mOn()) sizeWall(); });
+
+const selS = () => ML && ML.surfaces.find(x => x.id === ML.selected);
+const selM = () => ML && ML.masks.find(x => x.id === ML.selected);
+const newId = (p, arr) => { let i = 1; while (arr.some(x => x.id === p + i)) i++; return p + i; };
+const norm = e => { const r = $("wall").getBoundingClientRect(); return [(e.clientX - r.left) / r.width, (e.clientY - r.top) / r.height]; };
+function inPoly(p, c) {
+  let ins = false;
+  for (let i = 0, j = c.length - 1; i < c.length; j = i++) { const [xi, yi] = c[i], [xj, yj] = c[j];
+    if ((yi > p[1]) !== (yj > p[1]) && p[0] < (xj - xi) * (p[1] - yi) / (yj - yi) + xi) ins = !ins; }
+  return ins;
+}
+$("wallBox").addEventListener("pointerdown", e => {
+  if (!ML) return;
+  const p = norm(e), r = $("wall").getBoundingClientRect(), tol = 28 / r.width;
+  if (draft) { draft.push(p); drawMsg(); return; }
+  let best = null, bd = tol * tol;
+  const near = (kind, obj, i, pt) => { const d = (pt[0] - p[0]) ** 2 + ((pt[1] - p[1]) * r.height / r.width) ** 2; if (d < bd) { bd = d; best = { kind, obj, i }; } };
+  ML.surfaces.filter(mine).forEach(x => x.corners.forEach((c, i) => near("corner", x, i, c)));
+  ML.masks.filter(mine).forEach(m => m.points.forEach((c, i) => near("mpoint", m, i, c)));
+  if (!best) {
+    const sf = ML.surfaces.filter(mine).reverse().find(x => inPoly(p, x.corners));
+    const mk = ML.masks.filter(mine).reverse().find(m => inPoly(p, m.points));
+    if (mk && (!sf || ML.selected === mk.id)) best = { kind: "mmove", obj: mk, start: p, orig: mk.points.map(c => [...c]) };
+    else if (sf) best = { kind: "move", obj: sf, start: p, orig: sf.corners.map(c => [...c]) };
+  }
+  if (!best) { if (ML.selected) { ML.selected = null; mPush(true); renderMap(); } return; }
+  ML.selected = best.obj.id; if (best.kind === "corner") selCorner = best.i;
+  mDrag = best; $("wallBox").setPointerCapture(e.pointerId); mPush(true); renderMap();
+});
+$("wallBox").addEventListener("pointermove", e => {
+  if (!mDrag) return;
+  const p = norm(e), d = mDrag;
+  if (d.kind === "corner") d.obj.corners[d.i] = p;
+  else if (d.kind === "mpoint") d.obj.points[d.i] = p;
+  else { const dx = p[0] - d.start[0], dy = p[1] - d.start[1], tg = d.kind === "move" ? d.obj.corners : d.obj.points; d.orig.forEach((c, i) => tg[i] = [c[0] + dx, c[1] + dy]); }
+  mPush();
+});
+for (const ev of ["pointerup", "pointercancel"]) $("wallBox").addEventListener(ev, () => { if (mDrag) { mDrag = null; mPush(true); } });
+
+// Hidden areas: tap points, undo the last, Done needs three.
+const drawMsg = () => { $("drawMsg").textContent = !draft.length ? "Tap around the area to hide" : draft.length < 3 ? `${draft.length} point${draft.length > 1 ? "s" : ""} · keep going` : `${draft.length} points · tap Done when it's covered`; };
+function startDraw() { draft = []; ML.selected = null; $("drawbar").classList.add("show"); requestAnimationFrame(sizeWall); $("wallHint").style.display = "none"; drawMsg(); renderMap(); }
+function endDraw(keep) {
+  if (keep && draft.length >= 3) { const id = newId("m", ML.masks); ML.masks.push({ id, points: draft, projector: pid() }); ML.selected = id; mPush(true); toast("Area hidden"); }
+  else if (keep) return toast("Needs at least three points");
+  draft = null; $("drawbar").classList.remove("show"); requestAnimationFrame(sizeWall); $("wallHint").style.display = ""; renderMap();
+}
+$("drawUndo").onclick = () => { if (draft && draft.length) { draft.pop(); drawMsg(); } };
+$("drawCancel").onclick = () => endDraw(false);
+$("drawDone").onclick = () => endDraw(true);
+$("tEdit").onclick = () => { ML.edit = !ML.edit; mPush(true); renderMap(); };
+$("tTest").onclick = () => { ML.test = !ML.test; mPush(true); renderMap(); };
+
+// What a surface can show, in plain words.
+const SHOWS = [["show", "The show", "Follows the lights"], ["gen", "Visuals", "The live sketch"], ["pulse", "Beat pulse", "Flash on the beat"],
+               ["tunnel", "Tunnel", ""], ["bars", "Bars", ""], ["title", "Track name", ""], ["solid", "Solid colour", ""], ["test", "Test grid", "For lining up"]];
+const showName = x => x.content === "gen" ? (x.sketch ? `Visuals · ${x.sketch}` : "Visuals · live") : (SHOWS.find(k => k[0] === x.content) || [0, x.content])[1];
+let sketchList = null, presetCache = {};
+async function sketches() { if (!sketchList) try { sketchList = (await (await fetch("/api/sketches")).json()).sketches; } catch (e) { sketchList = []; } return sketchList; }
+async function presetsOf(n) { if (!(n in presetCache)) try { presetCache[n] = (await (await fetch(`/api/presets?sketch=${encodeURIComponent(n)}`)).json()).presets; } catch (e) { presetCache[n] = []; } return presetCache[n]; }
+
+function removeWithUndo(kind, obj) {
+  const arr = kind === "s" ? "surfaces" : "masks", i = ML[arr].indexOf(obj);
+  ML[arr].splice(i, 1); ML.selected = null; mPush(true); renderMap();
+  toast(`${kind === "s" ? obj.name || "Surface" : "Hidden area"} removed`, () => { ML[arr].splice(i, 0, obj); ML.selected = obj.id; mPush(true); renderMap(); });
+}
+
+let edSig = "";
+function renderMap() {
+  if (!ML) return;
+  const projs = ML.projectors || [{ id: "main", name: "Projector 1" }];
+  $("projs").innerHTML = (projs.length > 1 || addingProj ? projs.map(p => `<button data-p="${esc(p.id)}" class="${p.id === pid() ? "on" : ""}">${esc(p.name)}</button>`).join("") : `<span style="color:var(--dim);font-size:13px;margin-right:4px">${esc(projs[0].name)}</span>`)
+    + (addingProj ? `<input id="projName" placeholder="Name, e.g. Back wall" maxlength="40">` : `<button id="projAdd">＋ Projector</button>`);
+  $("projs").querySelectorAll("[data-p]").forEach(b => b.onclick = () => { curP = b.dataset.p; localStorage.setItem("s5proj", curP); ML.selected = null; sizeWall(); renderMap(); });
+  if ($("projAdd")) $("projAdd").onclick = () => { addingProj = true; renderMap(); $("projName").focus(); };
+  if ($("projName")) $("projName").onkeydown = e => {
+    if (e.key === "Escape") { addingProj = false; return renderMap(); }
+    if (e.key !== "Enter" || !e.target.value.trim()) return;
+    const name = e.target.value.trim().slice(0, 40);
+    let id = name.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "").slice(0, 16) || "p";
+    while (projs.some(p => p.id === id)) id = id.slice(0, 13) + "-" + Math.floor(Math.random() * 90 + 10);
+    ML.projectors = [...projs, { id, name }]; curP = id; localStorage.setItem("s5proj", curP); addingProj = false;
+    ML.selected = null; mPush(true); sizeWall(); renderMap(); toast(`${name} added. Open its output with ?p=${id}`);
+  };
+  $("tEdit").classList.toggle("on", !!ML.edit); $("tTest").classList.toggle("on", !!ML.test);
+
+  const list = ML.surfaces.filter(mine);
+  $("surfs").innerHTML = list.map(x => `<button class="tile${x.id === ML.selected ? " on" : ""}" data-id="${esc(x.id)}">${esc(x.name || x.id)}<small>${x.corners.length === 3 ? "△ " : ""}${esc(showName(x))}</small></button>`).join("")
+    + `<button class="tile add" id="addSurf">＋ Add surface<small>A new shape to pin</small></button>`
+    + `<button class="tile add" id="addTri">＋ Triangle<small>e.g. a pyramid face</small></button>`;
+  $("surfs").querySelectorAll("[data-id]").forEach(b => b.onclick = () => { ML.selected = b.dataset.id; mPush(true); renderMap(); });
+  $("addSurf").onclick = () => {
+    const id = newId("s", ML.surfaces), o = 0.04 * (list.length % 5);
+    ML.surfaces.push({ id, name: `Surface ${list.length + 1}`, content: "show", opacity: 1, hue_shift: 0, projector: pid(),
+                       corners: [[0.3 + o, 0.3 + o], [0.7 + o, 0.3 + o], [0.7 + o, 0.7 + o], [0.3 + o, 0.7 + o]] });
+    ML.selected = id; mPush(true); renderMap();
+  };
+  // A triangle: three corners (apex, base right, base left), as the projector takes them.
+  $("addTri").onclick = () => {
+    const id = newId("s", ML.surfaces), o = 0.04 * (list.length % 5);
+    ML.surfaces.push({ id, name: `Triangle ${ML.surfaces.filter(x => x.corners.length === 3).length + 1}`, content: "show", opacity: 1, hue_shift: 0, projector: pid(),
+                       corners: [[0.5 + o, 0.25 + o], [0.75 + o, 0.75 + o], [0.25 + o, 0.75 + o]] });
+    ML.selected = id; mPush(true); renderMap();
+  };
+  const masks = ML.masks.filter(mine);
+  $("maskCards").innerHTML = masks.map((m, i) => `<button class="tile mask${m.id === ML.selected ? " on" : ""}" data-m="${esc(m.id)}">Area ${i + 1}<small>${m.points.length} points</small></button>`).join("")
+    + `<button class="tile add mask" id="addMask">＋ Hide an area<small>Draw round it</small></button>`;
+  $("maskCards").querySelectorAll("[data-m]").forEach(b => b.onclick = () => { ML.selected = b.dataset.m; mPush(true); renderMap(); });
+  $("addMask").onclick = startDraw;
+  renderEditor();
+}
+
+// The selected surface's settings, right under the list: no tab to switch to.
+async function renderEditor() {
+  const x = selS(), m = selM(), ed = $("editor");
+  const sig = x ? `s:${x.id}:${x.content}:${x.sketch}:${x.preset}` : m ? `m:${m.id}` : "none";
+  if (sig === edSig) return paintEditor(); edSig = sig;
+  if (m) {
+    ed.innerHTML = `<div class="sub">Hidden area</div><div style="color:var(--dim);font-size:13px">Drag its points on the picture above, or drag inside it to move it.</div>
+      <div class="acts"><button class="tile" id="mDel">Remove</button></div>`;
+    $("mDel").onclick = () => removeWithUndo("m", selM() || m); return;
+  }
+  const X = () => selS() || x;
+  if (!x) { ed.innerHTML = `<div style="color:var(--dim)">Tap a surface on the picture or in the list to change it.</div>`; return; }
+  ed.innerHTML = `<input class="nm" id="eName" maxlength="40" aria-label="Surface name">
+    <div class="sub">Shows</div>
+    <div class="shows">${SHOWS.map(([k, n, h]) => `<button class="tile" data-c="${k}">${n}${h ? `<small>${h}</small>` : ""}</button>`).join("")}</div>
+    <div id="genRow" class="pair" style="display:none"><select id="eSketch"></select><select id="ePreset"></select></div>
+    <div class="level" id="eOp"><div class="fill"></div><div class="t"><span>Brightness</span><span class="v">–</span></div></div>
+    <div class="level" id="eRad"><div class="fill"></div><div class="t"><span>Rounded corners</span><span class="v">–</span></div></div>
+    <details><summary>Border and colour</summary><div class="inner">
+      <div class="level" id="eBw"><div class="fill"></div><div class="t"><span>Border</span><span class="v">–</span></div></div>
+      <div class="level" id="eBp"><div class="fill"></div><div class="t"><span>Border pulses on the beat</span><span class="v">–</span></div></div>
+      <div class="level" id="eBs"><div class="fill"></div><div class="t"><span>Border colour (white → show)</span><span class="v">–</span></div></div>
+      <div class="level" id="eHue"><div class="fill"></div><div class="t"><span>Shift the colours</span><span class="v">–</span></div></div>
+    </div></details>
+    <div class="acts"><button class="tile" id="eFill">Fill the screen</button><button class="tile" id="eReset">Reset shape</button>
+      <button class="tile" id="eDup">Duplicate</button><button class="tile" id="eDel">Remove</button></div>`;
+  $("eName").value = X().name || "";
+  $("eName").oninput = e => { X().name = e.target.value; mPush(); $("surfs").querySelector(`[data-id="${X().id}"]`).firstChild.textContent = X().name; };
+  ed.querySelectorAll("[data-c]").forEach(b => b.onclick = () => { X().content = b.dataset.c; if (X().content !== "gen") { X().sketch = null; X().preset = null; } mPush(true); renderMap(); });
+  // A slider per setting: [element, key, default, from 0..1, to 0..1, label]
+  const S2 = [["eOp", "opacity", 1, v => v, v => v, v => Math.round(v * 100) + "%"],
+              ["eRad", "radius", 0, v => v * 0.5, v => v / 0.5, v => Math.round(v / 0.5 * 100) + "%"],
+              ["eBw", "border", 0, v => v * 0.15, v => v / 0.15, v => v ? Math.round(v / 0.15 * 100) + "%" : "off"],
+              ["eBp", "border_pulse", 0, v => v, v => v, v => Math.round(v * 100) + "%"],
+              ["eBs", "border_sat", 0, v => v, v => v, v => v < 0.05 ? "white" : v > 0.95 ? "show colour" : Math.round(v * 100) + "%"],
+              ["eHue", "hue_shift", 0, v => v - 0.5, v => v + 0.5, v => Math.abs(v) < 0.01 ? "none" : (v > 0 ? "+" : "") + Math.round(v * 360) + "°"]];
+  edLevels = S2.map(([id, key, dflt, from, to, lab]) => {
+    const el = $(id), setv = level(el, v => { X()[key] = Math.round(from(v) * 1000) / 1000; el.querySelector(".v").textContent = lab(X()[key]); mPush(); });
+    return () => { setv(to(X()[key] ?? dflt)); el.querySelector(".v").textContent = lab(X()[key] ?? dflt); };
+  });
+  const tri = () => X().corners.length === 3;
+  $("eFill").onclick = () => { X().corners = tri() ? [[0.5, 0], [1, 1], [0, 1]] : [[0, 0], [1, 0], [1, 1], [0, 1]]; mPush(true); };
+  $("eReset").onclick = () => { const was = X().corners.map(c => [...c]); X().corners = tri() ? [[0.5, 0.25], [0.75, 0.75], [0.25, 0.75]] : [[0.25, 0.25], [0.75, 0.25], [0.75, 0.75], [0.25, 0.75]]; mPush(true);
+                                toast("Shape reset", () => { X().corners = was; mPush(true); }); };
+  $("eDup").onclick = () => { const id = newId("s", ML.surfaces);
+    ML.surfaces.push(Object.assign(JSON.parse(JSON.stringify(x)), { id, name: (X().name || "Surface") + " copy", corners: X().corners.map(([a, b]) => [a + 0.03, b + 0.03]) }));
+    ML.selected = id; mPush(true); renderMap(); };
+  $("eDel").onclick = () => removeWithUndo("s", X());
+  if (X().content === "gen") {
+    $("genRow").style.display = "";
+    const names = await sketches();
+    $("eSketch").innerHTML = `<option value="">Live · follows the Visuals screen</option>` + names.map(n => `<option${n === X().sketch ? " selected" : ""}>${esc(n)}</option>`).join("");
+    $("eSketch").onchange = e => { X().sketch = e.target.value || null; X().preset = null; mPush(true); renderMap(); };
+    if (X().sketch) {
+      const ps = await presetsOf(X().sketch);
+      $("ePreset").innerHTML = `<option value="">As set on the Visuals screen</option>` + ps.map(n => `<option${n === X().preset ? " selected" : ""}>${esc(n)}</option>`).join("");
+      $("ePreset").onchange = e => { X().preset = e.target.value || null; mPush(true); renderMap(); };
+    } else $("ePreset").style.display = "none";
+  }
+  paintEditor();
+}
+let edLevels = [];
+function paintEditor() {
+  const x = selS(); if (!x || !$("eName")) return;
+  if (document.activeElement !== $("eName")) $("eName").value = x.name || "";
+  $("editor").querySelectorAll("[data-c]").forEach(b => b.classList.toggle("on", b.dataset.c === x.content));
+  edLevels.forEach(f => f());
+}
+
+// Saved layouts: tap once to arm, again to load (it replaces the whole layout).
+async function renderSaved() {
+  let names = []; try { names = (await (await fetch(at(8100, "/api/layouts"))).json()).presets || []; } catch (e) {}
+  $("saved").innerHTML = names.map(n => `<button class="chipbtn" data-l="${esc(n)}">${esc(n)}</button>`).join("") + `<input id="saveAs" placeholder="Save this layout as…" maxlength="40">`;
+  $("saved").querySelectorAll("[data-l]").forEach(b => b.onclick = async () => {
+    if (!b.classList.contains("arm")) { b.classList.add("arm", "on"); b.textContent = "Load? Tap again"; return setTimeout(() => { b.classList.remove("arm", "on"); b.textContent = b.dataset.l; }, 3000); }
+    if (await send(at(8100, `/api/layouts/${encodeURIComponent(b.dataset.l)}/load`), {}, "Load layout")) toast(`Loaded ${b.dataset.l}`);
+    b.classList.remove("arm", "on"); b.textContent = b.dataset.l;
+  });
+  $("saveAs").onkeydown = async e => {
+    const n = e.target.value.trim(); if (e.key !== "Enter" || !n) return;
+    if (await send(at(8100, `/api/layouts/${encodeURIComponent(n)}`), {}, "Save layout")) { toast(`Saved as ${n}`); renderSaved(); }
+  };
+}
+renderSaved();
+
+addEventListener("keydown", e => {
+  if (!mOn() || !ML || /INPUT|SELECT|TEXTAREA/.test(e.target.tagName)) return;
+  const x = selS(); if (!x) return;
+  if (selCorner >= x.corners.length) selCorner = 0;
+  const st = e.shiftKey ? 10 : 1, sc = scr(), d = { ArrowLeft: [-st / sc.w, 0], ArrowRight: [st / sc.w, 0], ArrowUp: [0, -st / sc.h], ArrowDown: [0, st / sc.h] }[e.key];
+  if (!d) return; e.preventDefault();
+  x.corners[selCorner] = [x.corners[selCorner][0] + d[0], x.corners[selCorner][1] + d[1]]; mPush();
+});
+
+// ---------------------------------------------------------------- stage
+// The 3D stage page (:8100/stage.html?embed=1) in a frame, driven by messages: its own controls
+// do the work (and save what they save), this screen just draws friendlier ones round it.
+let STG = null;
+function stSend(m) { const fr = document.getElementById("stageFrame"), w = fr && fr.contentWindow; if (w && fr.src) w.postMessage(Object.assign({ s5stage: "set" }, m), "*"); }
+$("editRig").href = at(8100, "/stage.html");
+addEventListener("message", e => { if (e.data && e.data.s5stage === "state") { STG = e.data; renderStage(); } });
+document.addEventListener("visibilitychange", () => stSend({ pause: document.hidden || !document.querySelector("#s-stage.on") }));
+const setHaze = level($("stHaze"), v => stSend({ haze: v }));
+const setDay = level($("stDay"), v => stSend({ day: v }));
+$("stGlow").onclick = () => STG && stSend({ glow: !STG.glow });
+const CAM = { audience: "Audience", dj: "DJ booth", top: "From above", side: "Side" };
+const SECS = [["", "Follow the show"], ["GROOVE", "Groove"], ["BUILD", "Build"], ["DROP", "Drop"], ["BREAKDOWN", "Break"], ["INTRO", "Intro"]];
+$("secs").innerHTML = SECS.map(([k, n]) => `<button data-sec="${k}">${n}</button>`).join("");
+$("secs").querySelectorAll("button").forEach(b => b.onclick = () => stSend({ sec: b.dataset.sec }));
+let camSig = "", lookSig = "", rigSig = "";
+function renderStage() {
+  const s = STG;
+  if (s.cams.join() !== camSig) {
+    camSig = s.cams.join();
+    $("cams").innerHTML = s.cams.map(k => `<button class="tile" data-cam="${esc(k)}">${esc(CAM[k] || k[0].toUpperCase() + k.slice(1))}</button>`).join("");
+    $("cams").querySelectorAll("button").forEach(b => b.onclick = () => stSend({ cam: b.dataset.cam }));
+  }
+  on("#cams button", b => b.dataset.cam === s.cam);
+  const ls = s.looks.map(l => l[0]).join();
+  if (ls !== lookSig) {
+    lookSig = ls;
+    $("looks").innerHTML = s.looks.map(([k, label]) => { const [a, b] = label.split(" · ");
+      return `<button class="tile" data-look2="${esc(k)}">${esc(a)}${b ? `<small>${esc(b)}</small>` : ""}</button>`; }).join("");
+    $("looks").querySelectorAll("button").forEach(b => b.onclick = () => stSend({ laser: b.dataset.look2 }));
+  }
+  on("#looks button", b => b.dataset.look2 === s.laser);
+  on("#secs button", b => b.dataset.sec === (s.sec || ""));
+  $("stCue").textContent = s.cue && s.cue !== "off" ? `playing: ${s.cue}` : "";
+  setHaze(s.haze); setDay(s.day);
+  $("stGlow").classList.toggle("on", !!s.glow);
+  const rs = JSON.stringify(s.rig);
+  if (rs !== rigSig) {
+    rigSig = rs;
+    const TAG = { live: "Live", mapped: "Live · mapped", visuals: "Live · visuals", simulated: "Simulated", off: "Off", surface: "Surface" };
+    $("rig").innerHTML = s.rig.map(fx => `<button data-fx="${esc(fx.id)}"><span>${esc(fx.name)}</span><i class="${["live", "mapped", "visuals"].includes(fx.tag) ? "live" : ""}">${TAG[fx.tag] || fx.tag}</i></button>`).join("");
+    $("rig").querySelectorAll("button").forEach(b => b.onclick = () => stSend({ select: STG.selected === b.dataset.fx ? null : b.dataset.fx }));
+    const n = s.rig.filter(f => f.type !== "screen"), live = n.filter(f => ["live", "mapped", "visuals"].includes(f.tag)).length;
+    $("rigCount").textContent = `${live} live of ${n.length}`;
+  }
+  on("#rig button", b => b.dataset.fx === s.selected);
+  $("stCap").innerHTML = `<b>${esc(s.venue || "Stage")}</b> · drag to look around · scroll to zoom · tap a light to find it`;
+}
+
+// ---------------------------------------------------------------- focus
+function setFocus(f) { localStorage.setItem("s5focus", f ? "1" : "0"); show("visuals"); }
+$("focusBtn").onclick = () => setFocus(true);
+$("exitFocus").onclick = () => setFocus(false);
+$("blackF").onclick = () => $("black").click();
+
+// ---------------------------------------------------------------- colour palettes
+// Pairs of complementary colours (the second is the first's opposite, or a split of it). Picking
+// one locks the lights to the first colour and turns the visuals' own colour settings to the pair:
+// the sketch stops following the show's hue, takes the first as its tint, and spreads towards the
+// second. Only the colour settings a sketch actually has are touched. It stays on across new looks,
+// presets and energy changes until you pick Auto (or tap the Autopilot pill).
+const PALETTES = [
+  { id: "sunset", name: "Sunset", h: [0.07, 0.58], sat: 0.9 },
+  { id: "fireice", name: "Fire & ice", h: [0.0, 0.5], sat: 0.95 },
+  { id: "acid", name: "Acid", h: [0.25, 0.85], sat: 1 },
+  { id: "royal", name: "Royal", h: [0.76, 0.13], sat: 0.85 },
+  { id: "ocean", name: "Ocean", h: [0.48, 0.02], sat: 0.8 },
+  { id: "neon", name: "Neon", h: [0.92, 0.4], sat: 1 },
+  { id: "deep", name: "Deep blue", h: [0.62, 0.1], sat: 0.9 },
+  { id: "mono", name: "Mono", h: [0.6, 0.6], sat: 0.08 },
+];
+let PAL = localStorage.getItem("s5pal") || "";
+const palOf = id => PALETTES.find(p => p.id === id);
+const swatch = (h, sat) => `hsl(${Math.round(h * 360)},${Math.round(sat * 100)}%,${sat < 0.2 ? 80 : 55}%)`;
+$("palettes").innerHTML = `<button class="auto" data-pal=""><span class="sw2"></span>Auto</button>` +
+  PALETTES.map(p => `<button data-pal="${p.id}" title="${p.name}"><span class="sw2"><i style="background:${swatch(p.h[0], p.sat)}"></i><i style="background:${swatch(p.h[1], p.sat)}"></i></span>${p.name}</button>`).join("");
+$("palettes").querySelectorAll("button").forEach(b => b.onclick = () => setPalette(b.dataset.pal));
+
+// The sketch's colour settings for a palette (or back to the sketch's own defaults for Auto).
+function palValues(id) {
+  const p = palOf(id), out = {};
+  for (const q of params()) {
+    if (!["follow", "hue", "sat", "spread", "tint"].includes(q.id)) continue;
+    const v = !p ? q.default : { follow: 0, hue: p.h[0], sat: p.sat, spread: p.h[0] === p.h[1] ? 0.02 : 0.22, tint: 1 }[q.id];
+    out[q.id] = VJ.quant(q, Math.max(q.min, Math.min(q.max, v)));
+  }
+  return out;
+}
+const palVisuals = () => { if (PAL && SK) send("/api/params", palValues(PAL), "Colours"); };
+async function setPalette(id) {
+  const was = PAL; PAL = id; localStorage.setItem("s5pal", id); paintPalettes();
+  const p = palOf(id);
+  await cmd("palette", p ? { mode: "lock", hue: p.h[0] } : { mode: "auto" }, "Colours");
+  if (SK && (p || was)) send("/api/params", palValues(id), "Colours");
+  toast(p ? `${p.name}: lights and visuals` : "Colours follow the music again");
+}
+function paintPalettes() {
+  on("#palettes button", b => b.dataset.pal === PAL);
+  $("palName").textContent = PAL ? palOf(PAL).name : "following the music";
+}
+paintPalettes();
+// A new look, a preset or a fresh energy roll brings its own colours: put the palette's back on.
+let palSketch = "";
+setInterval(() => { if (SK && SK.name !== palSketch) { palSketch = SK.name; if (PAL) setTimeout(palVisuals, 400); } }, 500);
+// If the lights' colour is changed somewhere else (the ring, Follow the music), the palette is no longer in charge.
+setInterval(() => {
+  const p = palOf(PAL); if (!p || !S.palette) return;
+  if (S.palette.mode !== "lock" || Math.abs(S.palette.hue - p.h[0]) > 0.002) { PAL = ""; localStorage.setItem("s5pal", ""); paintPalettes(); }
+}, 1000);
+
+// ---------------------------------------------------------------- appearance
+function paintTheme() { const t = s5theme(); on("#theme button", b => b.dataset.t === t); }
+$("theme").querySelectorAll("button").forEach(b => b.onclick = () => { localStorage.setItem("s5theme", b.dataset.t); paintTheme(); });
+matchMedia("(prefers-color-scheme: light)").addEventListener("change", paintTheme);
+paintTheme();
+
+// ---------------------------------------------------------------- automix
+// A port of the Decks page's automix (brain/deckdash/web/index.html), without its kick-align and
+// tempo-ramp extras (those stay on the full page). It runs in this tab. The decks can be driven
+// (load, play, stop, sync, master) but not the mixer's faders, so it mixes like rekordbox Automix on
+// CDJs: with both channel faders up, the next track starts so its drop lands as the playing one's
+// outro ends (or on the outro's first bar, for a fixed overlap), both play, then the old deck stops
+// on a bar line and the new one becomes master. Then it goes the other way.
+// Don't run it here and on the Decks page at once: they'd both be mixing.
+const AM_LEAD_MS = 25, AM_MAX_LEAD = 128;
+const amSaved = JSON.parse(localStorage.getItem("s5am") || "{}");
+const am = { on: false, mode: amSaved.mode || "queue", style: amSaved.style || "drop", overlap: amSaved.overlap || 32,
+             phase: "off", next: null, skipped: new Set(), loadSent: 0, syncSent: 0, masterSent: 0,
+             startTimer: null, stopTimer: null, forceStart: null, plan: null, said: "" };
+const amSave = () => localStorage.setItem("s5am", JSON.stringify({ mode: am.mode, style: am.style, overlap: am.overlap }));
+
+// Each deck's timeline (beat grid, sections, drops), fetched once per track.
+const TL = {};
+function tlOf(p) {
+  const key = p.timelineKey || (p.track && p.track.ref); if (!key) return null;
+  let t = TL[p.number];
+  if (!t || t.key !== key) t = TL[p.number] = { key, data: null, at: 0 };
+  if (!t.data && !t.busy && performance.now() - t.at > 1500) {
+    t.busy = true; t.at = performance.now();
+    fetch(at(8080, `/api/timeline/${p.number}`)).then(r => r.ok ? r.json() : null)
+      .then(d => { if (d && d.sections && TL[p.number] === t) t.data = d; }).catch(() => {}).finally(() => t.busy = false);
+  }
+  return t.data;
+}
+const playheadMs = (p, now) => (p.position && p.position.ms || 0) + (p.status.playing && D ? (now - D.rx) * (1 + (p.status.pitchPct || 0) / 100) : 0);
+function beatPhase(tl, pos) {
+  const b = tl.beatMs; if (!b || b.length < 2) return null;
+  let lo = 0, hi = b.length - 1;
+  if (pos <= b[0]) lo = 0; else if (pos >= b[hi]) lo = hi - 1;
+  else while (hi - lo > 1) { const m = (lo + hi) >> 1; if (b[m] <= pos) lo = m; else hi = m; }
+  return { beat: lo + 1, frac: (pos - b[lo]) / (b[lo + 1] - b[lo]) };
+}
+const barFirstAtOrBefore = (tl, b) => { let r = tl.barFirstBeat[0]; for (const x of tl.barFirstBeat) { if (x <= b) r = x; else break; } return r; };
+const barFirstAtOrAfter = (tl, b) => tl.barFirstBeat.find(x => x >= b) || tl.beatMs.length;
+const barNumber = (tl, beat) => tl.barFirstBeat.filter(x => x <= beat).length;
+function outroEndBeat(tl) { const o = tl.sections.filter(s => s.type === "outro").pop(); return Math.min(tl.beatMs.length, o ? o.endBeat + 1 : tl.beatMs.length); }
+function mixStartBeat(tl, overlap) {
+  const last = tl.beatMs.length, o = tl.sections.filter(s => s.type === "outro").pop();
+  return barFirstAtOrBefore(tl, Math.max(1, Math.min(o ? o.startBeat : last - overlap, last - overlap)));
+}
+function leadToDrop(B) {
+  const tlB = tlOf(B); if (!tlB || !tlB.drops || !tlB.drops.length) return null;
+  const ph = beatPhase(tlB, playheadMs(B, performance.now())); if (!ph) return null;
+  const cue = ph.beat + ph.frac, d = tlB.drops.find(d => d.beat > cue + 4);
+  return d ? { beats: Math.round(d.beat - cue), bar: d.bar } : null;
+}
+function timeOfBeat(p, tl, beat) {
+  const now = performance.now(), rate = 1 + (p.status.pitchPct || 0) / 100;
+  return now + (tl.beatMs[Math.max(0, Math.min(tl.beatMs.length - 1, beat - 1))] - playheadMs(p, now)) / rate;
+}
+// Pull a time onto the deck's own beat, from its last beat packet (much sharper than the position).
+function snapToBeat(p, t) {
+  if (!p.beat || !p.status.playing || !p.status.effectiveBpm || !(p.beat.msSinceLast < 4000)) return t;
+  const last = D.rx - p.beat.msSinceLast, period = 60000 / p.status.effectiveBpm;
+  return last + Math.round((t - last) / period) * period;
+}
+const deckKey = s => `${s.trackSourcePlayer}:${s.trackSourceSlot}/${s.rekordboxId}`;
+const amSay = (html, short) => {
+  if (html !== am.said) { am.said = html; $("amStatus").innerHTML = html; }
+  $("amLine").innerHTML = am.on ? "Automix · " + (short || html) : "";
+};
+
+function amPickNext(currentId) {
+  const onDeck = new Set(D.players.map(p => p.status.rekordboxId));
+  const ok = t => !onDeck.has(t.id) && !played.has(libSrc + "/" + t.id) && !am.skipped.has(t.id) && t.id !== currentId;
+  if (am.mode === "harmonic") {
+    const mb = D.master && D.master.bpm, mk = masterKey();
+    const drift = t => Math.min(...[1, 0.5, 2].map(f => Math.abs(t.bpm * f / (mb || t.bpm) - 1)));
+    return TRACKS.filter(ok).filter(t => t.bpm && drift(t) <= 0.06).sort((a, b) => ((keyFits(b.key, mk) ? 1 : 0) - drift(b) * 10) - ((keyFits(a.key, mk) ? 1 : 0) - drift(a) * 10))[0] || null;
+  }
+  const i = TRACKS.findIndex(t => t.id === currentId);
+  return (i >= 0 ? TRACKS.slice(i + 1).concat(TRACKS.slice(0, i)) : TRACKS).find(ok) || null;
+}
+function amStop(reason) {
+  clearTimeout(am.startTimer); clearTimeout(am.stopTimer);
+  am.startTimer = am.stopTimer = null; am.forceStart = null; am.plan = null;
+  am.phase = am.on ? "prep" : "off";
+  if (reason) amSay(reason);
+}
+
+function amTick() {
+  $("amOn").classList.toggle("on", am.on); $("amix").classList.toggle("mixing", am.phase === "mixing");
+  if (!am.on) return amSay("Automix is off. Keep both channel faders up, then switch it on.");
+  if (!libSrc || !D || !D.players) return amSay("Automix needs the music library and the decks.");
+  if (am.phase === "mixing") return;
+  const ps = D.players.filter(p => p.number <= 4).sort((a, b) => a.number - b.number), playing = ps.filter(p => p.status.playing);
+  if (ps.length < 2) return amSay("Automix needs two decks.");
+  if (!playing.length) { amStop(); return amSay("Start a track on either deck and automix takes it from there.", "start a track to begin"); }
+  if (playing.length > 1) { amStop(); return amSay("Both decks are playing, so automix waits until one stops.", "waiting: both decks playing"); }
+  const A = playing[0], B = ps.find(p => p !== A), bs = B.status, now = performance.now();
+  if (A.status.rekordboxId && !played.has(deckKey(A.status))) { played.add(deckKey(A.status)); localStorage.setItem("s5played", JSON.stringify([...played].slice(-2000))); }
+
+  // 1. The next track, on the idle deck. One you loaded there yourself (and haven't played) is used as it is.
+  const bOwn = bs.trackLoaded && bs.rekordboxId && bs.rekordboxId !== A.status.rekordboxId && !played.has(deckKey(bs));
+  if (am.next && am.next.deck !== B.number) am.next = null;
+  if (bOwn && (!am.next || (bs.rekordboxId !== am.next.id && now - am.loadSent > 8000)))
+    am.next = { id: bs.rekordboxId, title: (B.track && B.track.title) || `Track #${bs.rekordboxId}`, deck: B.number };
+  if (!am.next) {
+    const t = amPickNext(A.status.rekordboxId);
+    if (!t) return amSay("No tracks left to mix into. Pick another playlist or switch to Best match.", "no tracks left");
+    am.next = { id: t.id, title: t.title, deck: B.number };
+  }
+  const nextT = `<b>${esc(am.next.title)}</b>`;
+  if (bs.rekordboxId !== am.next.id) {
+    if (now - am.loadSent > 8000) { am.loadSent = now; deckCmd(B.number, "load", { src: libSrc, id: am.next.id }, "Automix"); }
+    return amSay(`Loading ${nextT} on deck ${B.number}…`);
+  }
+  if (!bs.trackLoaded || bs.busy) return amSay(`Loading ${nextT} on deck ${B.number}…`);
+  const tries = am.next.tries || (am.next.tries = { sync: 0, master: 0 });
+  if (!bs.synced && tries.sync < 3 && now - am.syncSent > 3000) { am.syncSent = now; tries.sync++; deckCmd(B.number, "sync_on", null, "Automix"); }
+  if (!A.status.tempoMaster && tries.master < 3 && now - am.masterSent > 3000) { am.masterSent = now; tries.master++; deckCmd(A.number, "master", null, "Automix"); }
+
+  // 2. When: B's drop lands as A's outro ends, or A's outro starts the overlap (or Mix now's bar).
+  const tl = tlOf(A); tlOf(B);
+  if (!tl) return amSay(`Next: ${nextT} on deck ${B.number}. Reading deck ${A.number}'s beat grid…`);
+  const ph = beatPhase(tl, playheadMs(A, now)); if (!ph) return;
+  const cur = ph.beat + ph.frac;
+  const say = (start, how) => amSay(`Next: ${nextT} on deck ${B.number} · starts at bar ${barNumber(tl, start)} of deck ${A.number} (<b>${Math.max(0, Math.ceil(start - cur))}</b> beats) · ${how}`,
+                                    `next ${nextT} in <b>${Math.max(0, Math.ceil(start - cur))}</b> beats`);
+  if (am.startTimer && am.plan) return say(am.plan.start, am.plan.how);
+  let start, stop, how, note = "";
+  const lead = am.style === "drop" && !am.forceStart ? leadToDrop(B) : null;
+  if (lead && lead.beats <= AM_MAX_LEAD && outroEndBeat(tl) - lead.beats > cur + 1) {
+    stop = outroEndBeat(tl); start = stop - lead.beats;
+    how = `its drop (bar ${lead.bar}) lands as deck ${A.number}'s outro ends`;
+  } else {
+    if (am.style === "drop" && !am.forceStart)
+      note = lead ? (lead.beats > AM_MAX_LEAD ? " (its drop is too far in, so an overlap)" : " (too late for its drop, so an overlap)") : " (no drop found in it, so an overlap)";
+    start = am.forceStart || mixStartBeat(tl, am.overlap);
+    if (start < cur + 1) start = am.forceStart = barFirstAtOrAfter(tl, cur + 2);
+    stop = Math.min(tl.beatMs.length, barFirstAtOrAfter(tl, start + am.overlap));
+    how = `${stop - start}-beat overlap${note}`;
+  }
+  if (!am.startTimer && start - cur <= 16) { am.plan = { start, stop, how }; amSchedule(A, B, tl, start, stop); }
+  say(start, how);
+}
+
+function amSchedule(A, B, tl, start, stopBeat) {
+  const a = A.number, b = B.number, next = am.next;
+  const when = () => { const pa = D.players.find(p => p.number === a); return snapToBeat(pa, timeOfBeat(pa, tl, start)) - AM_LEAD_MS; };
+  // Two stages: wake 400 ms early, then aim with the freshest positions.
+  am.startTimer = setTimeout(() => {
+    am.startTimer = setTimeout(async () => {
+      am.startTimer = null; am.plan = null;
+      const pa = D.players.find(p => p.number === a), pb = D.players.find(p => p.number === b);
+      if (!am.on || !pa || !pb || !pa.status.playing || pb.status.playing || pb.status.rekordboxId !== next.id) return;
+      if (!(await deckCmd(b, "play", null, "Automix"))) return;
+      am.phase = "mixing"; am.forceStart = null;
+      played.add(deckKey(pb.status)); localStorage.setItem("s5played", JSON.stringify([...played].slice(-2000)));
+      toast(`Automix: “${next.title}” in on deck ${b}`);
+      amSay(`Mixing: deck ${a} → deck ${b} (<b>${esc(next.title)}</b>) over ${stopBeat - start} beats`, `mixing into <b>${esc(next.title)}</b>`);
+      $("amix").classList.add("mixing");
+      am.stopTimer = setTimeout(async () => {
+        am.stopTimer = null;
+        const nb = D.players.find(p => p.number === b);
+        am.phase = am.on ? "prep" : "off"; am.next = null;
+        if (!am.on || !nb || !nb.status.playing) return;     // you took over: leave deck A alone
+        await deckCmd(b, "master", null, "Automix");
+        await deckCmd(a, "stop", null, "Automix");
+        toast(`Automix: deck ${b} leads, picking the next track for deck ${a}`);
+        renderTracks();
+      }, timeOfBeat(pa, tl, stopBeat) - performance.now() - AM_LEAD_MS);
+    }, Math.max(0, when() - performance.now()));
+  }, Math.max(0, when() - performance.now() - 400));
+}
+
+function amPaint() {
+  on("#amMode button", b => b.dataset.v === am.mode); on("#amStyle button", b => b.dataset.v === am.style);
+  on("#amOverlap button", b => +b.dataset.v === am.overlap);
+  $("amOverlap").style.display = am.style === "overlap" ? "" : "none";
+}
+$("amMode").querySelectorAll("button").forEach(b => b.onclick = () => { am.mode = b.dataset.v; amSave(); amPaint(); if (am.phase !== "mixing") { am.next = null; amStop(); } });
+$("amStyle").querySelectorAll("button").forEach(b => b.onclick = () => { am.style = b.dataset.v; amSave(); amPaint(); if (am.phase !== "mixing") amStop(); });
+$("amOverlap").querySelectorAll("button").forEach(b => b.onclick = () => { am.overlap = +b.dataset.v; amSave(); amPaint(); if (am.phase !== "mixing") amStop(); });
+$("amOn").onclick = () => {
+  am.on = !am.on;
+  if (am.on) { am.phase = "prep"; am.next = null; am.skipped.clear(); toast("Automix on. Keep both channel faders up."); }
+  else { amStop(); toast("Automix off"); }
+  amTick();
+};
+$("amSkip").onclick = () => { if (!am.on || am.phase === "mixing" || !am.next) return; am.skipped.add(am.next.id); am.next = null; am.loadSent = 0; amStop(); amTick(); };
+$("amNow").onclick = () => {
+  if (!am.on || am.phase === "mixing") return;
+  const A = D && D.players.find(p => p.status.playing), tl = A && tlOf(A);
+  if (!tl) return toast("Nothing playing to mix out of");
+  clearTimeout(am.startTimer); am.startTimer = null; am.plan = null;
+  const ph = beatPhase(tl, playheadMs(A, performance.now()));
+  am.forceStart = barFirstAtOrAfter(tl, ph.beat + ph.frac + 2);
+  amTick();
+};
+amPaint();
+setInterval(amTick, 200);
+
+// ---------------------------------------------------------------- waveforms (Setup → Track waveforms)
+// The same data the Decks page draws: /api/waveform/N, a 400-slice overview (heights and colours),
+// and /api/wavedetail/N, 150 frames a second of [height 0-31, r, g, b]. Fetched once per track, and
+// only while the setting is on; drawn only while the Decks screen is showing.
+let WAVES = localStorage.getItem("s5waves") === "1";
+const OVW = {}, DET = {};
+function paintWaves() {
+  document.body.classList.toggle("waves", WAVES);
+  $("wavesT").classList.toggle("on", WAVES); $("wavesT").setAttribute("aria-checked", String(WAVES));
+}
+$("wavesT").onclick = () => { WAVES = !WAVES; localStorage.setItem("s5waves", WAVES ? "1" : "0"); paintWaves(); toast(WAVES ? "Waveforms on" : "Waveforms off"); };
+paintWaves();
+function waveData(p) {
+  const n = p.number, ok = p.waveformKey || (p.track && p.track.ref), dk = p.timelineKey || ok;
+  if (ok && (!OVW[n] || OVW[n].key !== ok)) { const o = OVW[n] = { key: ok, data: null };
+    fetch(at(8080, `/api/waveform/${n}`)).then(r => r.ok ? r.json() : null).then(d => { if (OVW[n] === o) o.data = d; }).catch(() => {}); }
+  if (dk && (!DET[n] || DET[n].key !== dk)) { const o = DET[n] = { key: dk, data: null };
+    fetch(at(8080, `/api/wavedetail/${n}`)).then(r => r.ok ? r.arrayBuffer() : null).then(b => { if (b && DET[n] === o) o.data = new Uint8Array(b); }).catch(() => {}); }
+  return { ovw: OVW[n] && OVW[n].data, det: DET[n] && DET[n].data };
+}
+function fitCanvas(cv) {
+  const dpr = Math.min(2, devicePixelRatio || 1), w = Math.round(cv.clientWidth * dpr), h = Math.round(cv.clientHeight * dpr);
+  if (cv.width !== w || cv.height !== h) { cv.width = w; cv.height = h; }
+  return [cv.getContext("2d"), w, h, dpr];
+}
+function drawDetail(cv, p, now) {
+  const [g, W, H, dpr] = fitCanvas(cv); g.clearRect(0, 0, W, H);
+  if (!p.track) return;
+  const { det } = waveData(p), tl = tlOf(p), pos = playheadMs(p, now), win = 8000, t0 = pos - win / 2, mpp = win / W, mid = H / 2, half = H / 2 - 3 * dpr;
+  if (det) {
+    const frames = det.length / 4;
+    for (let x = 0; x < W; x++) {
+      const t = t0 + x * mpp, f0 = Math.floor(t * 0.15), f1 = Math.max(f0 + 1, Math.floor((t + mpp) * 0.15));
+      if (f1 <= 0 || f0 >= frames) continue;
+      let hm = 0, fi = -1;
+      for (let f = Math.max(0, f0); f < Math.min(frames, f1); f++) if (det[f * 4] >= hm) { hm = det[f * 4]; fi = f; }
+      if (fi < 0) continue;
+      const h = hm / 31 * half;
+      g.globalAlpha = t < pos ? 0.45 : 1;
+      g.fillStyle = `rgb(${det[fi * 4 + 1]},${det[fi * 4 + 2]},${det[fi * 4 + 3]})`;
+      g.fillRect(x, mid - h, 1, h * 2);
+    }
+    g.globalAlpha = 1;
+  }
+  if (tl) {                                              // beats, bars (taller) and drops
+    const bars = new Set(tl.barFirstBeat), ppb = (tl.beatMs[1] - tl.beatMs[0]) / mpp;
+    for (let b = 1; b <= tl.beatMs.length; b++) {
+      const ms = tl.beatMs[b - 1]; if (ms < t0 || ms > t0 + win) continue;
+      const x = Math.round((ms - t0) / mpp), bar = bars.has(b);
+      if (!bar && ppb < 5 * dpr) continue;
+      g.fillStyle = bar ? "rgba(255,255,255,.55)" : "rgba(255,255,255,.22)";
+      g.fillRect(x, 0, bar ? 2 * dpr : dpr, (bar ? 10 : 5) * dpr); g.fillRect(x, H - (bar ? 10 : 5) * dpr, bar ? 2 * dpr : dpr, (bar ? 10 : 5) * dpr);
+    }
+    g.fillStyle = "#ff5a1f";
+    for (const d of tl.drops || []) { const ms = tl.beatMs[d.beat - 1]; if (ms >= t0 && ms <= t0 + win) g.fillRect(Math.round((ms - t0) / mpp) - dpr, 0, 3 * dpr, H); }
+  }
+  g.fillStyle = "#fff"; g.fillRect(Math.round(W / 2) - dpr, 0, 2 * dpr, H);   // the playhead
+}
+function drawOverview(cv, p, now) {
+  const [g, W, H, dpr] = fitCanvas(cv); g.clearRect(0, 0, W, H);
+  const t = p.track, dur = t ? t.durationSec * 1000 : 0; if (!dur) return;
+  const { ovw } = waveData(p), tl = tlOf(p), pos = playheadMs(p, now), frac = Math.min(1, pos / dur);
+  if (ovw && ovw.segments) {
+    const peak = ovw.peak || (ovw.peak = Math.max(1, ...ovw.heights)), bw = W / ovw.segments;
+    for (let i = 0; i < ovw.segments; i++) {
+      const hh = ovw.heights[i] / peak * (H - 6 * dpr);
+      g.globalAlpha = i / ovw.segments < frac ? 0.35 : 0.95; g.fillStyle = ovw.color ? ovw.colors[i] : "#bdbdbd";
+      g.fillRect(i * bw, (H - hh) / 2, Math.max(1, bw), hh);
+    }
+    g.globalAlpha = 1;
+  }
+  if (tl) { g.fillStyle = "#ff5a1f"; for (const d of tl.drops || []) g.fillRect(tl.beatMs[d.beat - 1] / dur * W - dpr, 0, 2 * dpr, H); }
+  g.fillStyle = "#fff"; g.fillRect(frac * W - dpr, 0, 2 * dpr, H);
+}
+requestAnimationFrame(function waveLoop(now) {
+  if (WAVES && D && D.players && document.querySelector("#s-decks.on")) {
+    document.querySelectorAll("#decks canvas.wv").forEach(cv => {
+      const p = D.players.find(x => x.number === +cv.dataset.n); if (!p) return;
+      (cv.classList.contains("det") ? drawDetail : drawOverview)(cv, p, now);
+    });
+  }
+  requestAnimationFrame(waveLoop);
+});
+
+// ---------------------------------------------------------------- keys (same as the Lighting page, plus visuals)
+const KEY_HOLD = { s: "strobe", w: "blinder" };
+const KEY_LOOK = { "0": "AUTO", "1": "INTRO", "2": "GROOVE", "3": "BREAKDOWN", "4": "DROP" };
+const KEY_E = { z: 0.22, x: 0.55, c: 0.92 };
+addEventListener("keydown", e => {
+  if (e.repeat || e.metaKey || e.ctrlKey || e.altKey || /INPUT|SELECT|TEXTAREA/.test(e.target.tagName)) return;
+  const k = e.key.toLowerCase();
+  if (k === "/") { e.preventDefault(); show("decks"); $("q").focus(); }
+  else if (k === " ") { e.preventDefault(); flash(); }
+  else if (KEY_HOLD[k]) holds[KEY_HOLD[k]](true);
+  else if (k === "b") $("black").click();
+  else if (KEY_LOOK[k]) cmd("look", KEY_LOOK[k], "Scene");
+  else if (k === "d") $("dropNow").click();
+  else if (KEY_E[k] !== undefined) energy(KEY_E[k], document.querySelector(`[data-energy="${KEY_E[k]}"]`));
+  else if (k === "n") $("next").click();
+  else if (k === "r") randomise();
+  else if (k === "f") setFreeze(!FREEZE);
+  else if (k === "escape") { if ($("sheet").classList.contains("show")) $("sheet").classList.remove("show"); else $("pilot").click(); }
+});
+addEventListener("keyup", e => { const n = KEY_HOLD[e.key.toLowerCase()]; if (n) holds[n](false); });
+</script>
+</body>
+</html>
