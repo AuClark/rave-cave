@@ -123,7 +123,7 @@
   /* Lighting like the other pages: the live status (scene, drop countdown, bars, fixtures) is the
      display, pinned under the top bar; tabs under it pick one section of controls. */
   .wrap.tabbed { grid-template-columns: minmax(0, 1fr); }
-  .wrap.tabbed > .card.span { position: sticky; top: var(--s5bar, 48px); z-index: 30; padding-bottom: 0; }
+  .wrap.tabbed > .card.span { position: sticky; top: var(--s5bar, 48px); z-index: 30; padding-bottom: 0; background: var(--bg); border: 0; border-bottom: 1px solid var(--line); }   /* the display: page background, like every page's */
   .wrap.tabbed > .card.span > .s5sect { margin: 16px -24px 0; }
   .wrap.tabbed > .card:not(.span) { width: 100%; max-width: 860px; justify-self: center; }
   .wrap.tabbed > .card:not(.span) > h2:first-child { display: none; }   /* the tab says which section this is */

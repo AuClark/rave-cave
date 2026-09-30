@@ -210,7 +210,7 @@
   body.decks-compact { min-height: calc(100vh + 220px); }
   body.decks-compact .tscroll { max-height: calc(100vh - 260px); }
   .deckhero > section.stack { border: 0; }
-  .showline { display: flex; align-items: center; flex-wrap: wrap; gap: 8px 16px; max-width: 1680px; margin: 0 auto; padding: 10px 24px 6px; }
+  .showline { display: flex; align-items: center; flex-wrap: wrap; gap: 8px 16px; padding: 10px 24px 6px; }
   .showline .showscene { font-size: 22px; font-weight: 300; letter-spacing: .04em; }
   .showline #shCount { font-weight: 600; font-size: 13px; color: var(--warn); }
   .showline .sp { flex: 1; }
@@ -220,7 +220,6 @@
   .zoom button { background: transparent; color: var(--text); border: 1px solid var(--line2); border-radius: 0; padding: 6px 10px; cursor: pointer; font: 500 13px/1 var(--font); }
   .zoom .zlbl { min-width: 48px; text-align: center; font-size: 12px; font-weight: 600; font-variant-numeric: tabular-nums; }
   main.tabbed > section[data-title] > h2:first-child { display: none; }   /* the tab says which section this is */
-  main.tabbed > section[data-title] { max-width: 1680px; }
   /* Library: load buttons first, title with artist under it on phones, fewer columns on narrow screens. */
   table.tt td.load { white-space: nowrap; } table.tt td.load .lbtn { min-width: 30px; margin-right: 3px; font-weight: 700; }
   table.tt td.load .lbtn.busy { opacity: .45; }
@@ -256,7 +255,10 @@
     max-width: 70vw; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; background: var(--accent); color: var(--n050507, #050507);
     font: 600 12px/1 var(--font); box-shadow: 0 6px 18px rgba(0,0,0,.5); }
   @media (pointer: coarse) { #tbody tr, .ldeck { -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; } }
-  main { padding: 0; gap: 0; border-left: 1px solid var(--line); border-right: 1px solid var(--line); max-width: 1680px; margin: 0 auto; }
+  /* Like every page: the display (the decks) and its tabs run edge to edge; the section below sits in a
+     centred column. No boxed frame. */
+  main { padding: 0; gap: 0; max-width: none; margin: 0; }
+  main.tabbed > section[data-title] { width: 100%; max-width: 1400px; justify-self: center; }
   /* Panels: square, flat, hairline borders; h2 numbered like "01 — Mixer". */
   main { counter-reset: sec; }
   section.panel, .card { border-radius: 0; background: var(--panel); border: 0; border-bottom: 1px solid var(--line); box-shadow: none; }
@@ -305,7 +307,7 @@
   select, input[type=search], .crates select, .ltools select, .automix select, .ltools input[type=search] {
     border-radius: 0; background: var(--well); border-color: var(--line2); color: var(--text); }
   .ltools input[type=search]:focus { border-color: var(--accent); }
-  .libdecks, .automix, .crates { background: var(--panel); }
+  .libdecks, .automix { background: var(--panel); } .crates { background: transparent; }   /* the playlists: a plain sidebar, no box */
   .automix { border-bottom: 1px solid var(--line); }
   .ldeck { border-radius: 0; background: var(--well); }
   .crates li > span, .crates summary { border-radius: 0; }

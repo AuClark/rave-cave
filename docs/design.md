@@ -35,6 +35,10 @@ How it works: every neutral grey in the pages' styles is written as `var(--nRRGG
 - **Big numbers and scene names:** light weight, large.
 - **Headings:** 600, in the dim colour.
 
+## Page frame
+
+The same on every page (in `s5auth.js`): the **display** (waveforms, preview, status, 3D view) and its **section tabs** run edge to edge; the chosen section sits in **one centred column**, `--s5col` (1280 px), straight on the page background, no box or border round it. Stage keeps its side panel. Don't cap a page at a max width or frame it.
+
 ## Components
 
 - **Top bar:** the logo, then the page links as quiet text with the current page in a white pill, then the page's own controls. The **SIM / NO DECKS** pill and the **lock** sit at the right end.

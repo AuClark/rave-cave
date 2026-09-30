@@ -202,6 +202,16 @@
   html body select, html body textarea,
   html body input:not([type=range]):not([type=checkbox]):not([type=radio]):not([type=color]):not([type=button]):not([type=submit]) {
     background-color: var(--well) !important; border: 1px solid var(--line2) !important; color: var(--text) !important; }
+  /* Page frame, the same on every page: the display and its section tabs run edge to edge; the chosen
+     section sits in one centred column (--s5col) straight on the page, no box or border round it. */
+  :root { --s5col: 1280px; }
+  html body main.tabbed > section[data-title], html body .wrap.tabbed > .card:not(.span), html body .panel.tabbed {
+    width: 100%; max-width: var(--s5col) !important; margin-left: auto; margin-right: auto; justify-self: center;
+    background: transparent !important; border: 0 !important; box-shadow: none !important; }
+  html body main.tabbed > section[data-title] { padding: 24px !important; }
+  html body .wrap.tabbed > .card:not(.span) { padding: 24px !important; }
+  html body .panel.tabbed > .card { background: transparent !important; border-left: 0 !important; border-right: 0 !important; }
+  @media (max-width: 760px) { html body main.tabbed > section[data-title], html body .wrap.tabbed > .card:not(.span) { padding: 16px 12px !important; } }
   /* Dropdowns: one clean chevron, with room (the browser's own sits jammed against the edge). */
   html body select:not([multiple]) { -webkit-appearance: none; appearance: none; padding-right: 34px !important; background-repeat: no-repeat !important;
     background-position: right 12px center !important; background-size: 12px 12px !important;

@@ -93,7 +93,7 @@
     .hero #beat i, .hero #beat #barN.s5barn { flex: 1 1 0; width: auto; min-width: 0; max-width: 48px; padding: 0; }
     .hero .herobar > button:not(.icon), .hero .herobar > a { padding: 0 11px; } }
   @media (min-width: 761px) { .hero .herobar { width: min(100%, calc(50vh * 16 / 9)); margin: 0 auto; } }
-  .faderrow { max-width: 1100px; margin: 20px auto 4px; padding: 0 24px; }
+  .faderrow { max-width: var(--s5col, 1280px); margin: 20px auto 4px; padding: 0 24px; }   /* the same column as the tab below */
   @media (max-width: 760px) { .faderrow { margin: 14px 0 0; padding: 0 12px; } }
   /* ---- Layout: the display is the hero (full-width band), a clean control panel underneath. ---- */
   main.hl { display: block; padding: 0; gap: 0; max-width: none; }
