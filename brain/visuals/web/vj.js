@@ -218,7 +218,7 @@ const VJ = (() => {
     };
   }
 
-  // The bar within the phrase, next to a beat counter: 1, 2, 3, 4 (a cycle of four beats each), then
+  // The bar within the phrase, as the first beat of a beat counter (1 – – –): 1, 2, 3, 4 (a cycle of four beats each), then
   // round again. Tap it for how many bars it counts to: 4, 8, 16 or 2, one setting for every page.
   const BARS_KEY = "s5barsof", BARS = [4, 8, 16, 2];
   function barCounter(el) {
@@ -238,7 +238,9 @@ const VJ = (() => {
       if (raw !== cand) { cand = raw; since = now; }
       if (cand !== shown && now - since > 120) shown = cand;
       const n = shown, txt = now < showOf ? `of ${of}` : String(n);
-      if (el.textContent !== txt) { el.textContent = txt; el.dataset.n = n; el.classList.toggle("one", n === 1); title(); }
+      if (el.textContent !== txt) { el.textContent = txt; el.dataset.n = n; title(); }
+      // It is the bar's first beat too: lit (orange) for the whole of the 1, like the segment it replaces.
+      el.classList.toggle("on", !!f && Math.round(f.bwb) === 1);
     };
   }
 

@@ -186,8 +186,10 @@
   .pv .pvbeat { position: absolute; top: 12px; right: 12px; display: flex; gap: 4px; align-items: center; height: 24px; padding: 0 9px;
                 border-radius: 99px; background: rgba(0,0,0,.55); }
   .pv .pvbeat i { width: 14px; height: 5px; border-radius: 99px; background: rgba(255,255,255,.28); transition: background .05s; }
-  .pv .pvbeat .s5barn { height: 18px; min-width: 18px; font-size: 11px; line-height: 18px; margin-right: 3px; background: rgba(255,255,255,.14); }
-  .beat .s5barn { align-self: center; margin-right: 6px; }
+  /* the bar number is each counter's first beat: the first segment gives way to it */
+  .pv .pvbeat .s5barn { height: 16px; min-width: 20px; font-size: 10px; line-height: 16px; }
+  .pv .pvbeat i:first-of-type, .beat i:first-of-type { display: none; }
+  .beat .s5barn { align-self: center; }
   .pv .pvbeat i.on { background: #fff; } .pv .pvbeat i.on:first-child { background: var(--accent); }
   .pill { height: var(--h-sm); padding: 0 14px; border-radius: 10px; background: rgba(255,255,255,.12); border: 1px solid rgba(255,255,255,.14);
           backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); font-weight: 500; font-size: 13px; white-space: nowrap; transition: background .12s; }

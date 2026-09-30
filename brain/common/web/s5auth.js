@@ -150,11 +150,13 @@
   .s5fader .t b { font-weight: 600; font-variant-numeric: tabular-nums; }
   .s5fader:focus-visible { outline: 2px solid #ff5a1f; outline-offset: 2px; }
   @media (max-width: 760px) { .s5fader { height: 56px; } }
-  /* The bar number beside a beat counter (VJ.barCounter): tap to change what it counts to. */
-  .s5barn { flex: none; min-width: 22px; height: 22px; padding: 0 5px; margin: 0 4px 0 0; border: 0; border-radius: 6px; background: rgba(255,255,255,.08);
-    color: #fafafa; font: 700 12px/22px ${FONT}; font-variant-numeric: tabular-nums; text-align: center; cursor: pointer; white-space: nowrap; }
-  .s5barn.one { background: rgba(255,90,31,.22); color: #ff8a5c; }
-  html[data-theme=light] .s5barn:not(.pvbeat .s5barn) { background: rgba(0,0,0,.06); color: #09090b; }
+  /* The bar number, as a beat counter's first beat (VJ.barCounter): dim between downbeats, orange on
+     the 1. Tap it to change what it counts to. */
+  .s5barn { flex: none; min-width: 22px; height: 18px; padding: 0 5px; margin: 0; border: 0; border-radius: 99px; background: rgba(255,255,255,.12);
+    color: rgba(255,255,255,.62); font: 700 11px/18px ${FONT}; font-variant-numeric: tabular-nums; text-align: center; cursor: pointer; white-space: nowrap;
+    transition: background .05s, color .05s; }
+  .s5barn.on { background: #ff5a1f; color: #fff; }
+  html[data-theme=light] .s5barn:not(.pvbeat .s5barn):not(.on) { background: rgba(0,0,0,.08); color: #52525b; }
   /* The audio monitor (VJ.waveStrip): its own dark panel stacked under a preview, never on it. */
   .s5wavebox { position: relative; display: none; flex-direction: column; height: 84px; margin-top: 6px; background: #08080a; border: 1px solid #26262b;
     border-radius: 10px; overflow: hidden; user-select: none; -webkit-user-select: none; }
