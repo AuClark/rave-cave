@@ -1,0 +1,20 @@
+{
+ "world": 0,
+ "pace": 0.5,
+ "bars": 1,
+ "lurch": 0.55,
+ "bob": 0.5,
+ "sway": 0.5,
+ "branch": 0.55,
+ "height": 1.5,
+ "hope": 1.0,
+ "thread": 0.8,
+ "motes": 0.9,
+ "fog": 0.5,
+ "sky": 0.3,
+ "reveal": 2,
+ "every": 1,
+ "kinds": 1,
+ "trip": 1.0,
+ "follow": 0.6
+}

@@ -1,0 +1,22 @@
+{
+ "world": 1,
+ "pace": 0.5,
+ "bars": 1,
+ "lurch": 0.7,
+ "bob": 0.6,
+ "sway": 0.2,
+ "fov": 0.95,
+ "branch": 0.8,
+ "height": 1.0,
+ "thick": 0.24,
+ "hope": 0.7,
+ "thread": 1.0,
+ "motes": 0.25,
+ "fog": 0.3,
+ "sky": 0.0,
+ "reveal": 3,
+ "every": 2,
+ "kinds": 3,
+ "trip": 0.5,
+ "far": 12
+}

@@ -1,0 +1,346 @@
+{
+  "title": "Mouths",
+  "about": "One huge cartoon mouth fills the wall and acts its heart out: a grin, a smirk, a Cheshire-wide sinister grin, a yell down to the uvula, a belly laugh, a gasp, a grimace, a pout, tongue out, a lip bite, a snarl, belting, an anime nervous wobble, springing from one to the next on the bar. The jaw pumps on the kick, the opening lip-syncs to the mids with consonants flicked on the hats, and heavy low end, above all the drop, pulls it into a filthy bass face. Drawn in anime, rubber-hose cartoon, grotesque detail or Lichtenstein pop art; A Hit is the jaw and the bob, B Move the consonants and sway, C Change the exaggeration and the background swell.",
+  "groups": [
+    {
+      "name": "Mouth",
+      "params": [
+        {
+          "id": "size",
+          "label": "Size",
+          "min": 0.85,
+          "max": 1.2,
+          "step": 0.01,
+          "default": 1.0
+        },
+        {
+          "id": "exag",
+          "label": "Exaggeration (how far each emotion is pushed)",
+          "min": 0.75,
+          "max": 1.35,
+          "step": 0.01,
+          "default": 1.0
+        },
+        {
+          "id": "elastic",
+          "label": "Elastic (overshoot and stretch on every change)",
+          "min": 0,
+          "max": 1,
+          "step": 0.01,
+          "default": 0.6
+        },
+        {
+          "id": "face",
+          "label": "Face hints (creases, nose, chin)",
+          "min": 0,
+          "max": 1,
+          "step": 0.01,
+          "default": 0.8
+        },
+        {
+          "id": "fang",
+          "label": "A cute fang",
+          "min": 0,
+          "max": 1,
+          "step": 0.01,
+          "default": 0
+        },
+        {
+          "id": "tword",
+          "kind": "fixed",
+          "label": "Words on the tongue (the text typed on this page, one a bar)",
+          "min": 0,
+          "max": 1,
+          "step": 1,
+          "default": 0
+        }
+      ]
+    },
+    {
+      "name": "Emotion",
+      "params": [
+        {
+          "id": "change",
+          "energy": -1,
+          "label": "Changes every (0 hold one, 1 bar, 2 bars, 3 four bars, 4 eight bars)",
+          "min": 0,
+          "max": 4,
+          "step": 1,
+          "default": 2
+        },
+        {
+          "id": "emo",
+          "energy": 0,
+          "label": "Held emotion (0 grin, 1 smirk, 2 sinister, 3 yell, 4 laugh, 5 gasp, 6 grimace, 7 pout, 8 tongue, 9 bite, 10 snarl, 11 belt, 12 nervous, 13 bass face)",
+          "min": 0,
+          "max": 13,
+          "step": 1,
+          "default": 0
+        },
+        {
+          "id": "mood",
+          "energy": 0,
+          "label": "Mood it picks from (0 all, 1 happy, 2 gremlin, 3 cheeky, 4 diva, 5 anime chaos, 6 sinister, 7 stank)",
+          "min": 0,
+          "max": 7,
+          "step": 1,
+          "default": 0
+        },
+        {
+          "id": "bass",
+          "energy": 1,
+          "label": "Heavy low end pulls it into bass face",
+          "min": 0,
+          "max": 1,
+          "step": 0.01,
+          "default": 0.7
+        },
+        {
+          "id": "drop",
+          "energy": 1,
+          "label": "Bass face on the drop",
+          "min": 0,
+          "max": 1,
+          "step": 0.01,
+          "default": 1
+        }
+      ]
+    },
+    {
+      "name": "Dance",
+      "params": [
+        {
+          "id": "pump",
+          "label": "Jaw pumps on the kick",
+          "min": 0,
+          "max": 1,
+          "step": 0.01,
+          "default": 0.6
+        },
+        {
+          "id": "sync",
+          "label": "Lip-sync to the mids",
+          "min": 0,
+          "max": 1,
+          "step": 0.01,
+          "default": 0.6
+        },
+        {
+          "id": "talk",
+          "label": "Consonant flicks on the hats",
+          "min": 0,
+          "max": 1,
+          "step": 0.01,
+          "default": 0.5
+        },
+        {
+          "id": "bob",
+          "label": "Bob, sway and squash",
+          "min": 0,
+          "max": 1.5,
+          "step": 0.01,
+          "default": 0.8
+        }
+      ]
+    },
+    {
+      "name": "Style",
+      "params": [
+        {
+          "id": "style",
+          "kind": "fixed",
+          "label": "Style (0 anime, 1 cartoon, 2 detailed, 3 pop art)",
+          "min": 0,
+          "max": 3,
+          "step": 1,
+          "default": 1
+        },
+        {
+          "id": "ink",
+          "label": "Line weight",
+          "min": 0.4,
+          "max": 1.6,
+          "step": 0.05,
+          "default": 1
+        },
+        {
+          "id": "gloss",
+          "label": "Gloss and wet highlights",
+          "min": 0,
+          "max": 1,
+          "step": 0.01,
+          "default": 0.8
+        },
+        {
+          "id": "spit",
+          "label": "Saliva strings on the wide ones",
+          "min": 0,
+          "max": 1,
+          "step": 0.01,
+          "default": 0.5
+        }
+      ]
+    },
+    {
+      "name": "Background",
+      "params": [
+        {
+          "id": "bg",
+          "energy": 0,
+          "label": "Background (0 burst, 1 halftone, 2 speed lines, 3 flat pulse, 4 the style's own)",
+          "min": 0,
+          "max": 4,
+          "step": 1,
+          "default": 4
+        },
+        {
+          "id": "busy",
+          "label": "How busy",
+          "min": 0,
+          "max": 1,
+          "step": 0.01,
+          "default": 0.5
+        }
+      ]
+    },
+    {
+      "name": "Reactivity",
+      "params": [
+        {
+          "id": "aband",
+          "label": "A Hit · band (0 off, 1 kick, 2 chords, 3 hats, 4 all, 5 energy)",
+          "min": 0,
+          "max": 5,
+          "step": 1,
+          "default": 1
+        },
+        {
+          "id": "aloop",
+          "label": "A Hit · loop (0 ½beat, 1 beat, 2 bar, 3 2bar, 4 4bar, 5 8bar, 6 16bar)",
+          "min": 0,
+          "max": 6,
+          "step": 1,
+          "default": 1
+        },
+        {
+          "id": "ashape",
+          "label": "A Hit · shape (0 follow, 1 punch, 2 ramp, 3 swell, 4 gate, 5 step)",
+          "min": 0,
+          "max": 5,
+          "step": 1,
+          "default": 1
+        },
+        {
+          "id": "aamt",
+          "label": "A Hit · amount",
+          "min": 0,
+          "max": 1,
+          "step": 0.01,
+          "default": 0.8
+        },
+        {
+          "id": "bband",
+          "label": "B Move · band",
+          "min": 0,
+          "max": 5,
+          "step": 1,
+          "default": 2
+        },
+        {
+          "id": "bloop",
+          "label": "B Move · loop",
+          "min": 0,
+          "max": 6,
+          "step": 1,
+          "default": 5
+        },
+        {
+          "id": "bshape",
+          "label": "B Move · shape",
+          "min": 0,
+          "max": 5,
+          "step": 1,
+          "default": 3
+        },
+        {
+          "id": "bamt",
+          "label": "B Move · amount",
+          "min": 0,
+          "max": 1,
+          "step": 0.01,
+          "default": 0.3
+        },
+        {
+          "id": "cband",
+          "label": "C Change · band",
+          "min": 0,
+          "max": 5,
+          "step": 1,
+          "default": 2
+        },
+        {
+          "id": "cloop",
+          "label": "C Change · loop",
+          "min": 0,
+          "max": 6,
+          "step": 1,
+          "default": 5
+        },
+        {
+          "id": "cshape",
+          "label": "C Change · shape",
+          "min": 0,
+          "max": 5,
+          "step": 1,
+          "default": 3
+        },
+        {
+          "id": "camt",
+          "label": "C Change · amount",
+          "min": 0,
+          "max": 1,
+          "step": 0.01,
+          "default": 0.4
+        }
+      ]
+    },
+    {
+      "name": "Colour",
+      "params": [
+        {
+          "id": "hue",
+          "label": "Hue (the background)",
+          "min": 0,
+          "max": 1,
+          "step": 0.005,
+          "default": 0.52
+        },
+        {
+          "id": "sat",
+          "label": "Background saturation",
+          "min": 0,
+          "max": 1,
+          "step": 0.01,
+          "default": 0.9
+        },
+        {
+          "id": "follow",
+          "label": "Follow show hue",
+          "min": 0,
+          "max": 1,
+          "step": 1,
+          "default": 1
+        },
+        {
+          "id": "tint",
+          "kind": "fixed",
+          "label": "Lips take the hue's opposite (0 the style's own red)",
+          "min": 0,
+          "max": 1,
+          "step": 0.01,
+          "default": 0
+        }
+      ]
+    }
+  ]
+}

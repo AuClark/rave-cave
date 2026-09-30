@@ -21,6 +21,7 @@ from the top:
 | **Energy** | Calm / Groove / Drop — a whole new look at that energy. The fastest way to change everything. |
 | **Effects** | Played on one parameter (named in the section heading, chosen under **MORE**). |
 | **Hold** | Hit / Move / Change — pushes the track's grip on the picture to its maximum while held. |
+| **Shuffle** | **Shuffle** (latch) puts up a new sketch from the theme, with one of its presets, every few bars on the 1; **Skip** jumps to the next one on the next 1; **Theme** steps through the themes. How often is under **MORE**. |
 | **Presets** | Tap to launch. The one playing is outlined. |
 | **Desk** | ÷2 and ×2 halve and double every speed at once; Chase steps through the presets on its own; Panic goes back to the preset you launched. |
 
@@ -75,8 +76,12 @@ ones.
 
 ## The three things you need to know
 
-**1. Pick a look.** The **Sketch** menu chooses what is drawn. **Load** puts a preset up. The
-arrow keys step through presets, and **1**–**9** jump straight to the first nine.
+**1. Pick a look.** The sketches are grouped into **themes** (Sacred, Cosmic, Tales, Signals,
+Organic, Luxe, Lines, or All). Tap a theme and its sketches show as tiles underneath; tap a tile to
+put it up. What is playing is written above in large, with its preset beside it. Under **Presets**, one tap puts a
+preset up, and the one playing is lit. The arrow keys step through them, and **1**–**9** (the
+small number on each) jump straight to the first nine. To keep what is playing, type a name in
+**Save what's playing as…** and press Enter.
 
 **Words.** The **Words** field (on the full controls, and in the pad's drawer) sets the text that
 sketches which draw type will use — `wormhole` puts it round the rings of its tunnel. Separate up
@@ -91,7 +96,8 @@ get somewhere good:
 | **W** | Groove | A middle setting. Moving, not hectic. |
 | **E** | Drop | Fast, dense, reacting hard. For when the track goes off. |
 
-They never go outside the range you set on each slider (below), so once you have fenced a look in,
+**Undo**, next to Randomise, takes back the last new look (**Shift+R** does the same). They never
+go outside the range you set on each slider (below), so once you have fenced a look in,
 Q/W/E stay inside the fence. Anything the sketch marks as a frame-rate knob is left alone, and so
 is anything it marks as identity — Hypnotoad's collar, Wormhole's Two tone — because a dice roll on
 those does not give you a different look, it gives you a broken one.
@@ -107,16 +113,24 @@ avoid mid-set.
 **3. One slider, three things.** Every parameter looks like this:
 
 ```
-  Hue                                    0.580   [A]
-  ────────────█──────▓▓▓▓▓▓▓▓▓▓▓▓▓──────────────
-              ^          ^      ▲      ▲
-           the value   the range, and its two arrows
+  Hue                                    0.58   [A]
+  ████████████████|░░░░░░░░░░░░░░░░░░░░░░░░░░░░░
+                  ^      ▲                 ▲
+              the value    the range's two ends
 ```
 
-- **The upright line** is the value. Drag anywhere along the top of the track to move it.
-- **The orange band** is how far that value is allowed to go. Drag the small **▲ arrows** under
-  the line to set its ends. Randomise, Q/W/E and automation all stay inside it.
-- **The square outline** appears when the parameter is automating, and shows where it has got to.
+- **The filled bar** is the value, filled from the left, or from nought for a speed that can run
+  backwards. Drag anywhere along the top of the track to move it. It turns orange on the
+  selected row.
+- **The band** behind it is how far that value is allowed to go. It is grey while it covers the
+  whole slider and turns warm brown once you have narrowed it, so a fenced-in parameter stands
+  out. Drag the small **▲** under either end to set it (they show on the selected row, on hover,
+  and whenever the range is narrowed). Randomise, Q/W/E and automation all stay inside it.
+- **The orange box** appears when the parameter is automating, and shows where it has got to.
+  The fill dims then, because the box is what's on screen.
+
+Parameters sit in two columns on a tablet or wider. Only the selected one shows its automation
+controls.
 
 Handling:
 
@@ -128,10 +142,42 @@ Handling:
 | Double-click | Back to the sketch's default |
 | Scroll wheel | Nudge one step (Shift for a fraction of one) |
 
+## Shuffle: let it play itself
+
+**Shuffle** changes the whole picture for you: every so many bars, on the 1, it puts up a
+different sketch from the theme you have chosen, with one of that sketch's own presets, so every
+look it lands on is one somebody made rather than a dice roll. It goes through every sketch in the
+theme before it repeats one, never picks the one already playing, and works through each sketch's
+presets in turn.
+
+- **Shuffle** turns it on and off (**S**). The thin bar under it fills up to the next change, and
+  the text says how many bars are left.
+- **every 1 · 2 · 4 · 8 · 16 · 32 bars** is how often.
+- **Skip** (**N**) goes to the next one on the next 1, and works with Shuffle off too: "something
+  else from this theme, in time".
+- **The theme tabs** are what it draws from. Pick **All** for everything.
+- **Pick something yourself** (a tile or a preset) and Shuffle gives it the full period before it
+  moves on, so it never undoes you straight away.
+- **NEXT**, on the right of every sketch tile and preset chip, queues that look as Shuffle's next
+  change. The **Next up** bar says what is queued and when it plays: at the next change if
+  Shuffle is on (**Play on the 1** brings it forward), or on the next 1 if Shuffle is off. **✕**
+  clears it. After it plays, Shuffle carries on picking for itself. The Launchpad shows what is
+  next too, and can clear it.
+- **Choose…** is for the sketches and presets you trust for a set. Tiles and preset chips switch
+  from playing to ticking: a tick is in, a dashed and crossed-out one is left out. **All in** and
+  **None** are shortcuts (None, then tick the few you want). It is kept per theme on the brain.
+  It only steers Shuffle: anything can still be played or queued by hand. If you tick out a
+  whole theme, Shuffle plays all of it rather than nothing, and says so.
+
+It runs on the visuals service, not in the page, so it keeps going with the tablet asleep, and the
+Launchpad and every other page show the same countdown. It is still on after the brain restarts if
+it was on before. While it is on, **SHUFFLE · THEME · bars left** shows in the strip under the
+preview whichever tab you are on; tap it to get back here.
+
 ## Making things move on their own
 
 Press **A** (or the **A** button on the row) and that parameter starts moving between the two ends
-of its orange band, by itself, locked to the beat. The selected row shows its controls:
+of its band, by itself, locked to the beat. The selected row shows its controls:
 
 | Control | What it does |
 |---|---|
@@ -142,8 +188,10 @@ of its orange band, by itself, locked to the beat. The selected row shows its co
 | **Hz** | Free-run in Hz instead of following the beat. Useful for slow drifts that should not lock to the music. |
 | **full** | Set the range back to the whole parameter. |
 
-**Space** freezes every automation where it stands, and unfreezes it. The values hold, and carry
-on from there — nothing jumps.
+**Space** freezes every automation where it stands, and unfreezes it. While frozen the values
+hold. Let go and each one goes straight to where the beat has got to, so it is back in time with
+the music at once. That can be a jump, and it is on purpose: every projector and the preview work
+the value out from the beat alone, so they can never disagree, even after one of them reloads.
 
 The movement is worked out on the projector itself, from the beat, so it stays exactly in time and
 does not depend on the tablet keeping up or the Wi-Fi behaving.
@@ -162,6 +210,7 @@ does not depend on the tablet keeping up or the Wi-Fi behaving.
 | **Space** | Freeze / unfreeze all automation |
 | **M** (hold) | Selected parameter to its maximum while held, like a momentary effect button |
 | **Esc** | Panic: back to the preset you loaded |
+| **S** / **N** | Shuffle on/off / skip to the next one, on the 1 |
 | **?** | The list, on screen |
 
 Keys are ignored while you are typing in the preset name box.
@@ -187,6 +236,7 @@ before automation existed still load; they come up with automation off and range
 - **Nothing moving:** check **Freeze** in the top bar is not lit, and that the beat dots are
   ticking. Without the show engine running there is a 120 BPM idle clock, so things still move.
 - **Too much going on:** press **Q**, then narrow the bands on whatever is still too much.
-- **Stuttering on the projector:** `cathedral` and `inkwell` cost several times what the flat
-  sketches do. Their Steps and Detail are marked as frame-rate knobs and the randomisers leave
-  them alone, so turn them down by hand — see [visuals.md](visuals.md#what-cathedral-and-inkwell-cost).
+- **Stuttering on the projector:** `cathedral` and `sisyphus` are the dearest, at nearly three
+  times the flat sketches. `cathedral`'s Steps is marked as a frame-rate knob and the randomisers
+  leave it alone, so turn it (and Depth) down by hand — see
+  [visuals.md](visuals.md#what-the-heavy-sketches-cost).

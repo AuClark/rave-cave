@@ -1,0 +1,59 @@
+{
+  "title": "Labyrinth",
+  "about": "A first-person walk through a maze that never ends: a step a beat, a turn on the bar, alcoves and dead ends on every side, and Ariadne's thread glowing down the floor round every corner. There is always light ahead -- a lamp just round the next turn that grows as you come up to it and moves on as you take it -- and at the end of every phrase the roof slides open and light pours in, a corner away as ever. Every few bars something waits in the corridor: glowing mushrooms that make the maze trip for a phrase, a lantern, an orb, a door of light, a portcullis that lifts on the kicks, a curtain of threads, a fallen pillar.",
+  "groups": [
+    {"name": "Walk", "params": [
+      {"id": "pace", "kind": "rate", "energy": 1, "label": "Pace (cells per beat; snapped so every turn lands on a bar)", "min": 0.25, "max": 1, "step": 0.25, "default": 0.5},
+      {"id": "bars", "energy": -1, "label": "Bars in the shortest straight (turns come every 1-3 of these)", "min": 1, "max": 4, "step": 1, "default": 1},
+      {"id": "lurch", "energy": 1, "label": "Lurch: how much of each step lands on the kick", "min": 0, "max": 1, "step": 0.01, "default": 0.55},
+      {"id": "bob", "label": "Footfall bob and sway from foot to foot", "min": 0, "max": 1, "step": 0.01, "default": 0.5},
+      {"id": "sway", "label": "Glance round (head sways; B adds a flick)", "min": 0, "max": 1, "step": 0.01, "default": 0.3},
+      {"id": "fov", "label": "Field of view", "min": 0.75, "max": 1.4, "step": 0.01, "default": 1.0}
+    ]},
+    {"name": "Maze", "params": [
+      {"id": "world", "kind": "fixed", "label": "World (0 hedge maze at dusk, 1 stone labyrinth, 2 neon grid, 3 ink on paper, 4 the mushroom trip)", "min": 0, "max": 4, "step": 1, "default": 1},
+      {"id": "branch", "label": "Side openings, alcoves and dead ends", "min": 0, "max": 1, "step": 0.01, "default": 0.5},
+      {"id": "height", "label": "Wall height (cells)", "min": 1, "max": 2.4, "step": 0.01, "default": 1.35},
+      {"id": "thick", "label": "Wall thickness", "min": 0.08, "max": 0.3, "step": 0.01, "default": 0.15},
+      {"id": "tex", "label": "Texture (leaves, stone courses, hatching)", "min": 0, "max": 1, "step": 0.01, "default": 0.85}
+    ]},
+    {"name": "Hope", "params": [
+      {"id": "hope", "label": "The light round the next corner", "min": 0.3, "max": 1.5, "step": 0.01, "default": 1.0},
+      {"id": "thread", "label": "Ariadne's thread", "min": 0, "max": 1, "step": 0.01, "default": 0.8},
+      {"id": "motes", "label": "Fireflies and motes", "min": 0, "max": 1, "step": 0.01, "default": 0.45},
+      {"id": "fog", "label": "Glow of the distance", "min": 0, "max": 1, "step": 0.01, "default": 0.45},
+      {"id": "sky", "label": "Roof open all the time", "min": 0, "max": 0.6, "step": 0.01, "default": 0.08},
+      {"id": "reveal", "energy": 0, "label": "The roof opens at the end of every (0 never, 1 4 bars, 2 8 bars, 3 16 bars)", "min": 0, "max": 3, "step": 1, "default": 2}
+    ]},
+    {"name": "Encounters", "params": [
+      {"id": "every", "energy": 1, "label": "Something in the corridor every (0 never, 1 2 bars, 2 4 bars, 3 8 bars)", "min": 0, "max": 3, "step": 1, "default": 2},
+      {"id": "kinds", "energy": 0, "label": "What (0 anything, 1 mushrooms, 2 lights: lantern, orb, door, 3 obstacles: gate, threads, pillar, 4 lights and obstacles)", "min": 0, "max": 4, "step": 1, "default": 0},
+      {"id": "trip", "label": "How hard the mushrooms trip you", "min": 0, "max": 1, "step": 0.01, "default": 0.7}
+    ]},
+    {"name": "Render", "params": [
+      {"id": "steps", "kind": "quality", "label": "Cells a ray may cross (lower is faster)", "min": 12, "max": 48, "step": 1, "default": 28},
+      {"id": "far", "kind": "quality", "label": "View distance (cells; beyond is light)", "min": 8, "max": 24, "step": 0.5, "default": 16}
+    ]},
+    {"name": "Reactivity", "params": [
+      {"id": "aband", "label": "A Hit · band (0 off, 1 kick, 2 chords, 3 hats, 4 all, 5 energy)", "min": 0, "max": 5, "step": 1, "default": 1},
+      {"id": "aloop", "label": "A Hit · loop (0 ½beat, 1 beat, 2 bar, 3 2bar, 4 4bar, 5 8bar, 6 16bar)", "min": 0, "max": 6, "step": 1, "default": 1},
+      {"id": "ashape", "label": "A Hit · shape (0 follow, 1 punch, 2 ramp, 3 swell, 4 gate, 5 step)", "min": 0, "max": 5, "step": 1, "default": 1},
+      {"id": "aamt", "label": "A Hit · amount", "min": 0, "max": 1, "step": 0.01, "default": 0.7},
+      {"id": "bband", "label": "B Move · band", "min": 0, "max": 5, "step": 1, "default": 3},
+      {"id": "bloop", "label": "B Move · loop", "min": 0, "max": 6, "step": 1, "default": 0},
+      {"id": "bshape", "label": "B Move · shape", "min": 0, "max": 5, "step": 1, "default": 0},
+      {"id": "bamt", "label": "B Move · amount", "min": 0, "max": 1, "step": 0.01, "default": 0.5},
+      {"id": "cband", "label": "C Change · band", "min": 0, "max": 5, "step": 1, "default": 2},
+      {"id": "cloop", "label": "C Change · loop", "min": 0, "max": 6, "step": 1, "default": 5},
+      {"id": "cshape", "label": "C Change · shape", "min": 0, "max": 5, "step": 1, "default": 3},
+      {"id": "camt", "label": "C Change · amount", "min": 0, "max": 1, "step": 0.01, "default": 0.5}
+    ]},
+    {"name": "Colour", "params": [
+      {"id": "hue", "label": "Hue of the light (0 the world's own)", "min": 0, "max": 1, "step": 0.005, "default": 0},
+      {"id": "follow", "label": "Follow the show's colour", "min": 0, "max": 1, "step": 0.01, "default": 0.3},
+      {"id": "sat", "label": "Saturation of the light", "min": 0, "max": 1, "step": 0.01, "default": 0.85},
+      {"id": "bright", "label": "Brightness", "min": 0.6, "max": 1.6, "step": 0.01, "default": 1.0},
+      {"id": "vign", "label": "Vignette", "min": 0, "max": 0.6, "step": 0.01, "default": 0.3}
+    ]}
+  ]
+}

@@ -6,7 +6,7 @@
 <title>Sektor5 · Commander</title>
 <link rel="icon" type="image/svg+xml" href="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA2NCA2NCI+PHJlY3Qgd2lkdGg9IjY0IiBoZWlnaHQ9IjY0IiByeD0iMTIiIGZpbGw9IiMyNDI0MjQiLz48cGF0aCB0cmFuc2Zvcm09InRyYW5zbGF0ZSgxNC41IDcpIHNjYWxlKC41KSIgZD0iTTAsMCBMNzAsMCBMNzAsMjEgTDIxLDIxIEwyMSw0MCBMNTcsNDAgTDcwLDUzIEw3MCw4NyBMNTcsMTAwIEwwLDEwMCBMMCw3OSBMNDksNzkgTDQ5LDYxIEwwLDYxIFoiIGZpbGw9IiNGRjVBMUYiLz48L3N2Zz4=">
 <style>
-  :root { --bg:#07070c; --panel:#12131d; --line:#262a3d; --text:#e8e9f3; --dim:#9a9a9a; --pink:#ff2fd0; --cyan:#2fe6ff; --good:#3dff8b; --warn:#ffb02e; --violet:#9b8cff; }
+  :root { --bg:var(--n07070c, #07070c); --panel:#12131d; --line:#262a3d; --text:#e8e9f3; --dim:var(--na1a1a1, #a1a1a1); --pink:#ff2fd0; --cyan:#2fe6ff; --good:#3dff8b; --warn:#ffb02e; --violet:#9b8cff; }
   * { box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
   body { margin:0; background:var(--bg); color:var(--text); font:15px/1.4 system-ui,-apple-system,sans-serif; padding:14px; -webkit-user-select:none; user-select:none; }
   h1 { font-size:14px; letter-spacing:.2em; margin:0 0 12px; display:flex; gap:12px; align-items:baseline; } h1 b { color:var(--pink); }
@@ -38,12 +38,12 @@
   button.big small, button.on small, button.held small { color:rgba(0,0,0,.6); }
   button.on { background:var(--cyan); color:#000; border-color:var(--cyan); }
   .pad { padding:26px 6px; font-size:15px; }
-  .pad.held { background:#fff; color:#000; border-color:#fff; box-shadow:0 0 24px rgba(255,255,255,.5); }
+  .pad.held { background:#fff; color:#000; border-color:#fff; box-shadow:0 0 24px rgba(var(--inv, 255,255,255),.5); }
   .pad.look.on { background:var(--c, var(--cyan)); border-color:var(--c, var(--cyan)); box-shadow:0 0 18px var(--c, var(--cyan)); }
   .seg { display:flex; gap:6px; } .seg button { flex:1; padding:12px 6px; }
   .swatches { display:grid; grid-template-columns:repeat(6,1fr); gap:8px; margin-top:10px; }
   .swatches button { padding:0; height:40px; border-radius:10px; border:2px solid transparent; }
-  .swatches button.on { border-color:#fff; box-shadow:0 0 14px rgba(255,255,255,.4); }
+  .swatches button.on { border-color:#fff; box-shadow:0 0 14px rgba(var(--inv, 255,255,255),.4); }
   input[type=range] { width:100%; accent-color:var(--cyan); }
   label { display:block; margin:12px 0 4px; color:var(--dim); font-size:13px; }
   .fx { display:grid; grid-template-columns:auto 1fr 44px; gap:10px; align-items:center; margin-top:8px; }
@@ -52,12 +52,12 @@
   .tapbpm { font-size:34px; font-weight:900; font-variant-numeric:tabular-nums; text-align:center; }
 
   /* ------------------------------------------------------------------ design system
-     Charcoal, hairline grid, one orange accent, light geometric type (Montserrat).
+     Near-black, hairline grid, one orange accent, system type (the shared theme in s5auth.js sits on top: docs/design.md).
      Same tokens and bottom tiles as the dashboard, Commander, mapping and visuals pages. */
-  :root { --bg:#242424; --panel:#2b2b2b; --card:#2b2b2b; --line:#3e3e3e; --line2:#555; --text:#f2f2f2; --dim:#9a9a9a;
-          --accent:#ff5a1f; --good:#7ccf8a; --warn:#f2b84b; --bad:#ef5b5b; --well:#1f1f1f;
-          --pink:#ff5a1f; --cyan:#ff5a1f; --acc:#ff5a1f; --violet:#bdbdbd;
-          --font:"Montserrat", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif; }
+  :root { --bg:var(--n0c0c0e, #0c0c0e); --panel:var(--n131315, #131315); --card:var(--n131315, #131315); --line:var(--n262628, #262628); --line2:var(--n3a3a3c, #3a3a3c); --text:var(--nfafafa, #fafafa); --dim:var(--na1a1a1, #a1a1a1);
+          --accent:#ff5a1f; --good:#7ccf8a; --warn:#f2b84b; --bad:#ef5b5b; --well:var(--n08080a, #08080a);
+          --pink:#ff5a1f; --cyan:#ff5a1f; --acc:#ff5a1f; --violet:var(--nc4c4c4, #c4c4c4);
+          --font:"Inter", -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", Roboto, system-ui, sans-serif; }
   html, body { background: var(--bg); }
   body { font-family: var(--font); letter-spacing: .01em; }
   button, input, select { font-family: var(--font); border-radius: 0 !important; }
@@ -76,11 +76,11 @@
   nav.apps a { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 28px 30px; color: var(--dim);
                text-decoration: none; font-size: 17px; font-weight: 400; line-height: 1.3; border-left: 1px solid var(--line); }
   nav.apps a:first-child { border-left: 0; }
-  nav.apps a:hover { color: var(--text); background: #2e2e2e; }
+  nav.apps a:hover { color: var(--text); background: var(--n171719, #171719); }
   nav.apps a .arr { font-size: 26px; font-weight: 300; color: var(--text); }
-  nav.apps a small { display: block; font-size: 11px; letter-spacing: .16em; color: #6b6b6b; margin-bottom: 4px; }
-  nav.apps a.here { background: var(--text); color: #222; }
-  nav.apps a.here small { color: #777; }
+  nav.apps a small { display: block; font-size: 11px; letter-spacing: .16em; color: var(--n525254, #525254); margin-bottom: 4px; }
+  nav.apps a.here { background: var(--text); color: var(--n0a0a0c, #0a0a0c); }
+  nav.apps a.here small { color: var(--n646464, #646464); }
   nav.apps a.here .arr { background: var(--accent); color: #fff; align-self: stretch; display: grid; place-items: center; width: 80px; margin: -28px -30px -28px 0; }
   @media (max-width: 900px) { nav.apps { grid-template-columns: 1fr 1fr; } nav.apps a:nth-child(3) { border-left: 0; } }
 
@@ -94,7 +94,7 @@
   .card h2::before { content: counter(sec, decimal-leading-zero) "  —  "; color: var(--accent); }
   .scene { font-weight: 300; font-size: 56px; letter-spacing: .01em; }
   @media (max-width: 760px) { .scene { font-size: clamp(30px, 11vw, 56px); } }
-  .scene.GROOVE { color: var(--text); } .scene.BREAKDOWN { color: #bdbdbd; } .scene.DROP { color: var(--accent); }
+  .scene.GROOVE { color: var(--text); } .scene.BREAKDOWN { color: var(--nc4c4c4, #c4c4c4); } .scene.DROP { color: var(--accent); }
   .tag { border-radius: 0; background: transparent; color: var(--warn); border: 1px solid var(--warn); font-weight: 600; }
   .count { font-weight: 300; font-size: 34px; color: var(--accent); }
   .bar { border-radius: 0; background: var(--well); height: 6px; }
@@ -102,11 +102,11 @@
   .beats { gap: 4px; } .beats div { border-radius: 0; background: var(--well); }
   .beats div.on { background: var(--text); box-shadow: none; } .beats div.on.one { background: var(--accent); box-shadow: none; }
   button { padding: 16px 10px; }
-  button small { font-weight: 500; color: #7a7a7a; }
+  button small { font-weight: 500; color: var(--n686868, #686868); }
   button.big { background: var(--accent); color: #fff; border-color: var(--accent); font-weight: 600; }
-  button.big small, button.on small, button.held small { color: rgba(255,255,255,.75); }
+  button.big small, button.on small, button.held small { color: rgba(var(--inv, 255,255,255),.75); }
   .pad { padding: 26px 6px; }
-  .pad.held { background: var(--text); color: #222; border-color: var(--text); box-shadow: none; }
+  .pad.held { background: var(--text); color: var(--n0a0a0c, #0a0a0c); border-color: var(--text); box-shadow: none; }
   .pad.look.on { background: var(--accent); border-color: var(--accent); color: #fff; box-shadow: none; }
   .swatches button { border-radius: 0 !important; border-width: 2px; }
   .swatches button.on { border-color: var(--text); box-shadow: none; }
@@ -118,12 +118,12 @@
   nav.pages a:hover { color: var(--text); }
   nav.pages a.here { color: var(--text); border-bottom-color: var(--accent); }
   .s5logo { display: inline-flex; align-items: center; vertical-align: middle; line-height: 1; }
-  .s5logo .s5word { color: var(--text, #f2f2f2); flex: none; display: block; }
+  .s5logo .s5word { color: var(--text, #fafafa); flex: none; display: block; }
   .s5logo .s5five { fill: var(--accent, #ff5a1f); }
   /* Lighting like the other pages: the live status (scene, drop countdown, bars, fixtures) is the
      display, pinned under the top bar; tabs under it pick one section of controls. */
   .wrap.tabbed { grid-template-columns: minmax(0, 1fr); }
-  .wrap.tabbed > .card.span { position: sticky; top: var(--s5bar, 48px); z-index: 30; padding-bottom: 0; }
+  .wrap.tabbed > .card.span { position: sticky; top: var(--s5bar, 48px); z-index: 30; padding-bottom: 0; background: var(--bg); border: 0; border-bottom: 1px solid var(--line); }   /* the display: page background, like every page's */
   .wrap.tabbed > .card.span > .s5sect { margin: 16px -24px 0; }
   .wrap.tabbed > .card:not(.span) { width: 100%; max-width: 860px; justify-self: center; }
   .wrap.tabbed > .card:not(.span) > h2:first-child { display: none; }   /* the tab says which section this is */
@@ -132,9 +132,14 @@
   .keymap { display: flex; flex-wrap: wrap; gap: 6px 14px; margin-top: 18px; padding-top: 14px; border-top: 1px solid var(--line); font-size: 12px; color: var(--dim); }
   .keymap kbd { font: 600 11px/1 var(--font); color: var(--text); border: 1px solid var(--line2); padding: 3px 6px; margin-right: 3px; }
   @media (pointer: coarse) { .keymap { display: none; } }
+  /* Phones: the pinned status kept compact (about a third of the screen), the controls scroll under it. */
+  @media (max-width: 760px) {
+    .wrap.tabbed > .card.span { padding: 12px 14px 0; }
+    .scene { font-size: clamp(28px, 9vw, 40px) !important; } .count { font-size: 20px !important; }
+    #title, #pos { font-size: 12px; } #viz { margin-top: 8px; }
+    .wrap.tabbed > .card.span > .s5sect { margin: 10px -14px 0; }
+  }
 </style>
-<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;500;600&display=swap" rel="stylesheet">
 <script src="/s5auth.js"></script>
 </head>
 <body>
@@ -153,17 +158,17 @@
 <div class="card">
   <h2>Performance · hold</h2>
   <div class="grid">
-    <button class="pad" data-hold="strobe">STROBE<small>hold · S</small></button>
-    <button class="pad" data-hold="blinder">BLINDER<small>hold · W</small></button>
-    <button class="pad" data-hold="black_hold">BLACKOUT<small>hold · B</small></button>
-    <button class="pad" id="flash">FLASH<small>tap · space</small></button>
+    <button class="pad" data-hold="strobe">Strobe<small>hold · S</small></button>
+    <button class="pad" data-hold="blinder">Blinder<small>hold · W</small></button>
+    <button class="pad" data-hold="black_hold">Blackout<small>hold · B</small></button>
+    <button class="pad" id="flash">Flash<small>tap · space</small></button>
   </div>
   <label>Strobe rate (locked to the beat)</label>
-  <div class="seg" id="sdiv"><button data-v="1">1/4</button><button data-v="2">1/8</button><button data-v="4">1/16</button><button data-v="0">FREE</button></div>
+  <div class="seg" id="sdiv"><button data-v="1">1/4</button><button data-v="2">1/8</button><button data-v="4">1/16</button><button data-v="0">Free</button></div>
   <label>Mixer reactions <span id="mixinfo" class="dim"></span></label>
-  <button id="mixreact" style="width:100%" onclick="cmd('mixer_react', !(S.mix && S.mix.react))" title="Lights react to the DJM: bass kill, fader level, Beat FX, filter">MIXER REACT</button>
+  <button id="mixreact" style="width:100%" onclick="cmd('mixer_react', !(S.mix && S.mix.react))" title="Lights react to the DJM: bass kill, fader level, Beat FX, filter">Mixer react</button>
   <label>Motion speed</label>
-  <div class="seg" id="speed"><button data-v="0.5">½× HALF</button><button data-v="1">1×</button><button data-v="2">2× DOUBLE</button></div>
+  <div class="seg" id="speed"><button data-v="0.5">½× Half</button><button data-v="1">1×</button><button data-v="2">2× Double</button></div>
   <div class="keymap" title="Keyboard shortcuts (a laptop next to the decks)">
     <span><kbd>Space</kbd> flash</span><span><kbd>S</kbd> strobe</span><span><kbd>W</kbd> blinder</span><span><kbd>B</kbd> blackout</span>
     <span><kbd>T</kbd> tap tempo</span><span><kbd>0</kbd>–<kbd>4</kbd> looks</span><span><kbd>D</kbd> drop now</span>
@@ -173,29 +178,29 @@
 <div class="card">
   <h2>Scenes · latch</h2>
   <div class="grid5">
-    <button class="pad look" data-look="AUTO" style="--c:var(--good)">AUTO<small>0</small></button>
-    <button class="pad look" data-look="INTRO" style="--c:#9a9a9a">AMBIENT<small>1</small></button>
-    <button class="pad look" data-look="GROOVE" style="--c:var(--cyan)">GROOVE<small>2</small></button>
-    <button class="pad look" data-look="BREAKDOWN" style="--c:var(--violet)">BREAK<small>3</small></button>
-    <button class="pad look" data-look="DROP" style="--c:var(--pink)">DROP<small>4</small></button>
+    <button class="pad look" data-look="AUTO" style="--c:var(--good)">Auto<small>0</small></button>
+    <button class="pad look" data-look="INTRO" style="--c:var(--na1a1a1, #a1a1a1)">Ambient<small>1</small></button>
+    <button class="pad look" data-look="GROOVE" style="--c:var(--cyan)">Groove<small>2</small></button>
+    <button class="pad look" data-look="BREAKDOWN" style="--c:var(--violet)">Break<small>3</small></button>
+    <button class="pad look" data-look="DROP" style="--c:var(--pink)">Drop<small>4</small></button>
   </div>
   <h2 style="margin-top:14px">Drop control</h2>
   <div class="grid">
-    <button class="big" onclick="cmd('drop_now')">DROP NOW<small>D</small></button>
-    <button class="big" style="background:var(--warn);border-color:var(--warn)" onclick="cmd('build', +$('bbars').dataset.v)">BUILD <span id="bbl">4</span> BARS</button>
+    <button class="big" onclick="cmd('drop_now')">Drop now<small>D</small></button>
+    <button class="big" style="background:var(--warn);border-color:var(--warn)" onclick="cmd('build', +$('bbars').dataset.v)">Build <span id="bbl">4</span> bars</button>
   </div>
   <div class="seg" id="bbars" data-v="4" style="margin-top:8px"><button data-v="2">2</button><button data-v="4">4</button><button data-v="8">8</button><button data-v="16">16</button></div>
   <div class="grid" style="margin-top:10px">
-    <button id="hold" onclick="cmd('hold')">HOLD</button>
-    <button onclick="cmd('clear')">CANCEL BUILD</button>
-    <button onclick="cmd('skip_drop')">SKIP NEXT DROP</button>
-    <button onclick="cmd('mark_drop')">MARK DROP HERE</button>
+    <button id="hold" onclick="cmd('hold')">Hold</button>
+    <button onclick="cmd('clear')">Cancel build</button>
+    <button onclick="cmd('skip_drop')">Skip next drop</button>
+    <button onclick="cmd('mark_drop')">Mark drop here</button>
   </div>
 </div>
 
 <div class="card">
   <h2>Colour</h2>
-  <div class="seg" id="pmode"><button data-v="auto">AUTO · KEY</button><button data-v="lock">LOCK</button><button data-v="cycle">CYCLE</button></div>
+  <div class="seg" id="pmode"><button data-v="auto">Auto · key</button><button data-v="lock">Lock</button><button data-v="cycle">Cycle</button></div>
   <div class="swatches" id="swatches"></div>
 </div>
 
@@ -204,7 +209,7 @@
   <div id="fixtures"></div>
   <label>Master intensity <span id="iv"></span></label>
   <input id="int" type="range" min="0" max="1" step="0.05" oninput="cmd('intensity',+this.value)">
-  <button id="black" style="margin-top:12px;width:100%" onclick="cmd('mode', S.mode==='blackout'?'auto':'blackout')">BLACKOUT (latch)</button>
+  <button id="black" style="margin-top:12px;width:100%" onclick="cmd('mode', S.mode==='blackout'?'auto':'blackout')">Blackout (latch)</button>
 </div>
 
 <div class="card">
@@ -212,25 +217,26 @@
   <div class="tapbpm"><span id="tbpm">128.0</span> <span class="dim">BPM</span></div>
   <div class="grid4" style="margin-top:10px">
     <button onclick="cmd('tap_bpm', (S.tap_bpm||128) - 1)">−1</button>
-    <button id="tap" style="grid-column:span 2" class="big">TAP<small>T</small></button>
+    <button id="tap" style="grid-column:span 2" class="big">Tap<small>T</small></button>
     <button onclick="cmd('tap_bpm', (S.tap_bpm||128) + 1)">+1</button>
   </div>
-  <button style="margin-top:8px;width:100%" onclick="cmd('tap_sync')">SYNC · downbeat now</button>
+  <button style="margin-top:8px;width:100%" onclick="cmd('tap_sync')">Sync · downbeat now</button>
 </div>
 
 <div class="card">
   <h2>Setup</h2>
   <label>Mode</label>
-  <div class="seg" id="mode"><button data-v="auto">AUTO</button><button data-v="manual">MANUAL</button></div>
+  <div class="seg" id="mode"><button data-v="auto">Auto</button><button data-v="manual">Manual</button></div>
   <label>Follow deck</label>
-  <div class="seg" id="follow"><button data-v="0">AUTO</button><button data-v="1">DECK 1</button><button data-v="2">DECK 2</button></div>
+  <div class="seg" id="follow"><button data-v="0">Auto</button><button data-v="1">Deck 1</button><button data-v="2">Deck 2</button></div>
   <label>Output latency compensation <span id="lv"></span> ms</label>
   <input id="lead" type="range" min="0" max="200" step="5" oninput="cmd('lead_ms',+this.value)">
-  <button style="margin-top:12px;width:100%" onclick="cmd('clear')">RESET ALL OVERRIDES</button>
+  <button style="margin-top:12px;width:100%" onclick="cmd('clear')">Reset all overrides</button>
 </div>
 
 </div>
 <script>
+const SCENE_NAME = { IDLE: "Waiting", INTRO: "Intro", GROOVE: "Groove", BUILD: "Building", HOLD: "Holding", PREDROP: "Here it comes", DROP: "Drop", BREAKDOWN: "Break", OUTRO: "Outro" };   // the show engine's scenes, as the pages show them
 let S = {};
 const $ = id => document.getElementById(id);
 async function cmd(c, v) {
@@ -286,7 +292,7 @@ function buildFixtures(ctl) {
   const names = Object.keys(ctl || {});
   if (names.join() === fxNames) return;
   fxNames = names.join();
-  $('fixtures').innerHTML = names.map(n => `<div class="fx"><button data-fx="${n}">${n.toUpperCase()}</button>
+  $('fixtures').innerHTML = names.map(n => `<div class="fx"><button data-fx="${n}">${n}</button>
     <input type="range" min="0" max="1" step="0.05" data-fxl="${n}"><span class="lv" data-fxv="${n}"></span></div>`).join('');
   document.querySelectorAll('[data-fx]').forEach(b => b.onclick = () => cmd('fixture', {name: b.dataset.fx, on: !S.fixture_ctl[b.dataset.fx].on}));
   document.querySelectorAll('[data-fxl]').forEach(i => i.oninput = () => cmd('fixture', {name: i.dataset.fxl, level: +i.value}));
@@ -295,14 +301,15 @@ function buildFixtures(ctl) {
 // Live view of what each fixture is outputting.
 function drawViz(preview) {
   const cv = $('viz'), dpr = devicePixelRatio || 1, names = Object.keys(preview || {});
-  const rowH = 22, W = cv.clientWidth, H = Math.max(1, names.length) * rowH;
+  const rowH = innerWidth <= 760 ? 14 : 22, W = cv.clientWidth,   // phones: thinner rows, so the pinned status stays small
+  H = Math.max(1, names.length) * rowH;
   if (cv.width !== Math.round(W * dpr) || cv.height !== Math.round(H * dpr)) { cv.width = Math.round(W * dpr); cv.height = Math.round(H * dpr); cv.style.height = H + 'px'; }
   const g = cv.getContext('2d'); g.setTransform(dpr, 0, 0, dpr, 0, 0); g.clearRect(0, 0, W, H);
   const lw = 64;
   names.forEach((n, i) => {
     const y = i * rowH, px = preview[n] || [];
-    g.fillStyle = '#9a9a9a'; g.font = '700 11px system-ui'; g.fillText(n.toUpperCase(), 0, y + 15);
-    g.fillStyle = '#1f1f1f'; g.fillRect(lw, y + 3, W - lw, rowH - 6);
+    g.fillStyle = '#a1a1aa'; g.font = `600 ${rowH < 20 ? 10 : 11}px system-ui`; g.fillText(n, 0, y + rowH / 2 + 4);
+    g.fillStyle = '#1f1f1f'; g.fillRect(lw, y + (rowH < 20 ? 2 : 3), W - lw, rowH - (rowH < 20 ? 4 : 6));
     const cw = (W - lw) / Math.max(1, px.length);
     px.forEach((c, k) => { g.fillStyle = c; g.fillRect(lw + k * cw, y + 3, Math.ceil(cw) - (px.length > 1 ? 1 : 0), rowH - 6); });
     if (!px.length) { g.fillStyle = '#6b6b6b'; g.fillText('idle / not streaming', lw + 8, y + 15); }
@@ -312,13 +319,13 @@ function drawViz(preview) {
 async function poll() {
   try {
     S = await (await fetch('/api/state')).json();
-    $('scene').textContent = S.scene; $('scene').className = 'scene ' + S.scene;
+    $('scene').textContent = SCENE_NAME[S.scene] || S.scene || '—'; $('scene').className = 'scene ' + S.scene;
     $('deck').textContent = S.free ? `tap clock · ${S.bpm.toFixed(1)} BPM` : S.live ? `deck ${S.live} · ${S.bpm ? S.bpm.toFixed(1) : '—'} BPM` : 'no deck playing';
-    const ov = [S.look && `LOOK ${S.look === 'INTRO' ? 'AMBIENT' : S.look}`, S.palette && S.palette.mode !== 'auto' && `COLOUR ${S.palette.mode.toUpperCase()}`,
-                S.speed !== 1 && `${S.speed}×`, S.mode === 'blackout' && 'BLACKOUT'].filter(Boolean).join(' · ');
+    const ov = [S.look && `Scene ${S.look === 'INTRO' ? 'ambient' : (SCENE_NAME[S.look] || S.look).toLowerCase()}`, S.palette && S.palette.mode !== 'auto' && `Colour ${S.palette.mode}`,
+                S.speed !== 1 && `${S.speed}×`, S.mode === 'blackout' && 'Blackout'].filter(Boolean).join(' · ');
     $('override').hidden = !ov; $('override').textContent = ov;
     $('title').textContent = S.title || '';
-    $('count').textContent = S.beats_to_drop != null ? `DROP in ${Math.ceil(S.beats_to_drop)} beats` : (S.next_drop_bar || S.free || !S.live ? '' : 'no drop ahead');
+    $('count').textContent = S.beats_to_drop != null ? `Drop in ${Math.ceil(S.beats_to_drop)} beats` : (S.next_drop_bar || S.free || !S.live ? '' : 'no drop ahead');
     $('pos').textContent = (S.bar ? `bar ${S.bar} · beat ${S.bwb}` + (S.section ? ` · ${S.section}` : '') : '')
       + (S.drops && S.drops.length ? ` · drops: ${S.drops.map(d => d.bar + (d.manual ? '*' : '')).join(', ')}` : '') + (S.fps ? ` · ${S.fps} fps` : '')
       + (S.calibration ? ` · calibration: ${S.calibration.marks} marks, predictions ${S.calibration.median_delta_beats > 0 ? '+' : ''}${S.calibration.median_delta_beats} beats` : '');

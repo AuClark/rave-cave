@@ -7,7 +7,7 @@
 <link rel="icon" type="image/svg+xml" href="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA2NCA2NCI+PHJlY3Qgd2lkdGg9IjY0IiBoZWlnaHQ9IjY0IiByeD0iMTIiIGZpbGw9IiMyNDI0MjQiLz48cGF0aCB0cmFuc2Zvcm09InRyYW5zbGF0ZSgxNC41IDcpIHNjYWxlKC41KSIgZD0iTTAsMCBMNzAsMCBMNzAsMjEgTDIxLDIxIEwyMSw0MCBMNTcsNDAgTDcwLDUzIEw3MCw4NyBMNTcsMTAwIEwwLDEwMCBMMCw3OSBMNDksNzkgTDQ5LDYxIEwwLDYxIFoiIGZpbGw9IiNGRjVBMUYiLz48L3N2Zz4=">
 <style>
   :root {
-    --bg: #07070c; --panel: #11121b; --panel2: #171927; --line: #262a3d;
+    --bg: var(--n07070c, #07070c); --panel: #11121b; --panel2: #171927; --line: #262a3d;
     --text: #e8e9f3; --dim: #8a8fa8; --accent: #ff2fd0; --accent2: #2fe6ff;
     --good: #3dff8b; --warn: #ffb02e; --bad: #ff4d5e;
   }
@@ -34,13 +34,13 @@
   .meters { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
   .meter { text-align: center; }
   .meter .lbl { color: var(--dim); font-size: 12px; letter-spacing: .1em; text-transform: uppercase; margin-bottom: 6px; }
-  .meter .bar { position: relative; height: 150px; width: 34px; margin: 0 auto; background: #0b0c13; border: 1px solid var(--line); border-radius: 8px; overflow: hidden; }
+  .meter .bar { position: relative; height: 150px; width: 34px; margin: 0 auto; background: var(--n0b0c13, #0b0c13); border: 1px solid var(--line); border-radius: 8px; overflow: hidden; }
   .meter .fill { position: absolute; bottom: 0; left: 0; right: 0; background: linear-gradient(0deg, var(--good) 0%, var(--good) 60%, var(--warn) 80%, var(--bad) 100%); transition: height .06s linear; }
   .meter .hold { position: absolute; left: 0; right: 0; height: 2px; background: #fff; }
   .meter .val { font-variant-numeric: tabular-nums; font-weight: 800; margin-top: 6px; }
   .meter .sub { color: var(--dim); font-size: 12px; font-variant-numeric: tabular-nums; }
   .meter.live .bar { border-color: var(--accent); box-shadow: 0 0 14px rgba(255,47,208,.35); }
-  .sharebar { display: flex; height: 16px; border-radius: 8px; overflow: hidden; margin-top: 14px; border: 1px solid var(--line); background: #0b0c13; }
+  .sharebar { display: flex; height: 16px; border-radius: 8px; overflow: hidden; margin-top: 14px; border: 1px solid var(--line); background: var(--n0b0c13, #0b0c13); }
   .sharebar div { transition: width .1s linear; }
   .midi { font-family: ui-monospace, monospace; font-size: 12px; color: var(--dim); margin-top: 10px; min-height: 18px; }
   .showscene { font-size: 38px; font-weight: 900; letter-spacing: .04em; line-height: 1; }
@@ -48,7 +48,7 @@
   .showscene.GROOVE { color: var(--accent2); } .showscene.BREAKDOWN { color: #9b8cff; } .showscene.PREDROP { color: #fff; }
   .fx { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
   @media (max-width: 900px) { .row3 { grid-template-columns: 1fr; } }
-  section.stack canvas { width: 100%; display: block; border-radius: 10px; background: #0b0c13; touch-action: none; cursor: zoom-in; }
+  section.stack canvas { width: 100%; display: block; border-radius: 10px; background: var(--n0b0c13, #0b0c13); touch-action: none; cursor: zoom-in; }
   section.stack.hidden { display: none; }
   .card { background: linear-gradient(180deg, var(--panel2), var(--panel)); border: 1px solid var(--line);
           border-radius: 18px; padding: 18px; position: relative; overflow: hidden; }
@@ -85,7 +85,7 @@
   .beats div { height: 14px; border-radius: 4px; background: #1d2031; border: 1px solid var(--line); transition: background .08s; }
   .beats div.on { background: var(--accent); border-color: var(--accent); box-shadow: 0 0 14px var(--accent); }
   .beats div.on.one { background: var(--accent2); border-color: var(--accent2); box-shadow: 0 0 14px var(--accent2); }
-  canvas.wave { width: 100%; height: 70px; display: block; background: #0b0c13; border-radius: 8px; border: 1px solid var(--line); }
+  canvas.wave { width: 100%; height: 70px; display: block; background: var(--n0b0c13, #0b0c13); border-radius: 8px; border: 1px solid var(--line); }
   .times { display: flex; justify-content: space-between; font-variant-numeric: tabular-nums; margin-top: 6px; }
   .times .rem { color: var(--accent); font-weight: 800; }
   .times span { color: var(--dim); }
@@ -104,7 +104,7 @@
   th { color: var(--dim); font-weight: 600; font-size: 11px; letter-spacing: .1em; text-transform: uppercase; }
   .row2 { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
   details summary { cursor: pointer; color: var(--dim); }
-  pre { background: #0b0c13; border: 1px solid var(--line); border-radius: 10px; padding: 12px; overflow: auto; max-height: 420px; font-size: 12px; }
+  pre { background: var(--n0b0c13, #0b0c13); border: 1px solid var(--line); border-radius: 10px; padding: 12px; overflow: auto; max-height: 420px; font-size: 12px; }
   @media (max-width: 700px) { .players { grid-template-columns: 1fr; } .row2 { grid-template-columns: 1fr; }
     .top { grid-template-columns: 80px 1fr; } .art { width: 80px; height: 80px; } .tempo { grid-column: 1 / -1; text-align: left; } }
   /* Library (Serato-style): crates on the left, search + track table on the right. */
@@ -131,7 +131,7 @@
   .crates details > summary { color:var(--dim); font-weight:700; }
   .tracks { display:flex; flex-direction:column; min-width:0; }
   .ltools { display:flex; gap:8px; align-items:center; flex-wrap:wrap; padding:10px 12px; border-bottom:1px solid var(--line); }
-  .ltools input[type=search] { flex:1 1 220px; font:inherit; padding:8px 12px; border-radius:10px; border:1px solid var(--line); background:#0b0c13; color:var(--text); }
+  .ltools input[type=search] { flex:1 1 220px; font:inherit; padding:8px 12px; border-radius:10px; border:1px solid var(--line); background:var(--n0b0c13, #0b0c13); color:var(--text); }
   .ltools input[type=search]:focus { outline:none; border-color:var(--accent2); }
   .ltools select { font:inherit; font-size:12px; padding:6px; border-radius:8px; background:#151827; color:var(--text); border:1px solid var(--line); }
   .ltools .count { color:var(--dim); font-size:12px; margin-left:auto; }
@@ -164,19 +164,19 @@
   @media (max-width: 800px) { .libbody { grid-template-columns:1fr; } .crates { max-height:200px; border-right:0; border-bottom:1px solid var(--line); } }
 
   /* ------------------------------------------------------------------ design system
-     Charcoal, hairline grid, one orange accent, light geometric type (Montserrat).
+     Near-black, hairline grid, one orange accent, system type (the shared theme in s5auth.js sits on top: docs/design.md).
      Shared with the Commander, projection editor and visuals pages. */
   :root {
-    --bg: #242424; --panel: #2b2b2b; --panel2: #2b2b2b; --line: #3e3e3e; --line2: #555;
-    --text: #f2f2f2; --dim: #9a9a9a; --accent: #ff5a1f; --accent2: #ff5a1f;
-    --good: #7ccf8a; --warn: #f2b84b; --bad: #ef5b5b; --well: #1f1f1f;
-    --font: "Montserrat", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+    --bg: var(--n0c0c0e, #0c0c0e); --panel: var(--n131315, #131315); --panel2: var(--n131315, #131315); --line: var(--n262628, #262628); --line2: var(--n3a3a3c, #3a3a3c);
+    --text: var(--nfafafa, #fafafa); --dim: var(--na1a1a1, #a1a1a1); --accent: #ff5a1f; --accent2: #ff5a1f;
+    --good: #7ccf8a; --warn: #f2b84b; --bad: #ef5b5b; --well: var(--n08080a, #08080a);
+    --font: "Inter", -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", Roboto, system-ui, sans-serif;
   }
   html, body { background: var(--bg); }
   body { font: 400 14px/1.45 var(--font); letter-spacing: .01em; }
   button, input, select { font-family: var(--font); }
   /* Top bar: nav-style, hairline under it, active item underlined in orange. */
-  header { background: rgba(36,36,36,.92); border-bottom: 1px solid var(--line); padding: 0 24px; min-height: 64px; gap: 20px; }
+  header { background: rgba(12,12,14,.92); border-bottom: 1px solid var(--line); padding: 0 24px; min-height: 64px; gap: 20px; }
   .logo { font-weight: 600; letter-spacing: .22em; font-size: 14px; }
   .logo b { color: var(--accent); font-weight: 600; }
   .pill { border-radius: 0; font-weight: 600; font-size: 11px; letter-spacing: .12em; padding: 4px 10px; background: transparent; }
@@ -203,8 +203,14 @@
   main.tabbed { grid-template-columns: minmax(0, 1fr); }   /* never wider than the screen */
   .deckhero { position: sticky; top: var(--s5bar, 48px); z-index: 30; min-width: 0; background: var(--bg); border-bottom: 1px solid var(--line); }
   .deckhero canvas { max-width: 100%; }
+  body.decks-compact .deckhero .showline, body.decks-compact .lanectl { display: none; }
+  html { overflow-anchor: none; }   /* the browser mustn't re-anchor the scroll when the pinned decks change height */
+  /* While condensed the page must stay taller than the window, or it would flip straight back; the
+     library takes the room the full decks gave up. */
+  body.decks-compact { min-height: calc(100vh + 220px); }
+  body.decks-compact .tscroll { max-height: calc(100vh - 260px); }
   .deckhero > section.stack { border: 0; }
-  .showline { display: flex; align-items: center; flex-wrap: wrap; gap: 8px 16px; max-width: 1680px; margin: 0 auto; padding: 10px 24px 6px; }
+  .showline { display: flex; align-items: center; flex-wrap: wrap; gap: 8px 16px; padding: 10px 24px 6px; }
   .showline .showscene { font-size: 22px; font-weight: 300; letter-spacing: .04em; }
   .showline #shCount { font-weight: 600; font-size: 13px; color: var(--warn); }
   .showline .sp { flex: 1; }
@@ -214,7 +220,6 @@
   .zoom button { background: transparent; color: var(--text); border: 1px solid var(--line2); border-radius: 0; padding: 6px 10px; cursor: pointer; font: 500 13px/1 var(--font); }
   .zoom .zlbl { min-width: 48px; text-align: center; font-size: 12px; font-weight: 600; font-variant-numeric: tabular-nums; }
   main.tabbed > section[data-title] > h2:first-child { display: none; }   /* the tab says which section this is */
-  main.tabbed > section[data-title] { max-width: 1680px; }
   /* Library: load buttons first, title with artist under it on phones, fewer columns on narrow screens. */
   table.tt td.load { white-space: nowrap; } table.tt td.load .lbtn { min-width: 30px; margin-right: 3px; font-weight: 700; }
   table.tt td.load .lbtn.busy { opacity: .45; }
@@ -233,23 +238,27 @@
     .crates li { flex: none; } .crates li > span { padding: 7px 10px; border: 1px solid var(--line2); }
     .crates details { display: flex; gap: 4px; align-items: center; } .crates summary { padding: 7px 10px; }
   }
-  @media (pointer: coarse) { table.tt td { padding: 10px 8px; } table.tt td.load .lbtn { min-width: 36px; min-height: 32px; } }
+  @media (pointer: coarse) { table.tt td { padding: 10px 8px; } table.tt td.load .lbtn { min-width: 40px; min-height: 40px; } }
   /* Deck buttons on the waveform lanes (laneCtlRender): right of each lane's BPM. */
   section.stack { position: relative; }
   .lanectl .lc { position: absolute; right: 10px; display: flex; gap: 4px; }
   .lanectl button { width: 32px; height: 28px; padding: 0; display: grid; place-items: center; cursor: pointer; border-radius: 0;
-    background: rgba(20,20,20,.6); color: var(--text); border: 1px solid var(--line2); }
+    background: rgba(6,6,8,.6); color: var(--text); border: 1px solid var(--line2); }
   .lanectl button:hover { border-color: var(--accent); }
-  .lanectl button.on { background: var(--accent); border-color: var(--accent); color: #111; }
+  .lanectl button.on { background: var(--accent); border-color: var(--accent); color: var(--n050507, #050507); }
   .lanectl svg { width: 15px; height: 15px; }
-  @media (max-width: 760px) { .lanectl .lc { right: 6px; gap: 3px; } .lanectl button { width: 27px; height: 24px; } .lanectl svg { width: 13px; height: 13px; } }
+  /* Phones: thumb-sized transport (36 px), inside the slim lane header (44 px). */
+  @media (max-width: 760px) { .lanectl .lc { right: 6px; gap: 4px; } .lanectl button { width: 36px; height: 36px; border-radius: 8px; } .lanectl svg { width: 15px; height: 15px; } }
   .libdecks { display: none !important; }   /* deck controls live on the waveform lanes now */
   /* Touch drag (library row or deck chip onto a deck's waveform): the tag that follows the finger. */
   .dragghost { position: fixed; left: 0; top: 0; z-index: 9995; pointer-events: none; margin: -46px 0 0 -12px; padding: 8px 12px;
-    max-width: 70vw; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; background: var(--accent); color: #111;
+    max-width: 70vw; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; background: var(--accent); color: var(--n050507, #050507);
     font: 600 12px/1 var(--font); box-shadow: 0 6px 18px rgba(0,0,0,.5); }
   @media (pointer: coarse) { #tbody tr, .ldeck { -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; } }
-  main { padding: 0; gap: 0; border-left: 1px solid var(--line); border-right: 1px solid var(--line); max-width: 1680px; margin: 0 auto; }
+  /* Like every page: the display (the decks) and its tabs run edge to edge; the section below sits in a
+     centred column. No boxed frame. */
+  main { padding: 0; gap: 0; max-width: none; margin: 0; }
+  main.tabbed > section[data-title] { width: 100%; max-width: 1400px; justify-self: center; }
   /* Panels: square, flat, hairline borders; h2 numbered like "01 — Mixer". */
   main { counter-reset: sec; }
   section.panel, .card { border-radius: 0; background: var(--panel); border: 0; border-bottom: 1px solid var(--line); box-shadow: none; }
@@ -259,7 +268,7 @@
   .players { gap: 0; } .players > .card + .card { border-left: 1px solid var(--line); }
   .row2, .row3 { gap: 0; } .row2 > * + *, .row3 > * + * { border-left: 1px solid var(--line); }
   .card { padding: 26px 28px; }
-  .card.playing { background: #2e2e2e; box-shadow: inset 3px 0 0 var(--accent); border-color: var(--line); }
+  .card.playing { background: var(--n171719, #171719); box-shadow: inset 3px 0 0 var(--accent); border-color: var(--line); }
   .card.master::before { background: var(--accent); color: #fff; font-weight: 600; }
   .flash { background: radial-gradient(circle at 50% 0%, rgba(255,90,31,.18), transparent 70%); }
   .pnum { font-weight: 300; font-size: 48px; color: var(--accent); }
@@ -267,13 +276,13 @@
   .title { font-weight: 600; font-size: 22px; letter-spacing: -.005em; }
   .artist { color: var(--text); opacity: .75; font-weight: 400; }
   .tempo .bpm { font-weight: 300; font-size: 52px; letter-spacing: -.02em; }
-  .art { border-radius: 0; background-color: var(--well); color: #555; }
-  .badge { border-radius: 0; background: transparent; color: #666; border-color: var(--line); font-weight: 600; letter-spacing: .12em; }
+  .art { border-radius: 0; background-color: var(--well); color: var(--n3a3a3c, #3a3a3c); }
+  .badge { border-radius: 0; background: transparent; color: var(--n4d4d4f, #4d4d4f); border-color: var(--line); font-weight: 600; letter-spacing: .12em; }
   .badge.on { color: #fff; }
   .badge.on.play { background: transparent; color: var(--good); border-color: var(--good); }
   .badge.on.pause, .badge.on.cue { background: transparent; color: var(--warn); border-color: var(--warn); }
   .badge.on.loop, .badge.on.sync, .badge.on.master, .badge.on.air { background: var(--accent); border-color: var(--accent); color: #fff; }
-  .badge.on.end, .badge.on.search { background: var(--text); color: #222; }
+  .badge.on.end, .badge.on.search { background: var(--text); color: var(--n0a0a0c, #0a0a0c); }
   .beats { gap: 4px; }
   .beats div { border-radius: 0; background: var(--well); border-color: var(--line); }
   .beats div.on { background: var(--text); border-color: var(--text); box-shadow: none; }
@@ -281,15 +290,15 @@
   canvas.wave, section.stack canvas, pre { border-radius: 0; background: var(--well); }
   section.stack { padding: 0; background: var(--well); }
   .times .rem { color: var(--accent); font-weight: 600; }
-  .kv { border-bottom: 1px solid #333; }
+  .kv { border-bottom: 1px solid var(--n1b1b1d, #1b1b1d); }
   .cue { border-radius: 0; background: var(--well); }
   table th { font-weight: 500; letter-spacing: .14em; }
-  th, td { border-bottom-color: #333; }
+  th, td { border-bottom-color: var(--n1b1b1d, #1b1b1d); }
   .meter .bar, .sharebar { border-radius: 0; background: var(--well); }
-  .meter .fill { background: linear-gradient(0deg, #8a8a8a 0%, #cfcfcf 65%, var(--accent) 88%, var(--bad) 100%); }
+  .meter .fill { background: linear-gradient(0deg, var(--n808080, #808080) 0%, var(--nd2d2d2, #d2d2d2) 65%, var(--accent) 88%, var(--bad) 100%); }
   .meter.live .bar { border-color: var(--accent); box-shadow: none; }
   .showscene { font-weight: 300; font-size: 44px; letter-spacing: .02em; }
-  .showscene.GROOVE { color: var(--text); } .showscene.BREAKDOWN { color: #bdbdbd; }
+  .showscene.GROOVE { color: var(--text); } .showscene.BREAKDOWN { color: var(--nc4c4c4, #c4c4c4); }
   /* Controls: outlined rectangles; orange edge on hover; orange fill when on. */
   .lbtn { border-radius: 0; background: transparent; border-color: var(--line2); font-weight: 600; letter-spacing: .1em; padding: 7px 12px; }
   .lbtn:hover { border-color: var(--accent); color: #fff; }
@@ -298,7 +307,7 @@
   select, input[type=search], .crates select, .ltools select, .automix select, .ltools input[type=search] {
     border-radius: 0; background: var(--well); border-color: var(--line2); color: var(--text); }
   .ltools input[type=search]:focus { border-color: var(--accent); }
-  .libdecks, .automix, .crates { background: var(--panel); }
+  .libdecks, .automix { background: var(--panel); } .crates { background: transparent; }   /* the playlists: a plain sidebar, no box */
   .automix { border-bottom: 1px solid var(--line); }
   .ldeck { border-radius: 0; background: var(--well); }
   .crates li > span, .crates summary { border-radius: 0; }
@@ -306,12 +315,12 @@
   .crates .on .cnt { color: var(--accent); }
   table.tt thead th { background: var(--panel); }
   table.tt thead th.sorted { color: var(--accent); }
-  table.tt tbody tr:hover { background: #313131; }
-  table.tt tbody tr.sel { background: #353535; box-shadow: inset 3px 0 0 var(--accent); }
-  table.tt tbody tr.played td:not(.ld) { color: #6b6b6b; }
+  table.tt tbody tr:hover { background: var(--n19191b, #19191b); }
+  table.tt tbody tr.sel { background: var(--n1d1d1f, #1d1d1f); box-shadow: inset 3px 0 0 var(--accent); }
+  table.tt tbody tr.played td:not(.ld) { color: var(--n525254, #525254); }
   .onDeck { border-radius: 0; }
   .droptarget { outline-color: var(--accent); }
-  .toast { border-radius: 0; background: #2f2f2f; border-color: var(--line2); border-left: 3px solid var(--accent); font-weight: 500; }
+  .toast { border-radius: 0; background: var(--n18181a, #18181a); border-color: var(--line2); border-left: 3px solid var(--accent); font-weight: 500; }
   /* Page links in the top bar (Decks / Lighting / Projection / Visuals): the current one underlined. */
   nav.pages { display: flex; gap: 2px; align-self: stretch; }
   nav.pages a { display: flex; align-items: center; padding: 0 12px; color: var(--dim); text-decoration: none; font-size: 14px; font-weight: 500;
@@ -323,20 +332,18 @@
   nav.apps a { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 30px 32px; color: var(--dim);
                text-decoration: none; font-size: 18px; font-weight: 400; line-height: 1.3; border-left: 1px solid var(--line); }
   nav.apps a:first-child { border-left: 0; }
-  nav.apps a:hover { color: var(--text); background: #2e2e2e; }
+  nav.apps a:hover { color: var(--text); background: var(--n171719, #171719); }
   nav.apps a .arr { font-size: 28px; font-weight: 300; color: var(--text); }
-  nav.apps a small { display: block; font-size: 11px; letter-spacing: .16em; color: #6b6b6b; margin-bottom: 4px; }
-  nav.apps a.here { background: var(--text); color: #222; }
-  nav.apps a.here small { color: #777; }
+  nav.apps a small { display: block; font-size: 11px; letter-spacing: .16em; color: var(--n525254, #525254); margin-bottom: 4px; }
+  nav.apps a.here { background: var(--text); color: var(--n0a0a0c, #0a0a0c); }
+  nav.apps a.here small { color: var(--n646464, #646464); }
   nav.apps a.here .arr { background: var(--accent); color: #fff; align-self: stretch; display: grid; place-items: center; width: 84px; margin: -30px -32px -30px 0; }
   @media (max-width: 900px) { nav.apps { grid-template-columns: 1fr 1fr; } nav.apps a:nth-child(3) { border-left: 0; } }
 
   .s5logo { display: inline-flex; align-items: center; vertical-align: middle; line-height: 1; }
-  .s5logo .s5word { color: var(--text, #f2f2f2); flex: none; display: block; }
+  .s5logo .s5word { color: var(--text, #fafafa); flex: none; display: block; }
   .s5logo .s5five { fill: var(--accent, #ff5a1f); }
 </style>
-<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;500;600&display=swap" rel="stylesheet">
 <script src="/s5auth.js"></script>
 </head>
 <body>
@@ -345,7 +352,7 @@
   <nav class="pages" id="pages">
     <a class="here" data-port="8080" data-path="/">Decks</a><a data-port="8090" data-path="/">Lighting</a><a data-port="8100" data-path="/edit">Projection</a><a data-port="8110" data-path="/">Visuals</a>
   <a data-port="8100" data-path="/stage.html">Stage</a></nav>
-  <span id="conn" class="pill">CONNECTING</span>
+  <span id="conn" class="pill">Connecting</span>
 </header>
 
 <main class="tabbed">
@@ -368,8 +375,8 @@
         <div class="ltools">
           <input id="libq" type="search" placeholder="Search title, artist, album, genre, key…  ( / )" autocomplete="off">
           <select id="libgenre"><option value="">All genres</option></select>
-          <button class="lbtn" id="fBpm" title="Within ±6% of the master tempo (or half / double)">BPM ≈ MASTER</button>
-          <button class="lbtn" id="fKey" title="Harmonically compatible with the master deck (Camelot ±1, relative)">KEY MATCH</button>
+          <button class="lbtn" id="fBpm" title="Within ±6% of the master tempo (or half / double)">BPM ≈ master</button>
+          <button class="lbtn" id="fKey" title="Harmonically compatible with the master deck (Camelot ±1, relative)">Key match</button>
           <span class="count" id="libcount"></span>
         </div>
         <div class="tscroll" id="tscroll"><table class="tt"><thead id="thead"></thead><tbody id="tbody"></tbody></table></div>
@@ -378,23 +385,23 @@
   </section>
   <section class="panel" id="amsec" data-title="Automix">
     <div class="automix">
-      <button class="lbtn" id="amOn" title="Mixes from deck to deck on its own. Keep both channel faders up.">AUTOMIX</button>
+      <button class="lbtn" id="amOn" title="Mixes from deck to deck on its own. Keep both channel faders up.">Automix</button>
       <select id="amMode" title="How the next track is chosen"><option value="queue">Next in this list</option><option value="harmonic">Best match (BPM + key)</option></select>
       <select id="amStyle" title="Where the mix lands"><option value="drop">Drop on outro end</option><option value="overlap">Fixed overlap</option></select>
       <select id="amOverlap" title="Fixed overlap: how long both tracks play together"><option value="16">16 beats</option><option value="32">32 beats</option><option value="64">64 beats</option></select>
-      <button class="lbtn on" id="amKick" title="Line the kicks up, not the rekordbox grids: start the new track shifted by the difference in the two tracks' grid errors (read from their waveforms), with SYNC off so the deck doesn't pull it back">KICK ALIGN</button>
-      <button class="lbtn" id="amTempo" title="The Pi takes tempo master and glides to each new track's original BPM during the mix (needs deckdash -Dtempo=on)">TEMPO RAMP</button>
+      <button class="lbtn on" id="amKick" title="Line the kicks up, not the rekordbox grids: start the new track shifted by the difference in the two tracks' grid errors (read from their waveforms), with SYNC off so the deck doesn't pull it back">Kick align</button>
+      <button class="lbtn" id="amTempo" title="The Pi takes tempo master and glides to each new track's original BPM during the mix (needs deckdash -Dtempo=on)">Tempo ramp</button>
       <span class="amstatus" id="amStatus">Automix is off.</span>
-      <button class="lbtn" id="amSkip" title="Choose a different next track">SKIP</button>
-      <button class="lbtn" id="amNow" title="Start the mix at the next bar">MIX NOW</button>
+      <button class="lbtn" id="amSkip" title="Choose a different next track">Skip</button>
+      <button class="lbtn" id="amNow" title="Start the mix at the next bar">Mix now</button>
     </div>
     <div class="automix" id="tempoRow">
-      <b style="font-size:12px;letter-spacing:.1em">TEMPO</b>
+      <b style="font-size:12px;letter-spacing:.1em">Tempo</b>
       <span class="amstatus" id="tempoStatus">—</span>
       <select id="tempoDeck" title="Whose original BPM to go back to, and who gets master"></select>
       <select id="tempoBeats" title="How long the glide takes"><option value="16">over 16 beats</option><option value="32">over 32 beats</option><option value="64" selected>over 64 beats</option><option value="128">over 128 beats</option></select>
-      <button class="lbtn" id="tempoReset" title="The Pi takes master (if it hasn't) and glides every synced deck back to this deck's original BPM">RESET BPM</button>
-      <button class="lbtn" id="tempoHand" title="Give tempo master to this deck">MAKE MASTER</button>
+      <button class="lbtn" id="tempoReset" title="The Pi takes master (if it hasn't) and glides every synced deck back to this deck's original BPM">Reset BPM</button>
+      <button class="lbtn" id="tempoHand" title="Give tempo master to this deck">Make master</button>
     </div>
   </section>
     <section class="panel" data-title="Mixer">
@@ -423,6 +430,7 @@
 </main>
 <div id="toast" class="toast"></div>
 <script>
+const SCENE_NAME = { IDLE: "Waiting", INTRO: "Intro", GROOVE: "Groove", BUILD: "Building", HOLD: "Holding", PREDROP: "Here it comes", DROP: "Drop", BREAKDOWN: "Break", OUTRO: "Outro" };   // the show engine's scenes, as the pages show them
 // Page links (top bar, a[data-port]) are wired by /s5auth.js: greyed out for viewers.
 const $ = (s, r = document) => r.querySelector(s);
 const cards = {}, waves = {}, artRefs = {}, timelines = {};
@@ -552,7 +560,7 @@ function drawGrid(g, tl, t0, winMs, msPerPx, y0, LH, dpr, rgb, edge, full) {
   for (const sec of tl.sections) {
     const a = tl.beatMs[sec.startBeat - 1], z = tl.beatMs[Math.min(tl.beatMs.length - 1, sec.endBeat)];
     if (z < t0 || a > t0 + winMs) continue;
-    g.fillStyle = SECTION_COLOURS[sec.type] || "#555";
+    g.fillStyle = SECTION_COLOURS[sec.type] || "#3a3a3c";
     g.fillRect((a - t0) / msPerPx, edge === "top" ? y0 : y0 + LH - 3 * dpr, (z - a) / msPerPx, 3 * dpr);
   }
   for (const dr of tl.drops) {
@@ -602,15 +610,15 @@ function drawDropHint(g, dpr, W) {
   const h = laneHits.find(l => l.n === dropTarget.n); if (!h) return;
   const y0 = h.y0 * dpr, y1 = h.y1 * dpr, warn = dropTarget.playing;
   g.fillStyle = warn ? "rgba(239,91,91,.22)" : "rgba(255,90,31,.16)"; g.fillRect(0, y0, W, y1 - y0);
-  g.strokeStyle = warn ? "#ef5b5b" : "#e6e6e6"; g.lineWidth = 2 * dpr; g.setLineDash([8 * dpr, 6 * dpr]);
+  g.strokeStyle = warn ? "#ef5b5b" : "#ebebeb"; g.lineWidth = 2 * dpr; g.setLineDash([8 * dpr, 6 * dpr]);
   g.strokeRect(dpr, y0 + dpr, W - 2 * dpr, y1 - y0 - 2 * dpr); g.setLineDash([]);
   const txt = `${warn ? `Deck ${dropTarget.n} is PLAYING · ` : ""}${dropTarget.shift ? "Load + play" : "Load"} "${dragging.title}" on deck ${dropTarget.n}`;
   const sub = dropTarget.shift || dropTarget.touch ? "" : "hold Shift to load and play";
   g.font = `800 ${16 * dpr}px system-ui`;
   const w = Math.max(g.measureText(txt).width, 10), cy = (y0 + y1) / 2;
-  g.fillStyle = "rgba(28,28,28,.9)"; g.fillRect((W - w) / 2 - 14 * dpr, cy - (sub ? 26 : 18) * dpr, w + 28 * dpr, (sub ? 48 : 32) * dpr);
+  g.fillStyle = "rgba(7,7,9,.9)"; g.fillRect((W - w) / 2 - 14 * dpr, cy - (sub ? 26 : 18) * dpr, w + 28 * dpr, (sub ? 48 : 32) * dpr);
   g.fillStyle = warn ? "#ef5b5b" : "#fff"; g.fillText(txt, (W - w) / 2, cy + (sub ? -4 : 4) * dpr);
-  if (sub) { g.font = `600 ${12 * dpr}px system-ui`; g.fillStyle = "#9a9a9a"; const sw = g.measureText(sub).width; g.fillText(sub, (W - sw) / 2, cy + 14 * dpr); }
+  if (sub) { g.font = `600 ${12 * dpr}px system-ui`; g.fillStyle = "#a1a1a1"; const sw = g.measureText(sub).width; g.fillText(sub, (W - sw) / 2, cy + 14 * dpr); }
 }
 
 // Beat in the bar, worked out every frame from the smoothed playhead and the beat grid. The decks'
@@ -631,7 +639,7 @@ function liveBeatInBar(p, now) {
   return p.status.beatWithinBar;
 }
 
-const CANVAS_FONT = "Montserrat, system-ui, sans-serif";
+const CANVAS_FONT = "Inter, -apple-system, BlinkMacSystemFont, system-ui, sans-serif";
 const artImgs = {};
 function artFor(p) {
   const t = p.track, ref = t && p.hasArt ? t.ref : null;
@@ -652,13 +660,13 @@ function drawCues(g, cues, t0, winMs, msPerPx, y, h, dpr) {
     if (x < -20 * dpr || x > winMs / msPerPx) continue;
     g.fillStyle = cueColour(c); g.fillRect(x - dpr, y, 2 * dpr, h);
     g.fillRect(x - dpr, y, 14 * dpr, 13 * dpr);
-    g.fillStyle = "#111"; g.font = `700 ${10 * dpr}px ${CANVAS_FONT}`; g.fillText(cueLabel(c), x + 2 * dpr, y + 10 * dpr);
+    g.fillStyle = "#050507"; g.font = `700 ${10 * dpr}px ${CANVAS_FONT}`; g.fillText(cueLabel(c), x + 2 * dpr, y + 10 * dpr);
   }
 }
 // The whole track in one strip: colour waveform (played part dimmed), sections, drops, cues,
 // playhead, and elapsed · bar · remaining.
 function drawOverview(g, p, x0, y, w, h, dpr, pos, tl) {
-  g.fillStyle = "#1f1f1f"; g.fillRect(x0, y, w, h);
+  g.fillStyle = "#08080a"; g.fillRect(x0, y, w, h);
   const wf = waves[p.number] && waves[p.number].data, t = p.track, dur = t ? t.durationSec * 1000 : 0;
   if (!dur) return;
   const frac = Math.max(0, Math.min(1, pos / dur)), X = ms => x0 + (ms / dur) * w;
@@ -667,7 +675,7 @@ function drawOverview(g, p, x0, y, w, h, dpr, pos, tl) {
     const bw = w / wf.segments, mid = y + h / 2 - 2 * dpr;
     for (let i = 0; i < wf.segments; i++) {
       const hh = (wf.heights[i] / wf.peak) * (h - 8 * dpr);
-      g.fillStyle = wf.color ? wf.colors[i] : "#bdbdbd"; g.globalAlpha = i / wf.segments < frac ? 0.3 : 0.9;
+      g.fillStyle = wf.color ? wf.colors[i] : "#c4c4c4"; g.globalAlpha = i / wf.segments < frac ? 0.3 : 0.9;
       g.fillRect(x0 + i * bw, mid - hh / 2, Math.max(1, bw), hh);
     }
     g.globalAlpha = 1;
@@ -675,7 +683,7 @@ function drawOverview(g, p, x0, y, w, h, dpr, pos, tl) {
   if (tl) {
     const msOf = b => tl.beatMs[Math.max(0, Math.min(tl.beatMs.length - 1, b - 1))];
     for (const sec of tl.sections) {
-      g.fillStyle = SECTION_COLOURS[sec.type] || "#555";
+      g.fillStyle = SECTION_COLOURS[sec.type] || "#3a3a3c";
       g.fillRect(X(msOf(sec.startBeat)), y + h - 3 * dpr, Math.max(1, X(msOf(Math.min(tl.beats, sec.endBeat + 1))) - X(msOf(sec.startBeat)) - dpr), 3 * dpr);
     }
     g.fillStyle = "#ff5a1f";
@@ -687,11 +695,11 @@ function drawOverview(g, p, x0, y, w, h, dpr, pos, tl) {
   const label = (txt, x, align, col) => {
     g.font = `600 ${11 * dpr}px ${CANVAS_FONT}`;
     const tw = g.measureText(txt).width, lx = align === "left" ? x : align === "right" ? x - tw : x - tw / 2;
-    g.fillStyle = "rgba(28,28,28,.85)"; g.fillRect(lx - 5 * dpr, y + 3 * dpr, tw + 10 * dpr, 16 * dpr);
+    g.fillStyle = "rgba(7,7,9,.85)"; g.fillRect(lx - 5 * dpr, y + 3 * dpr, tw + 10 * dpr, 16 * dpr);
     g.fillStyle = col; g.fillText(txt, lx, y + 15 * dpr);
   };
-  label(fmt(pos), x0 + 10 * dpr, "left", "#f2f2f2");
-  if (p.grid && p.grid.bars) label(`Bar ${p.grid.bar} / ${p.grid.bars}`, x0 + w / 2, "center", "#bdbdbd");
+  label(fmt(pos), x0 + 10 * dpr, "left", "#fafafa");
+  if (p.grid && p.grid.bars) label(`Bar ${p.grid.bar} / ${p.grid.bars}`, x0 + w / 2, "center", "#c4c4c4");
   label("-" + fmt(Math.max(0, dur - pos)), x0 + w - 10 * dpr, "right", "#ff5a1f");
 }
 
@@ -705,9 +713,13 @@ function drawStack() {
   const loaded = players.filter(p => p.status.trackLoaded);
   // Narrow screens (phones): slimmer lanes, so the pinned display leaves room for the controls.
   const slim = cv.clientWidth < 560;
-  const CTLW = slim ? 90 : 108;                 // the deck buttons' width (CSS px), see .lanectl
-  const HEADc = slim ? 44 : 52, WAVEc = slim ? 62 : 104, OVc = slim ? 24 : 30, laneCss = HEADc + WAVEc + OVc + 6;
-  const meterCss = Math.max(34, 16 * loaded.length + 6);
+  const CTLW = slim ? 124 : 108;                // the deck buttons' width (CSS px), see .lanectl
+  // Compact (scrolled down into the library): each lane is just a thin waveform with its deck and
+  // tempo on it, so the decks stay in view without taking the screen. See the scroll listener below.
+  const cmp = document.body.classList.contains("decks-compact");
+  const HEADc = cmp ? 0 : slim ? 44 : 52, WAVEc = cmp ? (slim ? 30 : 38) : slim ? 62 : 104, OVc = cmp ? 0 : slim ? 24 : 30,
+        laneCss = HEADc + WAVEc + OVc + (cmp ? 2 : 6);
+  const meterCss = cmp ? 0 : Math.max(34, 16 * loaded.length + 6);
   const Wc = cv.clientWidth, Hc = Math.max(1, players.length) * laneCss + meterCss;
   if (cv.width !== Math.round(Wc * dpr) || cv.height !== Math.round(Hc * dpr)) {
     cv.width = Math.round(Wc * dpr); cv.height = Math.round(Hc * dpr); cv.style.height = Hc + "px";
@@ -723,7 +735,7 @@ function drawStack() {
   }
 
   if (!players.length) {
-    g.fillStyle = "#6b6b6b"; g.font = `${14 * dpr}px ${CANVAS_FONT}`; g.fillText("Waiting for decks…", 12 * dpr, 40 * dpr);
+    g.fillStyle = "#525254"; g.font = `${14 * dpr}px ${CANVAS_FONT}`; g.fillText("Waiting for decks…", 12 * dpr, 40 * dpr);
     return;
   }
   const MH = meterCss * dpr, HEAD = HEADc * dpr, WAVE = WAVEc * dpr, OV = OVc * dpr;
@@ -733,16 +745,16 @@ function drawStack() {
     const y0 = laneY(li), s = p.status, t = p.track, t0 = t0q[p.number], rgb = deckRgb(p.number);
     const tl = timelines[p.number] && timelines[p.number].data;
     const wy = y0 + HEAD, wh = WAVE, mid = wy + wh / 2;
-    g.fillStyle = "#2b2b2b"; g.fillRect(0, y0, W, HEAD);
-    g.fillStyle = rgba(rgb, 1); g.fillRect(0, y0, 4 * dpr, LH - 6 * dpr);
+    g.fillStyle = "#131315"; g.fillRect(0, y0, W, HEAD);
+    g.fillStyle = rgba(rgb, 1); g.fillRect(0, y0, 4 * dpr, LH - (cmp ? 2 : 6) * dpr);
 
     // --- scrolling waveform, grid, cues, playhead
-    g.fillStyle = "#1f1f1f"; g.fillRect(0, wy, W, wh);
-    g.fillStyle = "#2e2e2e"; g.fillRect(0, mid, W, dpr);
+    g.fillStyle = "#08080a"; g.fillRect(0, wy, W, wh);
+    g.fillStyle = "#171719"; g.fillRect(0, mid, W, dpr);
     const d = details[p.number] && details[p.number].data;
     if (d) drawDetail(g, d, pos[p.number], t0, msPerPx, W, mid, wh / 2 - 2 * dpr, null);
     else {
-      g.fillStyle = "#6b6b6b"; g.font = `${14 * dpr}px ${CANVAS_FONT}`;
+      g.fillStyle = "#525254"; g.font = `${14 * dpr}px ${CANVAS_FONT}`;
       g.fillText(s.trackLoaded ? "loading waveform…" : "no track", 14 * dpr, mid + 5 * dpr);
     }
     if (tl) drawGrid(g, tl, t0, winMs, msPerPx, wy, wh, dpr, [255, 255, 255], "both", false);
@@ -750,6 +762,15 @@ function drawStack() {
     g.fillStyle = "#fff"; g.fillRect(W / 2 - dpr, wy, 2 * dpr, wh);
     g.beginPath(); g.moveTo(W / 2 - 6 * dpr, wy); g.lineTo(W / 2 + 6 * dpr, wy); g.lineTo(W / 2, wy + 7 * dpr); g.fill();
 
+    if (cmp) {                                   // compact: deck number and tempo on the strip, nothing else
+      const lbl = `${p.number}`, bpm = s.effectiveBpm ? s.effectiveBpm.toFixed(1) : "—";
+      g.font = `600 ${12 * dpr}px ${CANVAS_FONT}`;
+      const w1 = g.measureText(lbl).width; g.font = `500 ${11 * dpr}px ${CANVAS_FONT}`; const w2 = g.measureText(bpm).width;
+      g.fillStyle = "rgba(8,8,10,.82)"; g.fillRect(6 * dpr, mid - 9 * dpr, w1 + w2 + 22 * dpr, 18 * dpr);
+      g.font = `600 ${12 * dpr}px ${CANVAS_FONT}`; g.fillStyle = rgba(rgb, 1); g.fillText(lbl, 11 * dpr, mid + 4 * dpr);
+      g.font = `500 ${11 * dpr}px ${CANVAS_FONT}`; g.fillStyle = s.playing ? "#fafafa" : "#a1a1aa"; g.fillText(bpm, 19 * dpr + w1, mid + 4 * dpr);
+      return;
+    }
     // --- overview: whole track, sections, drops, cues, playhead; elapsed · bar · remaining
     drawOverview(g, p, 0, wy + wh + 2 * dpr, W, OV, dpr, pos[p.number], tl);
 
@@ -757,42 +778,44 @@ function drawStack() {
     const art = artFor(p), ax = 34 * dpr, as = (slim ? 36 : 44) * dpr, ay = y0 + 4 * dpr;
     g.font = `300 ${28 * dpr}px ${CANVAS_FONT}`; g.fillStyle = rgba(rgb, 1); g.fillText(p.number, 11 * dpr, y0 + 36 * dpr);
     if (art) g.drawImage(art, ax, ay, as, as);
-    else { g.fillStyle = "#1f1f1f"; g.fillRect(ax, ay, as, as); g.fillStyle = "#555"; g.font = `${18 * dpr}px ${CANVAS_FONT}`; g.fillText("♪", ax + 15 * dpr, ay + 29 * dpr); }
+    else { g.fillStyle = "#08080a"; g.fillRect(ax, ay, as, as); g.fillStyle = "#3a3a3c"; g.font = `${18 * dpr}px ${CANVAS_FONT}`; g.fillText("♪", ax + 15 * dpr, ay + 29 * dpr); }
     // Right: big BPM, then tags (line 1) and key / drop / track tempo (line 2).
     const pc = s.pitchPct || 0;
     let rx = W - (12 + CTLW) * dpr;              // room for the deck buttons (#lanectl) at the far right
-    g.font = `300 ${30 * dpr}px ${CANVAS_FONT}`; g.fillStyle = "#f2f2f2";
+    g.font = `300 ${30 * dpr}px ${CANVAS_FONT}`; g.fillStyle = "#fafafa";
     const bpmTxt = s.effectiveBpm ? s.effectiveBpm.toFixed(2) : "—", bw = g.measureText(bpmTxt).width;
     g.fillText(bpmTxt, rx - bw, y0 + 38 * dpr); rx -= bw + 18 * dpr;
     const tags = [];
-    if (s.playing) tags.push(["PLAYING", "#7ccf8a", false]);
-    else if (s.cued) tags.push(["CUED", "#f2b84b", false]);
-    else if (s.trackLoaded) tags.push(["PAUSED", "#f2b84b", false]);
-    if (s.looping) tags.push([s.loopBeats > 0 ? `LOOP ${s.loopBeats}` : "LOOP", "#f2f2f2", false]);
-    if (s.synced) tags.push(["SYNC", "#ff5a1f", true]);
-    if (s.tempoMaster) tags.push(["MASTER", "#ff5a1f", true]);
-    if (s.onAir) tags.push(["ON AIR", "#ff5a1f", false]);
-    if (s.reverse) tags.push(["REVERSE", "#f2f2f2", false]);
-    if (s.atEnd) tags.push(["END", "#f2f2f2", true]);
+    if (s.playing) tags.push(["Playing", "#4ade80", false]);
+    else if (s.cued) tags.push(["Cued", "#fbbf24", false]);
+    else if (s.trackLoaded) tags.push(["Paused", "#fbbf24", false]);
+    if (s.looping) tags.push([s.loopBeats > 0 ? `Loop ${s.loopBeats}` : "Loop", "#fafafa", false]);
+    if (s.synced) tags.push(["Sync", "#ff5a1f", true]);
+    if (s.tempoMaster) tags.push(["Master", "#ff5a1f", true]);
+    if (s.onAir) tags.push(["On air", "#ff5a1f", false]);
+    if (s.reverse) tags.push(["Reverse", "#fafafa", false]);
+    if (s.atEnd) tags.push(["End", "#fafafa", true]);
     // Phones: only the essentials on the right, so the title keeps some room.
     const narrow = W / dpr < 560;
-    const shown = narrow ? tags.filter(([txt]) => /^(PLAYING|CUED|PAUSED|LOOP|MASTER)/.test(txt)) : tags;
+    // Phones: no tags. The deck buttons beside them already show playing, sync and master (lit orange),
+    // and there is no room: they were drawn over the title.
+    const shown = narrow ? [] : tags;
     g.font = `600 ${10 * dpr}px ${CANVAS_FONT}`;
     let tx = rx;
     for (const [txt, col, fill] of shown.slice().reverse()) {
       const w = g.measureText(txt).width + 12 * dpr; tx -= w;
-      if (fill) { g.fillStyle = col; g.fillRect(tx, y0 + 8 * dpr, w, 16 * dpr); g.fillStyle = col === "#f2f2f2" ? "#222" : "#fff"; }
+      if (fill) { g.fillStyle = col; g.fillRect(tx, y0 + 8 * dpr, w, 16 * dpr); g.fillStyle = col === "#fafafa" ? "#0a0a0c" : "#fff"; }
       else { g.strokeStyle = col; g.lineWidth = dpr; g.strokeRect(tx + dpr / 2, y0 + 8.5 * dpr, w - dpr, 15 * dpr); g.fillStyle = col; }
       g.fillText(txt, tx + 6 * dpr, y0 + 19.5 * dpr); tx -= 5 * dpr;
     }
     const line2 = [];
-    if (t && t.key) line2.push([t.key, "#bdbdbd"]);
+    if (t && t.key) line2.push([t.key, "#c4c4c4"]);
     if (tl && s.playing) {
       const ph = beatPhase(tl, pos[p.number]), nxt = ph && tl.drops.find(dr => dr.beat > ph.beat);
-      if (nxt) line2.push([`DROP in ${Math.ceil(nxt.beat - ph.beat - ph.frac)}`, "#ff5a1f"]);
+      if (nxt) line2.push([`Drop in ${Math.ceil(nxt.beat - ph.beat - ph.frac)}`, "#ff5a1f"]);
     }
-    if (!narrow) line2.push([`track ${s.trackBpm ? s.trackBpm.toFixed(2) : "—"} · ${pc > 0 ? "+" : ""}${pc.toFixed(2)}%`, pc ? "#f2b84b" : "#9a9a9a"]);
-    if (narrow && line2.length > 1) line2.shift();   // keep the drop countdown, drop the key
+    if (!narrow) line2.push([`track ${s.trackBpm ? s.trackBpm.toFixed(2) : "—"} · ${pc > 0 ? "+" : ""}${pc.toFixed(2)}%`, pc ? "#f2b84b" : "#a1a1a1"]);
+    if (narrow) line2.length = 0;                     // phones: the drop countdown is in the header above
     g.font = `500 ${11 * dpr}px ${CANVAS_FONT}`;
     let lx2 = rx;
     for (const [txt, col] of line2.slice().reverse()) {
@@ -801,21 +824,22 @@ function drawStack() {
     // Left: title — artist, then album · year · genre · label · rating · bitrate.
     const textX = ax + as + 12 * dpr, maxW = Math.min(tx, lx2) - textX - 16 * dpr;
     const fit = (txt, w) => { let x = txt; while (x.length > 3 && g.measureText(x).width > w) x = x.slice(0, -2); return x === txt ? x : x + "…"; };
-    g.font = `600 ${13 * dpr}px ${CANVAS_FONT}`; g.fillStyle = "#f2f2f2";
+    g.font = `600 ${13 * dpr}px ${CANVAS_FONT}`; g.fillStyle = "#fafafa";
     const title = t ? `${t.title || "Untitled"}${t.artist ? "  —  " + t.artist : ""}` : (s.trackLoaded ? `Track #${s.rekordboxId}` : "empty");
     g.fillText(fit(title, maxW), textX, y0 + 22 * dpr);
     if (t) {
-      g.font = `400 ${11 * dpr}px ${CANVAS_FONT}`; g.fillStyle = "#9a9a9a";
+      g.font = `400 ${11 * dpr}px ${CANVAS_FONT}`; g.fillStyle = "#a1a1a1";
       const info = [t.album, t.year || null, t.genre, t.label, t.rating ? "★".repeat(t.rating) : null, t.bitRate ? t.bitRate + " kbps" : null].filter(Boolean).join("  ·  ");
       g.fillText(fit(info, maxW), textX, y0 + 41 * dpr);
     }
   });
 
+  if (cmp) return;
   // Phase meter (rekordbox style): each deck's beat in the bar, and a marker sweeping left to right
   // through each beat on every deck that's playing. When two decks play, their markers move together
   // if they're in phase; the text gives the offset against the master.
   const my = LH, rows = loaded, rh = rows.length ? (MH - 6 * dpr) / rows.length : 0;
-  g.fillStyle = "#262626"; g.fillRect(0, my, W, MH);
+  g.fillStyle = "#0e0e10"; g.fillRect(0, my, W, MH);
   const playingRows = rows.filter(p => p.status.playing);
   const phases = playingRows.length > 1 ? Object.fromEntries(phaseReadout(playingRows, pos).map(r => [r.num, r])) : {};
   const gx = 34 * dpr, cw = 26 * dpr, gap = 4 * dpr, gaugeX = gx + 4 * (cw + gap) + 20 * dpr, gaugeW = Math.min(360 * dpr, W * 0.3);
@@ -823,12 +847,12 @@ function drawStack() {
     const y = my + 3 * dpr + i * rh, rgb = deckRgb(p.number), bwb = liveBeatInBar(p, performance.now()), h = rh - 4 * dpr;
     g.font = `600 ${11 * dpr}px ${CANVAS_FONT}`; g.fillStyle = rgba(rgb, 1); g.fillText(p.number, 14 * dpr, y + h - 1 * dpr);
     for (let k = 0; k < 4; k++) {
-      g.fillStyle = bwb === k + 1 ? (k === 0 ? "#fff" : rgba(rgb, 1)) : "#3a3a3a";
+      g.fillStyle = bwb === k + 1 ? (k === 0 ? "#fff" : rgba(rgb, 1)) : "#222224";
       g.fillRect(gx + k * (cw + gap), y, cw, h);
     }
     // Track for the sweep: the beat starts at the left edge.
-    g.fillStyle = "#3a3a3a"; g.fillRect(gaugeX, y + h / 2 - dpr, gaugeW, 2 * dpr);
-    g.fillStyle = "#6b6b6b"; g.fillRect(gaugeX, y, 2 * dpr, h); g.fillRect(gaugeX + gaugeW - 2 * dpr, y, 2 * dpr, h);
+    g.fillStyle = "#222224"; g.fillRect(gaugeX, y + h / 2 - dpr, gaugeW, 2 * dpr);
+    g.fillStyle = "#525254"; g.fillRect(gaugeX, y, 2 * dpr, h); g.fillRect(gaugeX + gaugeW - 2 * dpr, y, 2 * dpr, h);
     const tl = timelines[p.number] && timelines[p.number].data, ph = tl && beatPhase(tl, pos[p.number]);
     if (p.status.playing && ph) {
       g.fillStyle = rgba(rgb, 1);
@@ -836,13 +860,22 @@ function drawStack() {
     }
     const r = phases[p.number];
     g.font = `600 ${11 * dpr}px ${CANVAS_FONT}`;
-    g.fillStyle = r ? (r.ok ? "#7ccf8a" : rgba(rgb, 1)) : "#9a9a9a";
-    const txt = !p.status.playing ? (p.status.cued ? "CUED" : "PAUSED")
-      : r ? r.txt : (p.status.tempoMaster ? "MASTER" : playingRows.length > 1 ? "" : "PLAYING");
+    g.fillStyle = r ? (r.ok ? "#7ccf8a" : rgba(rgb, 1)) : "#a1a1a1";
+    const txt = !p.status.playing ? (p.status.cued ? "Cued" : "Paused")
+      : r ? r.txt : (p.status.tempoMaster ? "Master" : playingRows.length > 1 ? "" : "Playing");
     g.fillText(txt, gaugeX + gaugeW + 16 * dpr, y + h - 1 * dpr);
   });
   drawDropHint(g, dpr, W);
 }
+
+// Scrolled down into the library, the pinned decks condense to thin strips (and the show line and deck
+// buttons tuck away); back near the top they open out again. Two thresholds, so it doesn't flicker.
+// The part of the page under the strips' edge stays where it was: nothing jumps.
+addEventListener("scroll", () => {
+  const on = document.body.classList.contains("decks-compact");
+  if (!on && scrollY > 160) document.body.classList.add("decks-compact");
+  else if (on && scrollY < 24) document.body.classList.remove("decks-compact");
+}, { passive: true });
 
 // Wheel and trackpad pinch zoom (pinch arrives as ctrl+wheel); two-finger pinch on touch.
 (() => {
@@ -892,7 +925,7 @@ async function loadTimeline(n, key) {
     if (!timelines[n].data) await new Promise(r => setTimeout(r, 1500));
   }
 }
-const SECTION_COLOURS = { intro: "#555555", groove: "#bdbdbd", breakdown: "#7a7a7a", build: "#f2b84b", drop: "#ff5a1f", outro: "#555555" };
+const SECTION_COLOURS = { intro: "#3a3a3c", groove: "#c4c4c4", breakdown: "#686868", build: "#f2b84b", drop: "#ff5a1f", outro: "#3a3a3c" };
 
 function render(st) {
   lastState = st;
@@ -1595,7 +1628,7 @@ function laneCtlRender() {
   const html = st.players.slice().sort((a, b) => a.number - b.number).map(p => {
     const s = p.status, h = laneHits.find(l => l.n === p.number); if (!h) return "";
     const b = (a, on, ico, title) => `<button class="${on ? "on" : ""}" data-dk="${p.number}" data-a="${a}" title="${title}" aria-label="${title}">${ICO[ico]}</button>`;
-    return `<div class="lc" style="top:${top + h.y0 + 8}px">` +
+    return `<div class="lc" style="top:${top + h.y0 + (cv.clientWidth < 560 ? 4 : 8)}px">` +
       b(s.playing ? "stop" : "play", s.playing, s.playing ? "stop" : "play", s.playing ? `Stop deck ${p.number}` : `Play deck ${p.number}`) +
       b(s.synced ? "sync_off" : "sync_on", s.synced, "sync", `Sync deck ${p.number}`) +
       b("master", s.tempoMaster, "master", `Make deck ${p.number} tempo master`) + `</div>`;
@@ -1713,10 +1746,10 @@ function renderMixer(m) {
 }
 function renderShow(sh) {
   if (!sh) { $("#shScene").textContent = "offline"; $("#shScene").className = "showscene"; return; }
-  $("#shScene").textContent = sh.scene; $("#shScene").className = "showscene " + sh.scene;
+  $("#shScene").textContent = SCENE_NAME[sh.scene] || sh.scene; $("#shScene").className = "showscene " + sh.scene;
   $("#shDeck").textContent = sh.live ? `following deck ${sh.live}` + (sh.follow ? " (locked)" : " (auto)") : "no deck playing";
   $("#shTitle").textContent = sh.title || "";
-  $("#shCount").textContent = sh.beats_to_drop != null ? `DROP in ${Math.ceil(sh.beats_to_drop)} beats` : "";
+  $("#shCount").textContent = sh.beats_to_drop != null ? `Drop in ${Math.ceil(sh.beats_to_drop)} beats` : "";
   const kv = (k, v) => v == null || v === "" ? "" : `<div class="kv"><span>${k}</span><b>${esc(v)}</b></div>`;
   $("#shKv").innerHTML = [kv("Bar", sh.bar ? `${sh.bar} · beat ${sh.bwb}` : ""), kv("Section", sh.section), kv("Mode", sh.mode),
     kv("Intensity", Math.round(sh.intensity * 100) + "%"), kv("Latency comp.", sh.lead_ms + " ms"), kv("Frame rate", sh.fps + " fps"),

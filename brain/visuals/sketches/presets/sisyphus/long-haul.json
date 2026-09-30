@@ -1,9 +1,11 @@
 {
  "climb": 64,
- "day": 128,
- "style": 3,
- "boil": 0.15,
- "hill": 0.4,
+ "hill": 0.45,
+ "style": 1,
+ "night": 0.9,
+ "boil": 0.3,
  "aamt": 0.5,
- "cloop": 6
+ "cloop": 6,
+ "size": 0.85,
+ "fade": 0.85
 }

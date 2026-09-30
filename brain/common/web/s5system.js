@@ -11,25 +11,25 @@
   const css = `
   #sys { position: fixed; inset: 0; z-index: 9990; background: var(--bg); overflow: auto; display: none; color: var(--text);
     font: 400 14px/1.45 var(--font); letter-spacing: .01em; text-align: left;
-    --bg: #242424; --panel: #2b2b2b; --line: #3e3e3e; --line2: #555; --text: #f2f2f2; --dim: #9a9a9a; --accent: #ff5a1f; --accent2: #ff5a1f;
-    --good: #7ccf8a; --warn: #f2b84b; --bad: #ef5b5b; --well: #1f1f1f;
-    --font: "Montserrat", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif; }
+    --bg: #0c0c0e; --panel: #131315; --line: #262628; --line2: #3a3a3c; --text: #fafafa; --dim: #a1a1a1; --accent: #ff5a1f; --accent2: #ff5a1f;
+    --good: #7ccf8a; --warn: #f2b84b; --bad: #ef5b5b; --well: #08080a;
+    --font: "Inter", -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", Roboto, system-ui, sans-serif; }
   #sys *, #sys *::before { box-sizing: border-box; }
-  .s5logo { display: flex; align-items: center; line-height: 1; } .s5logo .s5word { color: #f2f2f2; display: block; flex: none; }
+  .s5logo { display: flex; align-items: center; line-height: 1; } .s5logo .s5word { color: #fafafa; display: block; flex: none; }
   .s5logo .s5five { fill: #ff5a1f; }
   #simpop { position: fixed; top: calc(var(--s5bar, 48px) + 8px); right: 12px; z-index: 9992; width: min(340px, calc(100vw - 24px)); display: none; padding: 20px;
-    background: #2b2b2b; border: 1px solid #555; color: #f2f2f2; font: 400 13px/1.45 "Montserrat", ui-sans-serif, system-ui, sans-serif;
+    background: #131315; border: 1px solid #3a3a3c; color: #fafafa; font: 400 13px/1.45 "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
     box-shadow: 0 12px 40px rgba(0,0,0,.5); animation: s5in .2s ease; }
   #simpop.open { display: block; }
-  #simpop h4 { margin: 0 0 6px; font: 600 11px/1 "Montserrat", ui-sans-serif, system-ui, sans-serif; letter-spacing: .16em; text-transform: uppercase; color: #f2b84b; }
-  #simpop.offer h4 { color: #9a9a9a; }
-  #simpop p { margin: 0 0 14px; color: #9a9a9a; }
+  #simpop h4 { margin: 0 0 6px; font: 600 11px/1 "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif; letter-spacing: .16em; text-transform: uppercase; color: #f2b84b; }
+  #simpop.offer h4 { color: #a1a1a1; }
+  #simpop p { margin: 0 0 14px; color: #a1a1a1; }
   #simpop .row { display: flex; gap: 10px; align-items: center; margin-top: 10px; }
-  #simpop button { flex: none; font: 600 11px/1 "Montserrat", ui-sans-serif, system-ui, sans-serif; letter-spacing: .12em; text-transform: uppercase;
-    padding: 11px 12px; cursor: pointer; background: transparent; color: #f2f2f2; border: 1px solid #555; }
+  #simpop button { flex: none; font: 600 11px/1 "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif; letter-spacing: .12em; text-transform: uppercase;
+    padding: 11px 12px; cursor: pointer; background: transparent; color: #fafafa; border: 1px solid #3a3a3c; }
   #simpop button.wide { flex: 1; }
   #simpop button:hover { border-color: #ff5a1f; }
-  #simpop button.go { background: #ff5a1f; border-color: #ff5a1f; color: #111; }
+  #simpop button.go { background: #ff5a1f; border-color: #ff5a1f; color: #050507; }
   #simpop button:disabled { opacity: .5; cursor: wait; }
   #simpop input[type=range] { flex: 1; min-width: 0; accent-color: #ff5a1f; }
   #sys.open { animation: s5in .25s ease; }
@@ -71,14 +71,14 @@
   #sys .acts button:disabled { opacity: .4; cursor: wait; }
   #sys a { color: var(--accent2); }`;
   const dotCss = `
-  .s5bar > .s5right { margin-left: auto; display: flex; gap: 6px; align-items: center; flex: none; position: sticky; right: 36px; background: #242424; }
+  .s5bar > .s5right { margin-left: auto; display: flex; gap: 6px; align-items: center; flex: none; position: sticky; right: 36px; background: var(--bg, #0c0c0e); }
   .s5bar > .s5right + .s5who { margin-left: 8px; }
-  .s5right > .s5sim { flex: none; display: none; align-items: center; gap: 7px; height: 28px; padding: 0 10px; cursor: pointer; background: #242424; color: #9a9a9a; border: 1px solid #555;
-    font: 600 11px/1 "Montserrat", ui-sans-serif, system-ui, sans-serif; letter-spacing: .14em; text-transform: uppercase; }
+  .s5right > .s5sim { flex: none; display: none; align-items: center; gap: 7px; height: 28px; padding: 0 10px; cursor: pointer; border-radius: 8px; background: var(--bg, #0c0c0e); color: var(--na1a1a1, #a1a1a1); border: 1px solid var(--n3a3a3c, #3a3a3c);
+    font: 600 11px/1 "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif; letter-spacing: .14em; text-transform: uppercase; }
   .s5right > .s5sim.on, .s5right > .s5sim.live, .s5right > .s5sim.none, .s5right > .s5sim.offline { display: flex; }
   .s5right > .s5sim.on { color: #f2b84b; border-color: #f2b84b; }
   .s5right > .s5sim.live { color: #7ccf8a; border-color: #7ccf8a; }
-  .s5right > .s5spk { flex: none; width: 28px; height: 28px; padding: 0; display: grid; place-items: center; cursor: pointer; background: #242424; color: #9a9a9a; border: 1px solid #555; }
+  .s5right > .s5spk { flex: none; width: 28px; height: 28px; padding: 0; display: grid; place-items: center; cursor: pointer; border-radius: 8px; background: var(--bg, #0c0c0e); color: var(--na1a1a1, #a1a1a1); border: 1px solid var(--n3a3a3c, #3a3a3c); }
   .s5right > .s5spk svg { width: 16px; height: 16px; }
   .s5right > .s5spk.on { color: #f2b84b; border-color: #f2b84b; }
   .s5right > .s5spk.wait { color: #f2b84b; border-color: #f2b84b; animation: s5pulse 1s ease-in-out infinite; }
@@ -87,7 +87,7 @@
   .s5right > .s5sim.on i { animation: s5pulse 1.2s ease-in-out infinite; }
   .s5bar #conn, .herobar #conn { display: none !important; }   /* the status pill (right) says it all */
   @keyframes s5pulse { 50% { opacity: .35; } }
-  .s5home .hdot { position: absolute; left: 88px; top: 50%; width: 7px; height: 7px; margin-top: -3.5px; border-radius: 50%; background: #555;
+  .s5home .hdot { position: absolute; left: 88px; top: 50%; width: 7px; height: 7px; margin-top: -3.5px; border-radius: 50%; background: var(--n3a3a3c, #3a3a3c);
     opacity: 0; transition: opacity .4s, background .4s; }
   .s5home .hdot.ok, .s5home .hdot.warn, .s5home .hdot.bad { opacity: 1; }
   .s5home .hdot.ok { background: #7ccf8a; } .s5home .hdot.warn { background: #f2b84b; } .s5home .hdot.bad { background: #ef5b5b; box-shadow: 0 0 8px #ef5b5b; }`;
@@ -255,9 +255,10 @@
   pill.className = "s5sim";
   const bar = document.querySelector(".s5bar");
   // Right-hand group, next to the lock: [speaker] [status pill].
-  const right = document.createElement("span");
-  right.className = "s5right";
-  if (bar) { bar.insertBefore(right, bar.querySelector(".s5who")); right.appendChild(pill); }
+  // (s5auth.js may have made it already, for the appearance button.)
+  let right = bar && bar.querySelector(".s5right");
+  if (!right) { right = document.createElement("span"); right.className = "s5right"; if (bar) bar.insertBefore(right, bar.querySelector(".s5who")); }
+  if (bar) right.prepend(pill);
   // Speaker, left of the pill while the sim runs: sound on/off in one tap. The sound lives in the
   // player (/shell): from a normal page, turning it on moves you into the player.
   const inShell = !!(window.S5AUTH && S5AUTH.inShell);

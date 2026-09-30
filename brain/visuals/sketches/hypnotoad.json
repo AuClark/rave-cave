@@ -1,9 +1,9 @@
 {
   "title": "Hypnotoad",
-  "about": "ALL GLORY TO THE HYPNOTOAD. Drawn front-on and symmetrical, which is how he is usually seen and the most hypnotic way to put anything on a wall. He keeps his own colours whatever the show hue is doing -- olive and cream, yellow eyes, black splat of a pupil -- because a Hypnotoad in the wrong colours is not Hypnotoad; Tint overrules that if you want him recoloured. Everything behind him takes the hue instead: wavy concentric hypno rings on a small quantised palette, with sacred geometry drawn over them (Flower of Life, Metatron's Cube, or a ring-and-spoke mandala). Drawn as flat vector -- no outline, the form coming from where one colour stops and the next starts, with a shading brown for the brow and the haunches. The flat artwork has no outline because it sits on a flat card; these rings are not one, so he gets a thin dark keyline by default to hold him off the background -- Keyline 0 takes it away again, and the collar is off by default because he reads better without it. The eyes do the work: a brown socket, flat concentric bands of yellow and orange run outward from the middle at their own speed in cycles per beat. Reactivity is the standard three slots, see docs/reactive.md.",
+  "about": "ALL GLORY TO THE HYPNOTOAD. He keeps his own olive and cream whatever the show hue is doing (Tint overrules that), and the eyes are built to the show's animation: plain yellow eyeballs with a big soft black pupil snapping between a slit, a bean, an arch and a four-lobed star, the two eyes out of step, ringed by red and orange contours of the pupil itself and a yellow bloom that throbs on the kick. Behind him hypno rings radiate from the stare under sacred geometry; A Hit is the bob and the eye throb, B Move turns the geometry and wobbles the rings and pupils, C Change shifts the palette and brings up the line-work (docs/reactive.md).",
   "groups": [
     {"name": "Toad", "params": [
-      {"id": "size",    "label": "Size",                              "min": 0.4, "max": 1.6, "step": 0.01, "default": 0.95},
+      {"id": "size",    "label": "Size",                              "min": 0.4, "max": 1.6, "step": 0.01, "default": 1.05},
       {"id": "bob",     "label": "Bob and squash",                    "min": 0,   "max": 1.5, "step": 0.01, "default": 0.8},
       {"id": "blink",   "label": "Blink",                             "min": 0,   "max": 1,   "step": 0.01, "default": 0.7},
       {"id": "patches", "label": "Mottling on his back",              "min": 0,   "max": 1.4, "step": 0.01, "default": 1.0},
@@ -12,14 +12,17 @@
       {"id": "ink", "kind": "fixed", "label": "Line weight",                 "min": 0, "max": 2, "step": 0.05, "default": 1.0}
     ]},
     {"name": "Eyes", "params": [
-      {"id": "eyesize", "label": "Eye size",                          "min": 0.6, "max": 1.5, "step": 0.01, "default": 1.0},
-      {"id": "pupil",   "label": "Pupil splat size",                  "min": 0.15,"max": 0.9, "step": 0.01, "default": 0.62},
-      {"id": "rings",   "label": "Hypno rings in the eye",            "min": 1,   "max": 10,  "step": 1,    "default": 4},
-      {"id": "ringspin", "kind": "rate", "label": "Rings run (cycles per beat)", "min": -2, "max": 2, "step": 0.01, "default": 0.5}
+      {"id": "eyesize", "label": "Eye size",                          "min": 0.8, "max": 1.3, "step": 0.01, "default": 1.0},
+      {"id": "pupil",   "label": "Pupil size",                        "min": 0.45, "max": 0.7, "step": 0.01, "default": 0.62},
+      {"id": "pstep", "kind": "rate", "label": "Pupil changes shape every (0 quarter beat, 1 half beat, 2 beat)", "min": 0, "max": 2, "step": 1, "default": 1},
+      {"id": "glide",   "label": "Snap (0, the cartoon) to glide (1)", "min": 0, "max": 1, "step": 0.01, "default": 0.15},
+      {"id": "border",  "label": "Glowing border round the pupil",    "min": 0.5, "max": 1.6, "step": 0.01, "default": 1.0},
+      {"id": "irisc",   "label": "Border colours (0 the show: red, orange, yellow; 1 rainbow; 2 show hue)", "min": 0, "max": 2, "step": 1, "default": 0},
+      {"id": "glory", "kind": "fixed", "label": "ALL GLORY TO THE HYPNOTOAD caption", "min": 0, "max": 1, "step": 1, "default": 0}
     ]},
     {"name": "Sacred", "params": [
       {"id": "mode",    "energy": 0, "label": "Geometry (0 flower of life, 1 Metatron, 2 mandala)", "min": 0, "max": 2, "step": 1, "default": 0},
-      {"id": "scale",   "label": "Scale",                             "min": 0.04,"max": 0.5, "step": 0.005, "default": 0.13},
+      {"id": "scale",   "label": "Scale",                             "min": 0.04,"max": 0.5, "step": 0.005, "default": 0.16},
       {"id": "detail",  "label": "Rings out / spokes",                "min": 1,   "max": 7,   "step": 1,    "default": 3},
       {"id": "width",   "label": "Line width",                        "min": 0,   "max": 3,   "step": 0.05, "default": 1.0},
       {"id": "spin",    "kind": "rate", "label": "Geometry turns (cycles per beat)", "min": -0.3, "max": 0.3, "step": 0.002, "default": 0.01}
@@ -46,7 +49,7 @@
       {"id": "camt",   "label": "C Change · amount",                  "min": 0, "max": 1, "step": 0.01, "default": 0.5}
     ]},
     {"name": "Colour", "params": [
-      {"id": "hue",    "label": "Hue (the background, not him)",      "min": 0, "max": 1, "step": 0.005, "default": 0.02},
+      {"id": "hue",    "label": "Hue (the background, not him)",      "min": 0, "max": 1, "step": 0.005, "default": 0.76},
       {"id": "palette", "energy": 0, "label": "Hues in the palette",  "min": 2, "max": 8, "step": 1,     "default": 3},
       {"id": "sat",    "label": "Saturation",                         "min": 0, "max": 1, "step": 0.01,  "default": 1.0},
       {"id": "follow", "label": "Follow show hue",                    "min": 0, "max": 1, "step": 1,     "default": 0}

@@ -6,7 +6,7 @@
 <title>Sektor5 · Visuals</title>
 <link rel="icon" type="image/svg+xml" href="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA2NCA2NCI+PHJlY3Qgd2lkdGg9IjY0IiBoZWlnaHQ9IjY0IiByeD0iMTIiIGZpbGw9IiMyNDI0MjQiLz48cGF0aCB0cmFuc2Zvcm09InRyYW5zbGF0ZSgxNC41IDcpIHNjYWxlKC41KSIgZD0iTTAsMCBMNzAsMCBMNzAsMjEgTDIxLDIxIEwyMSw0MCBMNTcsNDAgTDcwLDUzIEw3MCw4NyBMNTcsMTAwIEwwLDEwMCBMMCw3OSBMNDksNzkgTDQ5LDYxIEwwLDYxIFoiIGZpbGw9IiNGRjVBMUYiLz48L3N2Zz4=">
 <style>
-  :root { --bg: #0c0d14; --card: #151724; --line: #2a2d42; --text: #e8e9f3; --dim: #8a8ea8; --acc: #2fe6ff; }
+  :root { --bg: var(--n0c0d14, #0c0d14); --card: #151724; --line: #2a2d42; --text: #e8e9f3; --dim: #8a8ea8; --acc: #2fe6ff; }
   * { box-sizing: border-box; }
   body { margin: 0; background: var(--bg); color: var(--text); font: 14px/1.4 system-ui, sans-serif; }
   header { display: flex; gap: 10px; align-items: center; padding: 10px 14px; border-bottom: 1px solid var(--line); position: sticky; top: 0; background: var(--bg); z-index: 2; }
@@ -29,12 +29,12 @@
   #err { color: #f88; white-space: pre-wrap; font: 12px ui-monospace, monospace; }
 
   /* ------------------------------------------------------------------ design system
-     Charcoal, hairline grid, one orange accent, light geometric type (Montserrat).
+     Near-black, hairline grid, one orange accent, system type (the shared theme in s5auth.js sits on top: docs/design.md).
      Same tokens and bottom tiles as the dashboard, Commander, mapping and visuals pages. */
-  :root { --bg:#242424; --panel:#2b2b2b; --card:#2b2b2b; --line:#3e3e3e; --line2:#555; --text:#f2f2f2; --dim:#9a9a9a;
-          --accent:#ff5a1f; --good:#7ccf8a; --warn:#f2b84b; --bad:#ef5b5b; --well:#1f1f1f;
-          --pink:#ff5a1f; --cyan:#ff5a1f; --acc:#ff5a1f; --violet:#bdbdbd;
-          --font:"Montserrat", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif; }
+  :root { --bg:var(--n0c0c0e, #0c0c0e); --panel:var(--n131315, #131315); --card:var(--n131315, #131315); --line:var(--n262628, #262628); --line2:var(--n3a3a3c, #3a3a3c); --text:var(--nfafafa, #fafafa); --dim:var(--na1a1a1, #a1a1a1);
+          --accent:#ff5a1f; --good:#7ccf8a; --warn:#f2b84b; --bad:#ef5b5b; --well:var(--n08080a, #08080a);
+          --pink:#ff5a1f; --cyan:#ff5a1f; --acc:#ff5a1f; --violet:var(--nc4c4c4, #c4c4c4);
+          --font:"Inter", -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", Roboto, system-ui, sans-serif; }
   html, body { background: var(--bg); }
   body { font-family: var(--font); letter-spacing: .01em; }
   button, input, select { font-family: var(--font); border-radius: 0 !important; }
@@ -53,11 +53,11 @@
   nav.apps a { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 28px 30px; color: var(--dim);
                text-decoration: none; font-size: 17px; font-weight: 400; line-height: 1.3; border-left: 1px solid var(--line); }
   nav.apps a:first-child { border-left: 0; }
-  nav.apps a:hover { color: var(--text); background: #2e2e2e; }
+  nav.apps a:hover { color: var(--text); background: var(--n171719, #171719); }
   nav.apps a .arr { font-size: 26px; font-weight: 300; color: var(--text); }
-  nav.apps a small { display: block; font-size: 11px; letter-spacing: .16em; color: #6b6b6b; margin-bottom: 4px; }
-  nav.apps a.here { background: var(--text); color: #222; }
-  nav.apps a.here small { color: #777; }
+  nav.apps a small { display: block; font-size: 11px; letter-spacing: .16em; color: var(--n525254, #525254); margin-bottom: 4px; }
+  nav.apps a.here { background: var(--text); color: var(--n0a0a0c, #0a0a0c); }
+  nav.apps a.here small { color: var(--n646464, #646464); }
   nav.apps a.here .arr { background: var(--accent); color: #fff; align-self: stretch; display: grid; place-items: center; width: 80px; margin: -28px -30px -28px 0; }
   @media (max-width: 900px) { nav.apps { grid-template-columns: 1fr 1fr; } nav.apps a:nth-child(3) { border-left: 0; } }
 
@@ -69,7 +69,7 @@
   main > div:last-child { padding: 20px 24px; }
   #previewWrap { border-radius: 0; }
   .card { margin-bottom: 0; border: 0; border-bottom: 1px solid var(--line); padding: 16px 0; background: transparent; }
-  button:active { background: #333; }
+  button:active { background: var(--n1b1b1d, #1b1b1d); }
   /* Page links in the top bar (Decks / Lighting / Projection / Visuals): the current one underlined. */
   nav.pages { display: flex; gap: 2px; align-self: stretch; }
   nav.pages a { display: flex; align-items: center; padding: 0 12px; color: var(--dim); text-decoration: none; font-size: 14px; font-weight: 500;
@@ -78,12 +78,26 @@
   nav.pages a.here { color: var(--text); border-bottom-color: var(--accent); }
   .s5logo { display: inline-flex; align-items: center; vertical-align: middle; line-height: 1; }
   header h1 { display: flex; align-items: center; line-height: 1; overflow: visible; }
-  .s5logo .s5word { color: var(--text, #f2f2f2); flex: none; display: block; }
+  .s5logo .s5word { color: var(--text, #fafafa); flex: none; display: block; }
   .s5logo .s5five { fill: var(--accent, #ff5a1f); }
 
+  .hero .s5wavebox { width: min(100%, calc(50vh * 16 / 9)); margin: 6px auto 0; }
+  @media (max-width: 760px) { .hero .s5wavebox { width: auto; margin: 6px 12px 0; }
+    /* the strip under the preview on one line: counter, audio, Freeze, Launchpad, ? */
+    .hero .herobar { flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; gap: 6px; } .herobar::-webkit-scrollbar { display: none; }
+    .hero .herobar > * { flex: none; } .padlink .long { display: none; }
+    /* the four-count takes whatever room the buttons leave, so the row spans the full width */
+    /* the bar number and the three beats share the room equally: the number's pill is as wide as a segment */
+    /* the bar number is one of the four: same width as each beat */
+    .hero .herobar > #beat { flex: 1 1 auto; min-width: 80px; gap: 4px; padding-right: 4px; }
+    .hero #beat i, .hero #beat #barN.s5barn { flex: 1 1 0; width: auto; min-width: 0; max-width: 48px; padding: 0; }
+    .hero .herobar > button:not(.icon), .hero .herobar > a { padding: 0 11px; } }
+  @media (min-width: 761px) { .hero .herobar { width: min(100%, calc(50vh * 16 / 9)); margin: 0 auto; } }
+  .faderrow { max-width: var(--s5col, 1280px); margin: 20px auto 4px; padding: 0 24px; }   /* the same column as the tab below */
+  @media (max-width: 760px) { .faderrow { margin: 14px 0 0; padding: 0 12px; } }
   /* ---- Layout: the display is the hero (full-width band), a clean control panel underneath. ---- */
   main.hl { display: block; padding: 0; gap: 0; max-width: none; }
-  .hero { background: #161616; border-bottom: 1px solid var(--line); padding: 24px 24px 0; }
+  .hero { background: var(--n060608, #060608); border-bottom: 1px solid var(--line); padding: 24px 24px 0; }
   .herobar { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; min-height: 56px; padding: 12px 0; }
   .herobar .hint { margin: 0; }
   .herobar .sp { flex: 1; }
@@ -118,29 +132,44 @@
   /* ------------------------------------------------------------------ performance controls
      Built for a tablet on a table by the decks: big targets, instant response, and the state of
      every parameter readable at a glance (where it can go, where it is, whether it is moving). */
-  .pp { padding: 6px 0 10px; border-left: 3px solid transparent; padding-left: 9px; margin-left: -12px; }
-  .pp.sel { border-left-color: var(--accent); background: #303030; }
-  .pl { display: flex; align-items: center; gap: 8px; margin: 0 0 6px; }
-  .pl label { flex: 1; font-size: 13px; cursor: pointer; }
-  .pl .pv { color: var(--dim); font-variant-numeric: tabular-nums; font-size: 12px; min-width: 4.5em; text-align: right; }
-  .pl .ab { padding: 3px 9px; font-size: 11px; letter-spacing: .1em; min-width: 34px; }
+  /* Parameters sit two to a row on a tablet or wider; one column on a phone. */
+  .panel.tabbed #groups > .card { display: grid; grid-template-columns: 1fr 1fr; column-gap: 36px; align-content: start; }
+  .panel.tabbed #groups > .card > h3 { grid-column: 1 / -1; }
+  .panel.tabbed #groups .col { min-width: 0; }
+  @media (max-width: 760px) { .panel.tabbed #groups > .card { grid-template-columns: 1fr; } }
+  .panel.tabbed { max-width: 1100px; }
+
+  .pp { padding: 8px 10px 6px; margin: 0 -10px; border-left: 2px solid transparent; min-width: 0; }
+  .pp.sel { border-left-color: var(--accent); background: var(--n141416, #141416); }
+  .pl { display: flex; align-items: baseline; gap: 8px; margin: 0; }
+  .pl label { flex: 1; min-width: 0; font-size: 13px; cursor: pointer; color: var(--nd8d8d8, #d8d8d8);
+              white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .pp.sel .pl label { color: var(--text); }
+  .pl .pv { color: var(--text); font-variant-numeric: tabular-nums; font-size: 13px; font-weight: 500; min-width: 3.5em; text-align: right; }
+  .pl .ab { align-self: center; padding: 2px 0; font-size: 10px; letter-spacing: .08em; width: 26px; color: var(--dim); border-color: var(--line); }
   .pl .ab.on { background: var(--accent); border-color: var(--accent); color: #fff; }
 
-  /* The track: a 34px grab strip. The band is where the value is allowed to go, the two nibs
-     drag its ends, the bar is the held value and the ring is where automation has moved it. */
-  .tr { position: relative; height: 34px; cursor: pointer; touch-action: none; -webkit-user-select: none; user-select: none; }
-  .tr::before { content: ""; position: absolute; left: 0; right: 0; top: 15px; height: 4px; background: #1b1b1b; border: 1px solid #444; }
-  .tr .band { position: absolute; top: 15px; height: 4px; background: #5a3a2a; border-top: 1px solid #7a4a30; border-bottom: 1px solid #7a4a30; }
-  .tr .bar { position: absolute; top: 8px; width: 3px; height: 18px; background: var(--text); margin-left: -1px; }
-  .tr .mk { position: absolute; top: 5px; width: 12px; height: 24px; margin-left: -6px; border: 2px solid var(--accent); display: none; }
+  /* The track, a 30px grab strip. The fill is the value, read at a glance from across a table.
+     The grey band is how far the value is allowed to move, and turns warm once it has been
+     narrowed; its ends are the two ▲ nibs underneath. The ring is where automation has it now. */
+  .tr { position: relative; height: 30px; cursor: pointer; touch-action: none; -webkit-user-select: none; user-select: none; }
+  .tr::before { content: ""; position: absolute; left: 0; right: 0; top: 11px; height: 8px; background: var(--well); }
+  .tr .band { position: absolute; top: 11px; height: 8px; background: var(--n222224, #222224); }
+  .pp.narrow .tr .band { background: #4a3226; box-shadow: inset 0 0 0 1px #7a4a30; }
+  .tr .fill { position: absolute; top: 11px; height: 8px; background: var(--n808080, #808080); }
+  .pp.sel .tr .fill { background: var(--accent); }
+  .pp.auto .tr .fill { opacity: .35; }
+  .tr .bar { position: absolute; top: 6px; width: 4px; height: 18px; background: var(--text); margin-left: -2px; }
+  .tr .mk { position: absolute; top: 5px; width: 14px; height: 20px; margin-left: -7px; border: 2px solid var(--accent);
+            background: rgba(255, 90, 31, .18); display: none; }
   .pp.auto .tr .mk { display: block; }
-  .tr .nib { position: absolute; top: 19px; width: 0; height: 0; margin-left: -6px;
-             border-left: 6px solid transparent; border-right: 6px solid transparent; border-top: 8px solid #9a6a4a; }
-  .tr .nib.hi { border-top-color: #9a6a4a; }
-  .pp.sel .tr .bar { background: var(--accent); }
+  .tr .nib { position: absolute; top: 21px; width: 0; height: 0; margin-left: -5px; opacity: 0; transition: opacity .15s;
+             border-left: 5px solid transparent; border-right: 5px solid transparent; border-bottom: 7px solid var(--n808080, #808080); }
+  .pp.sel .tr .nib, .pp.narrow .tr .nib, .tr:hover .nib { opacity: 1; }
+  .pp.narrow .tr .nib { border-bottom-color: #c07a52; }
 
   /* Automation, revealed for the selected parameter only: there is no room for eight rows of it. */
-  .au { display: none; gap: 6px; flex-wrap: wrap; align-items: center; margin: 8px 0 2px; }
+  .au { display: none; gap: 6px; flex-wrap: wrap; align-items: center; margin: 6px 0 4px; }
   .pp.sel .au { display: flex; }
   .au select, .au button { padding: 5px 8px; font-size: 12px; }
   .au .lbl { color: var(--dim); font-size: 11px; letter-spacing: .1em; text-transform: uppercase; }
@@ -148,36 +177,213 @@
   .au .rng { color: var(--dim); font-size: 11px; font-variant-numeric: tabular-nums; }
 
   /* Beat pulse in the top bar: a dot a bar wide, the downbeat filled. */
-  #beat { display: inline-flex; gap: 4px; align-items: center; }
-  #beat i { width: 9px; height: 9px; border: 1px solid var(--line2); display: block; }
+  #beat { display: inline-flex; gap: 5px; align-items: center; }
+  #beat i { width: 12px; height: 12px; border: 1px solid var(--line2); display: block; }
   #beat i.on { background: var(--accent); border-color: var(--accent); }
   #beat i.b1 { border-color: var(--text); }
 
-  #keys { position: fixed; inset: 0; background: rgba(20,20,20,.94); z-index: 100; display: none; padding: 40px;
-          overflow: auto; }
+  /* The key list: a panel over the page (either theme); click a row to do it. */
+  #keys { position: fixed; inset: 0; background: rgba(0,0,0,.55); backdrop-filter: blur(4px); -webkit-backdrop-filter: blur(4px); z-index: 100; display: none; padding: 60px 16px; overflow: auto; }
   #keys.show { display: block; }
-  #keys table { border-collapse: collapse; margin: 0 auto; max-width: 620px; }
-  #keys td { padding: 7px 14px; border-bottom: 1px solid var(--line); font-size: 14px; }
-  #keys td:first-child { color: var(--accent); font-weight: 600; white-space: nowrap; letter-spacing: .08em; }
-  #keys h2 { text-align: center; font-weight: 500; letter-spacing: .2em; font-size: 14px; color: var(--dim); }
+  #keys .kbox { max-width: 560px; margin: 0 auto; background: var(--panel); border: 1px solid var(--line); border-radius: 16px; padding: 18px 18px 10px; box-shadow: 0 20px 60px rgba(0,0,0,.4); }
+  #keys .khead { display: flex; align-items: baseline; gap: 10px; margin: 0 4px 8px; }
+  #keys h2 { margin: 0; font-weight: 600; font-size: 16px; color: var(--text); flex: 1; }
+  #keys .khead span { font-size: 12px; color: var(--dim); }
+  #keys table { border-collapse: collapse; width: 100%; }
+  #keys th { text-align: left; font-size: 12px; font-weight: 600; color: var(--dim); padding: 14px 8px 6px; }
+  #keys td { padding: 7px 8px; border-top: 1px solid var(--line); font-size: 13px; color: var(--text); vertical-align: middle; }
+  #keys td:first-child { width: 1%; white-space: nowrap; }
+  #keys kbd { display: inline-block; min-width: 24px; padding: 2px 7px; margin-right: 3px; border: 1px solid var(--line2); border-bottom-width: 2px; border-radius: 6px;
+              background: var(--well); color: var(--text); font: 600 12px var(--font); text-align: center; }
+  #keys tr.go { cursor: pointer; } #keys tr.go:hover td { background: var(--hover); } #keys tr.did td { background: rgba(255,90,31,.14); }
+  #keys .kclose { height: 30px; padding: 0 12px; }
 
-  /* What the parts of a track mean, said once rather than guessed at. */
-  .legend { display: flex; flex-wrap: wrap; gap: 6px 16px; margin: 10px 0 8px; color: var(--dim); font-size: 11.5px; }
+  /* What the parts of a track mean, said once rather than guessed at (inside "How the sliders work"). */
+  .legend { display: flex; flex-wrap: wrap; gap: 6px 16px; margin: 4px 0 8px; color: var(--dim); font-size: 11.5px; }
   .legend span { display: flex; align-items: center; gap: 6px; }
-  .legend .lg { display: block; width: 16px; height: 10px; }
-  .legend .lg.bar { width: 3px; height: 14px; background: var(--text); }
-  .legend .lg.band { height: 4px; background: #5a3a2a; border-top: 1px solid #7a4a30; border-bottom: 1px solid #7a4a30; }
-  .legend .lg.mk { width: 12px; height: 14px; border: 2px solid var(--accent); }
-  .padlink { display: inline-block; padding: 7px 10px; border: 1px solid var(--line2); text-decoration: none;
+  .legend .lg { display: block; width: 16px; height: 8px; }
+  .legend .lg.fill { background: var(--accent); }
+  .legend .lg.band { background: #4a3226; box-shadow: inset 0 0 0 1px #7a4a30; }
+  .legend .lg.mk { width: 12px; height: 14px; border: 2px solid var(--accent); background: rgba(255, 90, 31, .18); }
+  .padlink { display: inline-block; padding: 8px 12px; border: 1px solid var(--line2); text-decoration: none;
              color: var(--text); font-weight: 600; font-size: 11px; letter-spacing: .1em; }
   .padlink:hover { border-color: var(--accent); }
-  #shout { color: var(--accent); font-size: 11px; font-weight: 600; letter-spacing: .16em; text-transform: uppercase;
-           opacity: 0; transition: opacity .25s; min-width: 7em; }
-  .row button b { font-weight: 700; color: var(--accent); margin-left: 5px; }
-  button.on .row b, .row button.on b { color: #fff; }
+  .herobar > button { padding: 7px 14px; }
+  /* Status ("mixing", "randomised"...): a pill floating on the preview's corner. It's page chrome over the
+     preview, not part of the picture, so it never reaches the projectors, and it moves nothing. */
+  #shout { position: absolute; top: 10px; left: 10px; z-index: 3; pointer-events: none; display: inline-flex; align-items: center; gap: 6px;
+           height: 24px; padding: 0 10px; border-radius: 99px; background: rgba(8,8,10,.78); border: 1px solid rgba(255,90,31,.55);
+           color: #fff; font-size: 12px; font-weight: 600; opacity: 0; transform: translateY(-4px); transition: opacity .2s, transform .2s; }
+  #shout::before { content: ""; width: 6px; height: 6px; border-radius: 50%; background: var(--accent); }
+  .herobar .hint { margin-left: auto !important; text-align: right; font-size: 11.5px; }
+
+  /* ---- the Sketch tab: what's playing, the three energies, the presets, then the rest ---- */
+  [hidden] { display: none !important; }
+  /* What's playing, in words: the sketch in large, its preset beside it. */
+  .now { display: flex; align-items: baseline; gap: 12px; flex-wrap: wrap; margin: 0 0 16px; }
+  .now b { font-size: 22px; font-weight: 500; letter-spacing: .02em; }
+  .now span { color: var(--dim); font-size: 13px; }
+  .now span:not(:empty)::before { content: "· "; }
+  /* Themes: one row of tabs. The one chosen is what the tiles show and what Shuffle draws from. */
+  .themes { display: flex; flex-wrap: wrap; gap: 0; border: 1px solid var(--line); margin: 0 0 10px; }
+  .themes button { flex: 1 1 auto; border: 0; border-right: 1px solid var(--line); padding: 9px 12px; font-size: 11px;
+                   letter-spacing: .14em; text-transform: uppercase; color: var(--dim); font-weight: 600; }
+  .themes button:last-child { border-right: 0; }
+  .themes button.on { background: var(--text); color: var(--n0a0a0c, #0a0a0c); }
+  .themes button:hover:not(.on) { color: var(--text); }
+  .blurb { color: var(--dim); font-size: 12px; margin: 0 0 10px; min-height: 1em; }
+  .tiles { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 6px; margin: 0 0 12px; }
+  /* Tiles and preset chips are one kind of thing: tap the name to play it, tap NEXT to queue it as
+     Shuffle's next change. In Choose mode the name ticks it in or out of Shuffle instead. */
+  .it { display: flex; min-width: 0; border: 1px solid var(--line2); }
+  .it > button { border: 0; background: transparent; }
+  .it .go { flex: 1; min-width: 0; padding: 12px; text-align: left; font-size: 13px; font-weight: 500; letter-spacing: .02em;
+            white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .it .nx { flex: none; padding: 0 9px; font-size: 9.5px; letter-spacing: .14em; color: var(--n686868, #686868); border-left: 1px solid var(--line); }
+  .it .nx:hover { color: var(--accent); }
+  .it:hover { border-color: var(--accent); }
+  .it.on { background: var(--accent); border-color: var(--accent); }
+  .it.on .go { color: #fff; } .it.on .nx { color: #ffd6c6; border-left-color: rgba(var(--inv, 255,255,255), .3); }
+  .it.queued { box-shadow: inset 0 0 0 1px var(--accent); border-color: var(--accent); }
+  .it.queued .nx { color: var(--accent); }
+  .it.on.queued .nx { color: #fff; }
+  .choosing .it .nx { display: none; }
+  .choosing .it .go::before { content: "✓"; display: inline-block; width: 1.3em; color: var(--good); font-weight: 700; }
+  .choosing .it.out { opacity: .4; border-style: dashed; }
+  .choosing .it.out .go { text-decoration: line-through; }
+  .choosing .it.out .go::before { content: "–"; color: var(--dim); }
+  /* Shuffle: one toggle, how often, skip, and a bar that fills to the next change. */
+  .shuffle { display: grid; grid-template-columns: auto 1fr auto; gap: 8px; align-items: stretch; margin: 0 0 6px; }
+  .shuffle #bShuffle { padding: 10px 18px; min-width: 150px; text-align: left; }
+  .shuffle #bShuffle.on { background: var(--accent); border-color: var(--accent); }
+  .every { display: flex; border: 1px solid var(--line2); }
+  .every span { align-self: center; padding: 0 10px; color: var(--dim); font-size: 10px; letter-spacing: .14em; text-transform: uppercase; }
+  .every button { flex: 1; border: 0; border-left: 1px solid var(--line); padding: 6px 4px; font-size: 12px; color: var(--nd2d2d2, #d2d2d2); }
+  .every button.on { background: var(--n2c2c2e, #2c2c2e); color: #fff; }
+  .shufstat { position: relative; height: 3px; background: var(--well); margin: 0 0 6px; overflow: hidden; }
+  .shufstat i { position: absolute; left: 0; top: 0; bottom: 0; background: var(--accent); width: 0; }
+  #shufText { color: var(--dim); font-size: 12px; margin: 0 0 8px; }
+  .shufmeta { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin: 0 0 24px; color: var(--dim); font-size: 12px; }
+  .shufmeta button, .nextup button, .choosebar button { padding: 5px 10px; font-size: 11px; letter-spacing: .08em; }
+  .nextup { display: none; align-items: center; gap: 10px; flex-wrap: wrap; padding: 8px 10px; margin: 0 0 8px;
+            border: 1px solid var(--accent); background: rgba(255, 90, 31, .08); font-size: 13px; }
+  .nextup.show { display: flex; }
+  .nextup .lbl { color: var(--accent); font-size: 10px; font-weight: 600; letter-spacing: .16em; text-transform: uppercase; }
+  .nextup .sp { flex: 1; }
+  .choosebar { display: none; align-items: center; gap: 8px; flex-wrap: wrap; padding: 8px 10px; margin: 0 0 8px;
+               border: 1px solid var(--good); font-size: 12px; color: var(--nd8d8d8, #d8d8d8); }
+  .choosing .choosebar { display: flex; }
+  .choosebar .sp { flex: 1; }
+  .choosebar #bChooseDone { background: var(--good); border-color: var(--good); color: var(--n050507, #050507); }
+  #shufText b { color: var(--text); font-weight: 600; }
+  @media (max-width: 760px) { .shuffle { grid-template-columns: 1fr auto; } .every { grid-column: 1 / -1; grid-row: 2; } }
+  /* In the strip under the display, so a Shuffle in progress shows whichever tab is open. */
+  #shufPill { display: none; align-items: center; gap: 8px; padding: 6px 10px; border: 1px solid var(--accent);
+              color: var(--accent); font-size: 11px; font-weight: 600; letter-spacing: .12em; cursor: pointer; }
+  #shufPill.show { display: inline-flex; }
+  #about { margin: 10px 0 18px; display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2;
+           overflow: hidden; cursor: pointer; line-height: 1.5; }
+  #about.open { display: block; }
+  .sec { margin: 0 0 8px; font-size: 10px; font-weight: 500; letter-spacing: .18em; text-transform: uppercase; color: var(--dim); }
+  /* The same three colours as the Launchpad's energy pads, so the two read as one instrument. */
+  .energy { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin: 0 0 8px; }
+  .energy button { position: relative; min-height: 76px; padding: 12px 14px; text-align: left; display: flex; flex-direction: column;
+                   justify-content: flex-end; gap: 2px; background: var(--panel); font-size: 15px; letter-spacing: .04em; }
+  .energy button small { font-size: 10px; letter-spacing: .14em; color: var(--dim); font-weight: 600; text-transform: uppercase; }
+  .energy button kbd { position: absolute; top: 9px; right: 11px; font: 600 11px var(--font); color: var(--dim);
+                       border: 1px solid var(--line2); padding: 1px 6px; }
+  .energy .e1 { border-color: #4a6f8a; } .energy .e2 { border-color: #8a7a3a; } .energy .e3 { border-color: var(--accent); }
+  .energy .e1:hover { background: #2c3338; } .energy .e2:hover { background: var(--n33312a, #33312a); } .energy .e3:hover { background: #3a2c26; }
+  .energy button.hit { background: var(--n222224, #222224); }
+  .dice { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin: 0 0 22px; }
+  .dice button { padding: 8px 6px; font-size: 12px; color: var(--nd8d8d8, #d8d8d8); border-color: var(--line); }
+  .dice button:disabled { opacity: .35; }
+  /* Presets are played, not browsed: one tap each, the one playing lit. */
+  .chips { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 6px; margin: 0 0 8px; }
+  .chips .it .go { padding: 10px 12px; letter-spacing: .03em; }
+  .chips .it .go i { font-style: normal; color: var(--n525254, #525254); font-size: 10px; font-weight: 600; margin-right: 8px; }
+  .chips .it.on .go i { color: #ffd6c6; }
+  .chips .none { color: var(--dim); font-size: 12px; padding: 6px 0; grid-column: 1 / -1; }
+  .panel .card .row.save { margin: 0 0 22px; }
+  .row.save input { font-size: 13px; }
+  .panel .card .row.words { margin: 0 0 22px; }
+  details.help { border-top: 1px solid var(--line); padding: 12px 0 0; }
+  details.help summary { cursor: pointer; color: var(--dim); font-size: 11px; letter-spacing: .16em; text-transform: uppercase; }
+  details.help[open] summary { margin-bottom: 10px; }
+  details.help p { margin: 0 0 8px; }
+
+  /* ------------------------------------------------------------------ clean pass (2026-09)
+     Same behaviour as above; softer, quieter shapes, in line with the shared theme. */
+  .herobar { gap: 8px; }
+  #conn.pill { border-radius: 99px !important; padding: 4px 10px; font-size: 12px; font-weight: 500; }
+  #beat { gap: 5px; align-items: center; height: 34px; } #beat i { width: 26px; height: 6px; border: 0; border-radius: 99px; background: var(--n3a3a41, #3a3a41); }
+  #beat i.on { background: var(--text); } #beat i.b1.on { background: var(--accent); } #beat i.b1 { border: 0; }
+  .padlink { border-radius: 8px; padding: 8px 12px; font-weight: 500; font-size: 13px; color: var(--text); }
+  .padlink:hover { border-color: var(--n52525b, #52525b); }
+  #shufPill { border-radius: 99px; padding: 6px 12px; font-size: 12px; font-weight: 500; background: rgba(255,90,31,.1); }
+  .herobar > button, .herobar > a { height: 34px; display: inline-flex; align-items: center; }
+  /* the bar number is the first beat: the first segment gives way to it */
+  .hero #beat > #barN { height: 18px; min-height: 18px; min-width: 22px; padding: 0 6px; font-size: 11px; line-height: 18px; border: 0 !important; } #beat i.b1 { display: none; }
+  .herobar > button.icon { width: 34px; justify-content: center; padding: 0; } .herobar > button.icon svg { width: 17px; height: 17px; }
+  /* Headings inside a tab */
+  .sec { font-size: 12px; font-weight: 600; color: var(--dim); margin: 0 0 10px; }
+  .now b { font-size: 24px; font-weight: 600; letter-spacing: -.02em; }
+  /* Themes: a single scrolling row of chips, never a wrapped grid */
+  .themes { flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; gap: 6px; border: 0; margin: 0 0 10px; padding: 1px; }
+  .themes::-webkit-scrollbar { display: none; }
+  .themes button { flex: none; border: 1px solid var(--line) !important; border-radius: 99px !important; padding: 0 14px; height: 32px;
+                   font-size: 13px; font-weight: 500 !important; color: var(--dim); background: transparent; }
+  .themes button:last-child { border-right: 1px solid var(--line); }
+  .themes button.on { background: var(--text); color: var(--n09090b, #09090b); border-color: var(--text) !important; }
+  /* Tiles and preset chips: rounded cards; "queue as next" is a quiet icon at the end */
+  .tiles, .chips { gap: 6px; }
+  .it { border: 1px solid var(--line); border-radius: 10px; overflow: hidden; background: var(--n111114, #111114); transition: border-color .12s, background .12s; }
+  .it:hover { border-color: var(--n52525b, #52525b); }
+  .it .go { padding: 11px 12px; font-size: 13px; font-weight: 500; }
+  .it .nx { width: 36px; padding: 0; font-size: 15px; color: var(--n6b6b74, #6b6b74); border-left: 1px solid var(--line); border-radius: 0 !important; }
+  .it .nx:hover { color: var(--accent); background: rgba(255,90,31,.08); }
+  .it.on { background: var(--accent); border-color: var(--accent); }
+  .it.on .nx { color: rgba(var(--inv, 255,255,255),.8); border-left-color: rgba(var(--inv, 255,255,255),.25); }
+  .it.queued { box-shadow: none; border-color: var(--accent); background: rgba(255,90,31,.08); }
+  /* Shuffle: a toggle, a segmented "every", Skip */
+  .shuffle #bShuffle { border-radius: 10px !important; min-width: 130px; font-weight: 600 !important; }
+  .every { border: 1px solid var(--line); border-radius: 10px; padding: 3px; gap: 2px; background: var(--n111114, #111114); overflow: hidden; }
+  .every span { font-size: 12px; padding: 0 8px; }
+  .every button { border: 0 !important; border-radius: 7px !important; color: var(--dim); }
+  .every button.on { background: var(--text); color: var(--n09090b, #09090b); }
+  .shufstat { height: 3px; border-radius: 99px; }
+  .nextup { border-radius: 10px; } .choosebar { border-radius: 10px; }
+  .nextup .lbl { font-size: 12px; font-weight: 600; }
+  /* Energy: neutral cards; the energy shows as a coloured dot, not three different borders */
+  .energy button { border-color: var(--line) !important; border-radius: 12px !important; background: var(--n111114, #111114); font-size: 15px; font-weight: 600 !important; }
+  .energy button::before { content: ""; position: absolute; top: 14px; left: 14px; width: 8px; height: 8px; border-radius: 50%; background: #60a5fa; }
+  .energy .e2::before { background: #fbbf24; } .energy .e3::before { background: var(--accent); }
+  .energy button:hover { background: var(--n17171a, #17171a) !important; border-color: var(--n52525b, #52525b) !important; }
+  .energy button small { font-size: 12px; font-weight: 400; }
+  .energy button kbd { border-radius: 5px; font-size: 11px; }
+  .dice button { border-radius: 8px !important; color: var(--text); }
+  /* Transitions: a tidy form */
+  #transCard .p label { display: block; font-size: 12px; font-weight: 600; color: var(--dim); margin: 14px 0 6px; }
+  #transCard select { height: 40px; padding: 0 12px; font-size: 14px; }
+  .tpool { display: flex; flex-wrap: wrap; gap: 6px; margin: 10px 0 4px; }
+  .tpool button { display: inline-flex; align-items: center; gap: 7px; height: 32px; padding: 0 12px; border-radius: 99px !important; border-color: var(--line) !important;
+                  color: var(--dim); font-size: 13px; }
+  .tpool button::before { content: ""; width: 12px; height: 12px; border-radius: 4px; border: 1.5px solid var(--line2); box-sizing: border-box; }
+  .tpool button.on { background: rgba(255,90,31,.12) !important; border-color: rgba(255,90,31,.55) !important; color: var(--text) !important; }
+  .tpool button.on::before { border-color: var(--accent); background: var(--accent) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 12'%3E%3Cpath d='M2.5 6.2l2.2 2.2 4.8-4.8' fill='none' stroke='white' stroke-width='1.8' stroke-linecap='round'/%3E%3C/svg%3E") center/100% no-repeat; }
+  .tpool .hint { flex-basis: 100%; margin: 2px 0 0; }
+  /* The ? lists keyboard shortcuts: no use on a touch screen, so it goes and the counter takes the room. */
+  @media (hover: none), (max-width: 760px) { #bKeys { display: none !important; } }
+  #transCard .row { gap: 8px; margin: 8px 0; }
+  #transCard label.hint { display: flex; gap: 10px; align-items: flex-start; margin: 12px 0; font-size: 13px; color: var(--text); }
+  #transCard input[type=checkbox] { width: 18px; height: 18px; margin: 1px 0 0; accent-color: var(--accent); flex: none; }
+  #bNext { height: 42px; font-weight: 600 !important; }
+  details.help summary { font-size: 13px; font-weight: 500; }
+  @media (max-width: 760px) {
+    .themes button { height: 40px; } .it .go { padding: 13px 12px; } .it .nx { width: 44px; }
+    .every button { min-height: 36px; }
+  }
 </style>
-<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;500;600&display=swap" rel="stylesheet">
 <script src="/s5auth.js"></script>
 </head>
 <body>
@@ -187,42 +393,81 @@
 </header>
 <main class="hl">
   <section class="hero">
-    <div id="previewWrap"><canvas id="gl"></canvas><canvas id="ov"></canvas></div>
+    <div id="previewWrap"><canvas id="gl"></canvas><canvas id="ov"></canvas><span id="shout" aria-live="polite"></span></div>
     <div class="herobar">
       <span id="conn" class="pill">connecting</span>
-      <span id="beat" title="Beat and bar"><i class="b1"></i><i></i><i></i><i></i></span>
-      <span id="shout"></span>
+      <span id="beat" title="The bar's four beats (the 1 in orange)"><button id="barN"></button><i class="b1"></i><i></i><i></i><i></i></span>
+      <button id="bWave" class="icon" title="Audio monitor: the track's waveform under the preview, for you, not on the projector (V)" aria-label="Audio monitor"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M3 12h2M7 8v8M11 5v14M15 9v6M19 11v2M21 12h0"/></svg></button>
       <button id="bFreeze" title="Freeze all automation (Space)">Freeze</button>
+      <a href="pad.html" class="padlink">Launchpad<span class="long"> →</span></a>
       <button id="bKeys" title="Keyboard shortcuts (?)">?</button>
-      <a href="pad.html" class="padlink">LAUNCHPAD →</a>
-      <span class="hint">Every change goes live on any projector surface set to <b>generative</b>
-        (<a id="editLink" data-port="8100" data-path="/edit">mapping editor</a>, content → generative).</span>
+      <span class="hint">Live on every projector surface set to <b>generative</b>
+        (<a id="editLink" data-port="8100" data-path="/edit">mapping editor</a>).</span>
     </div>
   </section>
+  <!-- Below the pinned display, so it scrolls with the controls. -->
+  <div class="faderrow"><div id="intensity" title="How strongly the picture reacts, calm to full on. Glides, stays on the beat. (Arrow keys when focused)"></div></div>
   <section class="panel tabbed">
     <div class="card">
       <h3>Sketch</h3>
-      <select id="sketch" class="big" title="The live sketch"></select>
-      <p class="hint" id="about"></p>
-      <p id="err"></p>
-      <div class="row"><button id="bCalm" class="grow" title="Q — a calm look, nothing hectic">Calm <b>Q</b></button>
-        <button id="bGroove" class="grow" title="W — a groove">Groove <b>W</b></button>
-        <button id="bDrop" class="grow" title="E — full on, for the drop">Drop <b>E</b></button></div>
-      <div class="row"><button id="bRand" class="grow">Randomise</button><button id="bNudge" class="grow">Nudge</button><button id="bReset" class="grow">Reset</button></div>
-      <div class="row"><input id="textIn" type="text" class="grow" placeholder="Words, separated by |  (wormhole, subliminal)"><button id="bText">Set</button></div>
-      <p class="hint" id="textHint">Up to eight words. Sketches that draw type read them straight off — the page draws them once and hands them over.</p>
-      <div class="row"><input id="presetName" type="text" class="grow" placeholder="New preset, e.g. hex-bloom"><button id="bSave">Save</button></div>
-      <div class="row"><select id="presetList" class="grow"></select><button id="bLoad">Load</button></div>
-      <p class="hint"><b>Calm / Groove / Drop</b> are the same dice at three energies: they aim the
-        speeds, counts and reaction amounts low, middle or high. All of them, and Randomise, stay
-        inside each parameter's own range. Ranges and automation are saved with the preset.</p>
-      <div class="legend">
-        <span><i class="lg bar"></i>the value</span>
-        <span><i class="lg band"></i>how far it may move — drag the ▲ arrows</span>
-        <span><i class="lg mk"></i>automation, moving on its own</span>
+      <div class="now"><b id="nowName">—</b><span id="nowPreset"></span></div>
+
+      <div id="picker">
+      <div class="themes" id="themeChips" role="tablist"></div>
+      <p class="blurb" id="themeBlurb"></p>
+      <div class="choosebar"><span id="chooseText"></span><span class="sp"></span>
+        <button id="bAllIn">All in</button><button id="bNone">None</button><button id="bChooseDone">Done</button></div>
+      <div class="tiles" id="sketchTiles"></div>
+
+      <div id="shufBlock">
+      <div class="nextup" id="nextUp"><span class="lbl">Next up</span><b id="nextName"></b><span id="nextWhen"></span>
+        <span class="sp"></span><button id="bNextNow" title="Play it on the next 1">Play on the 1</button>
+        <button id="bNextClear" title="Clear it: Shuffle picks for itself">✕</button></div>
+      <div class="shuffle">
+        <button id="bShuffle" title="Every few bars, on the 1, a new sketch from this theme with one of its presets (S)">Shuffle</button>
+        <div class="every" id="everyChips"><span>every</span></div>
+        <button id="bSkip" title="Something else from this theme, on the next 1 (N)">Skip</button>
       </div>
-      <p class="hint">Drag the line to set the value, the arrows under it to set the range.
-        <b>Shift</b>-drag for fine, double-click to reset it, wheel to nudge. <b>?</b> lists the keys.</p>
+      <div class="shufstat"><i id="shufFill"></i></div>
+      <p id="shufText"></p>
+      <div class="shufmeta"><span id="shufPool"></span><button id="bChoose" title="Tick which sketches and presets Shuffle may play from this theme">Choose…</button></div>
+      </div>
+      <p class="hint" id="about" title="Click for the whole description"></p>
+      <p id="err"></p>
+
+      <p class="sec">New look</p>
+      <div class="energy">
+        <button id="bCalm" class="e1" title="A calm look, nothing hectic"><kbd>Q</kbd>Calm<small>breakdown</small></button>
+        <button id="bGroove" class="e2" title="A groove"><kbd>W</kbd>Groove<small>in the mix</small></button>
+        <button id="bDrop" class="e3" title="Full on, for the drop"><kbd>E</kbd>Drop<small>full on</small></button>
+      </div>
+      <div class="dice">
+        <button id="bRand" title="Anything, inside every range (R)">Randomise</button>
+        <button id="bNudge" title="A small push on everything">Nudge</button>
+        <button id="bUndo" title="Back to before the last new look (Shift+R)" disabled>Undo</button>
+        <button id="bReset" title="Every parameter to its default">Reset</button>
+      </div>
+
+      <p class="sec">Presets</p>
+      <div class="chips" id="presetChips"></div>
+      </div>
+      <div class="row save"><input id="presetName" type="text" class="grow" placeholder="Save what's playing as…"><button id="bSave">Save</button></div>
+
+      <p class="sec">Words</p>
+      <div class="row words"><input id="textIn" type="text" class="grow" placeholder="WAKE UP|OBEY|DANCE — up to eight, for sketches that draw type"><button id="bText">Set</button></div>
+
+      <details class="help"><summary>How the sliders work</summary>
+        <div class="legend">
+          <span><i class="lg fill"></i>the value</span>
+          <span><i class="lg band"></i>how far it may move (drag the ▲ under it)</span>
+          <span><i class="lg mk"></i>automation, moving it now</span>
+        </div>
+        <p class="hint">Drag the slider to set the value and the ▲ ends to narrow its range. <b>Shift</b>-drag for fine,
+          double-click to reset, wheel to nudge. <b>A</b> automates the selected one.</p>
+        <p class="hint"><b>Calm / Groove / Drop</b> are the same dice at three energies: they aim the speeds, counts
+          and reaction amounts low, middle or high. They and Randomise stay inside every range, and ranges and
+          automation are saved with a preset. <b>?</b> lists the keys.</p>
+      </details>
     </div>
     <div class="card" id="transCard">
       <h3>Transitions</h3>
@@ -231,6 +476,7 @@
         through a build, slow dissolves in a breakdown, wipes and irises in the groove.</p>
       <div class="p"><label for="tType">Type</label></div>
       <select id="tType" class="big"></select>
+      <div class="tpool" id="tPool" hidden></div>
       <div class="row">
         <select id="tBeats" class="grow" title="Length">
           <option value="0">Length: auto</option><option value="1">1 beat</option><option value="2">2 beats</option>
@@ -242,13 +488,13 @@
         </select>
       </div>
       <label class="hint"><input type="checkbox" id="tPresets"> Presets morph too (loading a preset transitions from the old values)</label>
-      <div class="row"><button id="bNext" class="grow">Mix to a random sketch ▶</button></div>
+      <div class="row"><button id="bNext" class="grow" title="Shuffle's pick: from its theme, next up first, only what is ticked in">Mix to the next one ▶</button></div>
       <p class="hint" id="tLast"></p>
     </div>
     <div id="groups"></div>
   </section>
 </main>
-<div id="keys"><h2>Keyboard</h2><table id="keysTable"></table></div>
+<div id="keys"><div class="kbox"><div class="khead"><h2>Keyboard</h2><span>click a row to do it</span><button class="kclose">Close</button></div><table id="keysTable"></table></div></div>
 <script src="render.js"></script>
 <script src="vj.js"></script>
 <script>
@@ -268,10 +514,24 @@ addEventListener("resize", resize); resize();
 
 connectEvents(R, {
   onStatus: ok => { $("conn").textContent = ok ? "live" : "reconnecting"; $("conn").className = "pill" + (ok ? " ok" : ""); },
-  onSketch: sk => { SK = sk; build(); refreshSketches(); refreshPresets(); },
+  onSketch: sk => {
+    if (!SK || SK.name !== sk.name) { lastPreset = ""; undoV = null; $("bUndo").disabled = true; }
+    SK = sk; build(); refreshSketches(); refreshPresets();
+  },
   onParams: p => { if (!dragging) { V = p; sync(); } else R.genParams = V; },
-  onAuto: (a, frz) => { AU = a; FREEZE = !!frz; $("bFreeze").classList.toggle("on", FREEZE); if (!dragging) syncAuto(); },
+  // The echo of a range end being dragged is always a few moves behind the finger; keep ours.
+  onAuto: (a, frz) => {
+    const mine = rangeDrag && AU[rangeDrag];
+    AU = a; if (mine) AU[rangeDrag] = mine; R.genAuto = AU;
+    FREEZE = !!frz; $("bFreeze").classList.toggle("on", FREEZE); if (!dragging) syncAuto();
+  },
   onText: t => { if (document.activeElement !== $("textIn")) $("textIn").value = t || ""; },
+  onShuffle: sh => {
+    const was = SHUF.theme; SHUF = sh;
+    if (sh.playing) ACTIVE = sh.playing;
+    if (sh.playing === ACTIVE && sh.preset) lastPreset = sh.preset;
+    paintShuffle(); if (was !== sh.theme || THEMES.length) paintPicker(); paintPresets();
+  },
   onTransition: st => showTrans(st),
 });
 
@@ -287,11 +547,20 @@ function set(changes) {
   };
   if (performance.now() - lastPush > 40) send(); else pushTimer = setTimeout(send, 40);
 }
-// Automation changes are rare (a tap, not a drag), so they go straight out.
+// Automation goes out on the same 40 ms throttle as the values. Most changes are a tap, but
+// dragging a range end is a stream of them, and each post is a disk write and a broadcast.
+let autoPending = {}, autoTimer = null, lastAuto = 0, rangeDrag = null;
 function setAuto(id, patch) {
   AU[id] = Object.assign({}, AU[id], patch);
   R.genAuto = AU;
-  fetch("/api/auto", { method: "POST", body: JSON.stringify({ [id]: AU[id] }) }).catch(() => {});
+  autoPending[id] = AU[id];
+  clearTimeout(autoTimer);
+  const send = () => {
+    lastAuto = performance.now();
+    const body = JSON.stringify(autoPending); autoPending = {};
+    fetch("/api/auto", { method: "POST", body }).catch(() => {});
+  };
+  if (performance.now() - lastAuto > 40) send(); else autoTimer = setTimeout(send, 40);
   syncAuto();
 }
 function setFreeze(on) {
@@ -321,12 +590,16 @@ const frac = (p, v) => (v - p.min) / ((p.max - p.min) || 1);
 function build() {
   $("about").textContent = SK.about || "";
   $("err").textContent = R.genError || "";
+  // Two columns that stack on their own, so opening one parameter's automation only pushes
+  // down its own column: first half down the left, second half down the right.
+  const cols = ps => { const h = Math.ceil(ps.length / 2);
+    return `<div class="col">${ps.slice(0, h).map(row).join("")}</div><div class="col">${ps.slice(h).map(row).join("")}</div>`; };
   $("groups").innerHTML = SK.groups.map((g, gi) =>
-    `<div class="card"><h3>${g.name}<button data-g="${gi}">random</button></h3>` +
-    g.params.map(p => `<div class="pp" id="pp_${p.id}" data-id="${p.id}">
+    `<div class="card"><h3>${g.name}<button data-g="${gi}">random</button></h3>` + cols(g.params) + "</div>").join("");
+  function row(p) { return `<div class="pp" id="pp_${p.id}" data-id="${p.id}">
         <div class="pl"><label>${p.label}</label><span class="pv" id="v_${p.id}"></span>
           <button class="ab" id="a_${p.id}" title="Automate this one (A)">A</button></div>
-        <div class="tr" id="t_${p.id}" title="Drag the line for the value, the arrows below for its range. Shift = fine, double-click = default, wheel = nudge."><div class="band"></div><div class="mk"></div>
+        <div class="tr" id="t_${p.id}" title="Drag for the value, the ▲ ends below for its range. Shift = fine, double-click = default, wheel = nudge."><div class="band"></div><div class="fill"></div><div class="mk"></div>
           <div class="nib lo"></div><div class="nib hi"></div><div class="bar"></div></div>
         <div class="au" id="au_${p.id}">
           <span class="lbl">rate</span><select id="ar_${p.id}"></select>
@@ -339,7 +612,7 @@ function build() {
           <span class="rng" id="rg_${p.id}"></span>
           <button id="af_${p.id}" title="Set the range to the full parameter">full</button>
         </div>
-      </div>`).join("") + "</div>").join("");
+      </div>`; }
 
   for (const p of params()) {
     track(p);
@@ -379,6 +652,7 @@ function track(p) {
     grab = d.sort((a, b) => a[1] - b[1])[0][0];
     startX = e.clientX;
     startVal = grab === "v" ? (V[p.id] ?? p.default) : grab === "lo" ? loOf(p) : hiOf(p);
+    if (grab !== "v") rangeDrag = p.id;
     dragging++;
     move(e);
   });
@@ -396,7 +670,7 @@ function track(p) {
     }
   };
   el.addEventListener("pointermove", move);
-  const up = e => { if (grab) { grab = null; dragging = Math.max(0, dragging - 1); } };
+  const up = e => { if (grab) { grab = null; rangeDrag = null; dragging = Math.max(0, dragging - 1); } };
   el.addEventListener("pointerup", up);
   el.addEventListener("pointercancel", up);
   el.addEventListener("dblclick", () => { set({ [p.id]: p.default }); paint(p); });
@@ -430,6 +704,11 @@ function paint(p) {
   $("v_" + p.id).textContent = fmt(p, v);
   const tr = $("t_" + p.id), pc = x => (frac(p, x) * 100).toFixed(2) + "%";
   tr.querySelector(".bar").style.left = pc(v);
+  // The fill runs from nought for a speed that can go either way, else from the bottom.
+  const zero = p.min < 0 && p.max > 0 ? 0 : p.min, fl = tr.querySelector(".fill");
+  fl.style.left = pc(Math.min(zero, v)); fl.style.width = (Math.abs(frac(p, v) - frac(p, zero)) * 100).toFixed(2) + "%";
+  const span = (p.max - p.min) || 1;
+  $("pp_" + p.id).classList.toggle("narrow", (loOf(p) - p.min) / span > 0.005 || (p.max - hiOf(p)) / span > 0.005);
   const b = tr.querySelector(".band");
   b.style.left = pc(loOf(p)); b.style.width = ((frac(p, hiOf(p)) - frac(p, loOf(p))) * 100).toFixed(2) + "%";
   tr.querySelector(".nib.lo").style.left = pc(loOf(p));
@@ -438,7 +717,9 @@ function paint(p) {
   if (rg) rg.textContent = fmt(p, loOf(p)) + " – " + fmt(p, hiOf(p));
 }
 
-function sync() { if (SK) for (const p of params()) paint(p); }
+function sync() { if (SK) { for (const p of params()) paint(p); INT.set(VJ.intensityOf(params(), loOf, hiOf, V)); } }
+// Intensity: one fader for how busy the picture is, played live (see VJ.intensityValues).
+const INT = VJ.fader($("intensity"), e => { if (SK) { set(VJ.intensityValues(params(), loOf, hiOf, e, V)); lastPreset = ""; paintPresets(); } });
 
 function syncAuto() {
   if (!SK) return;
@@ -448,7 +729,7 @@ function syncAuto() {
     $("a_" + p.id).classList.toggle("on", !!a.on);
     $("at_" + p.id).classList.toggle("on", !!a.retrig);
     $("ah_" + p.id).classList.toggle("on", hz);
-    const ar = $("ar_" + p.id), list = hz ? HZ.map(v => ({ cpb: v, label: v + " Hz" })) : NOTES;
+    const ar = $("ar_" + p.id), list = hz ? HZ : NOTES;
     const want = near(list, a.rate ?? 0.25).cpb;
     if (ar.dataset.hz !== String(hz)) {
       ar.dataset.hz = String(hz);
@@ -462,7 +743,12 @@ function syncAuto() {
 }
 
 // The moving marker, the beat pulse, and the preview, all on the same frame.
-const beatDots = [...$("beat").children];
+const beatDots = [...$("beat").querySelectorAll("i")], barN = VJ.barCounter($("barN"));
+// The audio monitor under the preview (a setting shared with Live).
+const drawWave = VJ.waveStrip($("previewWrap"), R);
+const paintWaveBtn = () => { $("bWave").classList.toggle("on", VJ.waveOn()); $("bWave").setAttribute("aria-pressed", VJ.waveOn()); };
+$("bWave").onclick = () => { VJ.waveOn(!VJ.waveOn()); paintWaveBtn(); };
+addEventListener("s5wavepv", paintWaveBtn); paintWaveBtn();
 (function frame(now) {
   R.draw(now);
   if (SK) {
@@ -474,8 +760,13 @@ const beatDots = [...$("beat").children];
       mk.style.left = (frac(p, live[p.id] ?? p.min) * 100).toFixed(2) + "%";
     }
     const f = R.lastFrame;
-    if (f) beatDots.forEach((d, i) => d.classList.toggle("on", i === Math.round(f.bwb) - 1 && 1 - f.frac > 0.35));
+    INT.beat(f);
   }
+  // The beat counter: the beat you're on stays lit the whole beat (brightest on the hit).
+  const bf = R.lastFrame;
+  drawWave(bf); barN(bf);
+  beatDots.forEach((d, i) => { const now = !!bf && i === Math.round(bf.bwb) - 1; d.classList.toggle("on", now);
+    d.style.opacity = now ? (0.55 + 0.45 * Math.pow(1 - bf.frac, 2)).toFixed(2) : ""; });
   requestAnimationFrame(frame);
 })(performance.now());
 
@@ -492,17 +783,22 @@ const beatDots = [...$("beat").children];
 // the look, and a dice roll on them is how you end up at nine frames a second.
 const skipRnd = VJ.skip;
 
+function keepUndo() { undoV = Object.assign({}, V); $("bUndo").disabled = false; }
+function undo() { if (undoV) { set(Object.assign({}, undoV)); sync(); flash("undone"); } }
+function hit(id) { const b = $(id); b.classList.add("hit"); setTimeout(() => b.classList.remove("hit"), 160); }
 function energise(e, label) {
-  undoV = Object.assign({}, V);
+  keepUndo();
   set(VJ.energyValues(params(), loOf, hiOf, e));
   sync(); flash(label);
+  hit(e < 0.4 ? "bCalm" : e < 0.8 ? "bGroove" : "bDrop");
+  lastPreset = ""; paintPresets();
 }
 let flashTimer = null;
 function flash(msg) {
   const el = $("shout");
-  el.textContent = msg; el.style.opacity = "1";
+  el.textContent = msg[0].toUpperCase() + msg.slice(1); el.style.opacity = "1"; el.style.transform = "none";
   clearTimeout(flashTimer);
-  flashTimer = setTimeout(() => (el.style.opacity = "0"), 900);
+  flashTimer = setTimeout(() => { el.style.opacity = "0"; el.style.transform = ""; }, 1400);
 }
 $("bCalm").onclick = () => energise(0.22, "calm");
 $("bGroove").onclick = () => energise(0.55, "groove");
@@ -510,10 +806,13 @@ $("bDrop").onclick = () => energise(0.92, "drop");
 
 $("bRand").onclick = () => randomise();
 function randomise() {
-  undoV = Object.assign({}, V);
+  keepUndo();
   set(Object.fromEntries(params().filter(p => !skipRnd(p)).map(p => [p.id, rnd(p)])));
   sync(); flash("randomised");
+  lastPreset = ""; paintPresets();
 }
+$("bUndo").onclick = undo;
+$("about").onclick = () => $("about").classList.toggle("open");
 $("bNudge").onclick = () => {
   set(Object.fromEntries(params().filter(p => !skipRnd(p)).map(p => {
     const lo = loOf(p), hi = hiOf(p);
@@ -528,18 +827,145 @@ $("keys").onclick = () => $("keys").classList.remove("show");
 
 // ---------- sketches and presets
 let PRESETS = [];
+// ---------- themes, the sketch tiles and Shuffle
+// The theme picked here is both what the tiles show and what Shuffle draws from, and it is held by
+// the visuals service, so the Launchpad and every other page agree on it. Shuffle itself runs there
+// too: it keeps changing on the 1 with no page open, and this page only shows it and steers it.
+let THEMES = [], TITLES = {}, ACTIVE = "", SHUF = { on: false, theme: "all", every: 8, left: null, queue: null, out: {} };
+let ALLNAMES = [], LEGACY = false, CHOOSE = false;
+const EVERY = [1, 2, 4, 8, 16, 32];
+const esc = s => String(s).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]);
+const allThemes = () => [{ id: "all", name: "All", blurb: "Every sketch", sketches: LEGACY ? ALLNAMES : THEMES.flatMap(t => t.sketches) }, ...THEMES];
+const themeNow = () => allThemes().find(t => t.id === SHUF.theme) || allThemes()[0];
+const postShuffle = d => fetch("/api/shuffle", { method: "POST", body: JSON.stringify(d) }).catch(() => {});
+const bars = n => n + (n === 1 ? " bar" : " bars");
+
 async function refreshSketches() {
   const r = await (await fetch("/api/sketches")).json();
-  $("sketch").innerHTML = r.sketches.map(n => `<option ${n === r.active ? "selected" : ""}>${n}</option>`).join("");
+  // A visuals service from before themes sends only the names: show them all, plainly, and hide
+  // Shuffle, which such a server doesn't have either.
+  LEGACY = !Array.isArray(r.themes);
+  THEMES = LEGACY ? [] : r.themes; TITLES = r.titles || {}; ACTIVE = r.active; ALLNAMES = r.sketches || [];
+  $("shufBlock").hidden = LEGACY; $("themeChips").hidden = LEGACY;
+  paintPicker(); paintShuffle();
 }
-$("sketch").onchange = async e => {
-  const r = await postJson("/api/select", { sketch: e.target.value });
-  if (r) noteTrans(r.trans, "Mixing to " + e.target.value);
+// What Shuffle leaves out of the theme on screen, and sending a change to it (the whole list).
+const outNow = () => { const o = (SHUF.out || {})[themeNow().id] || {}; return { sketches: o.sketches || [], presets: o.presets || {} }; };
+function sendOut(o) {
+  SHUF.out = Object.assign({}, SHUF.out, { [themeNow().id]: o });
+  paintPicker(); paintPresets(); paintShuffle();
+  postShuffle({ out: { theme: themeNow().id, sketches: o.sketches, presets: o.presets } });
+}
+function toggleSketchOut(n) {
+  const o = outNow(), set = new Set(o.sketches);
+  set.has(n) ? set.delete(n) : set.add(n);
+  sendOut({ sketches: [...set], presets: o.presets });
+}
+function togglePresetOut(p) {
+  const o = outNow(), mine = new Set(o.presets[ACTIVE] || []);
+  mine.has(p) ? mine.delete(p) : mine.add(p);
+  sendOut({ sketches: o.sketches, presets: Object.assign({}, o.presets, { [ACTIVE]: [...mine] }) });
+}
+const queue = (sketch, preset) => {
+  SHUF.queue = { sketch, preset: preset || null }; paintShuffle(); paintPicker(); paintPresets();
+  postShuffle({ queue: SHUF.queue });
+  flash("queued");
 };
+// One kind of button for tiles and preset chips: the name plays it, NEXT queues it.
+const item = (cls, label, title, data) =>
+  `<div class="it ${cls}" ${data}><button class="go" title="${title}">${label}</button><button class="nx" title="Play next: at Shuffle's next change, or on the next 1">${cls.includes("queued") ? "✓" : "+"}</button></div>`;
+function paintPicker() {
+  const th = themeNow();
+  $("themeChips").innerHTML = allThemes().map(t =>
+    `<button data-t="${esc(t.id)}" role="tab" class="${t.id === th.id ? "on" : ""}" title="${esc(t.blurb)}">${esc(t.name)}</button>`).join("");
+  $("themeChips").querySelectorAll("button").forEach(b => b.onclick = () => {
+    SHUF.theme = b.dataset.t; paintPicker(); paintShuffle(); postShuffle({ theme: SHUF.theme });
+  });
+  $("themeBlurb").textContent = `${th.blurb} · ${th.sketches.length} sketches`;
+  const out = outNow().sketches, q = SHUF.queue;
+  $("sketchTiles").innerHTML = th.sketches.map(n => item(
+    [n === ACTIVE ? "on" : "", q && q.sketch === n && !q.preset ? "queued" : "", out.includes(n) ? "out" : ""].join(" "),
+    esc(TITLES[n] || n), esc(n), `data-s="${esc(n)}"`)).join("");
+  $("sketchTiles").querySelectorAll(".it").forEach(el => {
+    const n = el.dataset.s;
+    el.querySelector(".go").onclick = async () => {
+      if (CHOOSE) return toggleSketchOut(n);
+      const r = await postJson("/api/select", { sketch: n });           // through a transition, on the beat
+      if (r) { noteTrans(r.trans, "Mixing to " + (TITLES[n] || n)); flash("mixing to " + (TITLES[n] || n)); }
+    };
+    el.querySelector(".nx").onclick = () => queue(n);
+  });
+  $("picker").classList.toggle("choosing", CHOOSE);
+  $("chooseText").innerHTML = `Tick what Shuffle may play from <b>${esc(th.name)}</b>: the sketches here, and the presets below for the one playing. Picking by hand still plays anything.`;
+  $("nowName").textContent = TITLES[ACTIVE] || ACTIVE || "—";
+}
+function paintShuffle() {
+  const on = !!SHUF.on, th = themeNow().name;
+  $("bShuffle").classList.toggle("on", on);
+  $("bShuffle").textContent = on ? "Shuffle on" : "Shuffle";
+  const ev = $("everyChips");
+  ev.innerHTML = `<span>every</span>` + EVERY.map(n =>
+    `<button data-n="${n}" class="${n === SHUF.every ? "on" : ""}" title="${bars(n)}">${n}</button>`).join("") + `<span>bars</span>`;
+  ev.querySelectorAll("button").forEach(b => b.onclick = () => { SHUF.every = +b.dataset.n; paintShuffle(); postShuffle({ every: SHUF.every }); });
+  $("shufText").innerHTML = on
+    ? `Next change in <b>${bars(SHUF.left || SHUF.every)}</b>, on the 1: a sketch from <b>${esc(th)}</b> with one of its presets.`
+    : `Off. Turn it on for a new sketch from <b>${esc(th)}</b>, with one of its presets, every ${bars(SHUF.every)} on the 1. Picking one yourself gives it the full ${bars(SHUF.every)}.`;
+  $("nowPreset").textContent = SHUF.playing === ACTIVE && SHUF.preset ? SHUF.preset : (lastPreset || "");
+  // Next up: what the next change will be, if something is queued.
+  const q = SHUF.queue;
+  $("nextUp").classList.toggle("show", !!q);
+  if (q) {
+    $("nextName").textContent = (TITLES[q.sketch] || q.sketch) + (q.preset ? " · " + q.preset : "");
+    $("nextWhen").textContent = on ? `at the next change, in ${bars(SHUF.left || SHUF.every)}` : "on the next 1";
+    $("bNextNow").hidden = !on;
+  }
+  // How much of the theme Shuffle may play.
+  const th2 = themeNow(), o = outNow(), n = th2.sketches.filter(x => !o.sketches.includes(x)).length;
+  const np = Object.values(o.presets).reduce((a, l) => a + l.length, 0);
+  $("shufPool").textContent = n === 0
+    ? `Everything in ${th2.name} is ticked out, so Shuffle plays all ${th2.sketches.length}.`
+    : `Shuffle plays ${n === th2.sketches.length ? "all " + n : n + " of " + th2.sketches.length} sketches` +
+      (np ? `, leaving out ${np} preset${np === 1 ? "" : "s"}.` : ".");
+  $("bChoose").textContent = CHOOSE ? "Done" : "Choose…";
+}
+$("bChoose").onclick = () => { CHOOSE = !CHOOSE; paintPicker(); paintPresets(); paintShuffle(); };
+$("bChooseDone").onclick = () => { CHOOSE = false; paintPicker(); paintPresets(); paintShuffle(); };
+$("bAllIn").onclick = () => sendOut({ sketches: [], presets: {} });
+$("bNone").onclick = () => sendOut({ sketches: [...themeNow().sketches], presets: outNow().presets });
+$("bNextNow").onclick = () => { postShuffle({ skip: true }); flash("next on the 1"); };
+$("bNextClear").onclick = () => { SHUF.queue = null; paintShuffle(); paintPicker(); paintPresets(); postShuffle({ queue: null }); };
+$("bShuffle").onclick = () => { SHUF.on = !SHUF.on; paintShuffle(); postShuffle({ on: SHUF.on }); };
+$("bSkip").onclick = () => { postShuffle({ skip: true }); flash("next on the 1"); };
+// The bar under the buttons fills towards the next change, smoothly within the bar.
+(function shufFrame() {
+  const f = R.lastFrame;
+  let w = 0;
+  if (SHUF.on && f && SHUF.left) {
+    const inBar = (VJ.barBeat(f) % 4 + 4) % 4 / 4;
+    w = Math.max(0, Math.min(1, (SHUF.every - SHUF.left + inBar) / SHUF.every));
+  }
+  $("shufFill").style.width = (w * 100).toFixed(1) + "%";
+  requestAnimationFrame(shufFrame);
+})();
 async function refreshPresets() {
   const r = await (await fetch("/api/presets")).json();
   PRESETS = r.presets;
-  $("presetList").innerHTML = PRESETS.map(n => `<option>${n}</option>`).join("") || "<option value=''>(none saved)</option>";
+  paintPresets();
+}
+// Numbered 1-9 to match the keys that jump to them.
+function paintPresets() {
+  const esc = s => s.replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]);
+  const q = SHUF.queue, outP = (outNow().presets[ACTIVE]) || [];
+  $("presetChips").innerHTML = PRESETS.length
+    ? PRESETS.map((n, i) => item(
+        [n === lastPreset ? "on" : "", q && q.sketch === ACTIVE && q.preset === n ? "queued" : "", outP.includes(n) ? "out" : ""].join(" "),
+        `<i>${i < 9 ? i + 1 : "·"}</i>${esc(n)}`, esc(n), `data-n="${esc(n)}"`)).join("")
+    : `<span class="none">No presets for this sketch yet: save one below.</span>`;
+  $("presetChips").querySelectorAll(".it").forEach(el => {
+    const n = el.dataset.n;
+    el.querySelector(".go").onclick = () => CHOOSE ? togglePresetOut(n) : loadPreset(n);
+    el.querySelector(".nx").onclick = () => queue(ACTIVE, n);
+  });
 }
 // The words sketches can draw. Sent on Enter or on the button; the renderer draws them to a
 // texture on arrival, so nothing here has to know how type works.
@@ -552,35 +978,61 @@ $("textIn").onkeydown = e => { if (e.key === "Enter") { sendText(); e.preventDef
 $("bSave").onclick = async () => {
   const n = $("presetName").value.trim(); if (!n) return;
   const r = await fetch(`/api/presets/${encodeURIComponent(n)}`, { method: "POST" });
-  if (!r.ok) alert((await r.json()).error); refreshPresets();
+  if (!r.ok) return alert((await r.json()).error);
+  lastPreset = n; $("presetName").value = ""; refreshPresets(); flash("saved");
 };
+$("presetName").onkeydown = e => { if (e.key === "Enter") { $("bSave").onclick(); e.preventDefault(); } };
 function loadPreset(n) {
   if (!n) return;
-  lastPreset = n; $("presetList").value = n;
+  lastPreset = n; paintPresets();
   fetch(`/api/presets/${encodeURIComponent(n)}/load`, { method: "POST" });
 }
-$("bLoad").onclick = () => loadPreset($("presetList").value);
 function stepPreset(d) {
   if (!PRESETS.length) return;
-  const i = Math.max(0, PRESETS.indexOf(lastPreset || $("presetList").value));
+  const i = PRESETS.indexOf(lastPreset);
+  if (i < 0) return loadPreset(PRESETS[d > 0 ? 0 : PRESETS.length - 1]);
   loadPreset(PRESETS[(i + d + PRESETS.length) % PRESETS.length]);
 }
 
 // ---------- keyboard, deck style
+// Grouped by what you're doing. [keys shown, what it does, the key it presses when the row is clicked
+// (null: held, or needs the mouse)].
 const KEYS = [
-  ["Q  ·  W  ·  E", "New look: calm  ·  groove  ·  full on for the drop"],
-  ["← / →", "Previous / next preset"],
-  ["1 – 9", "Jump to preset slot"],
-  ["↑ / ↓", "Select the parameter above / below"],
-  ["[ / ]  ·  wheel", "Nudge the selected parameter (Shift for fine)"],
-  ["R  ·  Shift+R", "Randomise inside every range  ·  undo it"],
-  ["A", "Automation on or off for the selected parameter"],
-  ["Space", "Freeze or unfreeze all automation"],
-  ["M (hold)", "Selected parameter to its maximum while held"],
-  ["Esc", "Panic: back to the loaded preset"],
-  ["?", "This list"],
+  ["The look", [
+    [["Q", "W", "E"], "New look: calm, groove, or full on for the drop", ["q", "w", "e"]],
+    [["R"], "Randomise, inside every range", ["r"]],
+    [["Shift", "R"], "Undo the last new look", null],
+    [["←", "→"], "Previous / next preset", ["ArrowLeft", "ArrowRight"]],
+    [["1–9"], "Jump to that preset", null],
+    [["Esc"], "Panic: back to the loaded preset", ["Escape"]],
+  ]],
+  ["Moving through the set", [
+    [["S"], "Shuffle on or off", ["s"]],
+    [["N"], "Skip to the next look, on the 1", ["n"]],
+    [["Space"], "Freeze or unfreeze all movement", [" "]],
+  ]],
+  ["One setting (the selected one, orange bar)", [
+    [["↑", "↓"], "Select the setting above / below", ["ArrowUp", "ArrowDown"]],
+    [["[", "]"], "Nudge it down / up (Shift for fine, or the mouse wheel)", ["[", "]"]],
+    [["A"], "Automation on or off", ["a"]],
+    [["M"], "Hold: to its maximum while held", null],
+  ]],
+  ["Display", [
+    [["V"], "Audio monitor under the preview, on or off", ["v"]],
+    [["?"], "This list", null],
+  ]],
 ];
-$("keysTable").innerHTML = KEYS.map(([k, d]) => `<tr><td>${k}</td><td>${d}</td></tr>`).join("");
+$("keysTable").innerHTML = KEYS.map(([g, rows]) => `<tbody><tr class="g"><th colspan="2">${g}</th></tr>` + rows.map(([ks, d, press]) =>
+  `<tr${press ? ` class="go" data-press='${JSON.stringify(press)}' title="Click to do it"` : ""}><td>${ks.map(k => `<kbd>${k}</kbd>`).join(press && press.length > 1 ? "" : " ")}</td><td>${d}</td></tr>`).join("") + `</tbody>`).join("");
+// Click a row to do it (the first of its keys): the list works as a menu too, and proves the keys work.
+$("keysTable").addEventListener("click", e => {
+  const tr = e.target.closest("tr.go"); if (!tr) return;
+  const press = JSON.parse(tr.dataset.press), ki = [...tr.querySelectorAll("kbd")].indexOf(e.target.closest("kbd"));
+  const key = press[Math.max(0, Math.min(press.length - 1, ki))];
+  dispatchEvent(new KeyboardEvent("keydown", { key, bubbles: true }));
+  tr.classList.add("did"); setTimeout(() => tr.classList.remove("did"), 350);
+});
+$("keys").addEventListener("click", e => { if (e.target.id === "keys" || e.target.closest(".kclose")) $("keys").classList.remove("show"); });
 
 const typing = e => {
   const t = e.target;
@@ -603,11 +1055,14 @@ addEventListener("keydown", e => {
   if (k === "w" || k === "W") { energise(0.55, "groove"); return; }
   if (k === "e" || k === "E") { energise(0.92, "drop"); return; }
   if (k === "r" || k === "R") {
-    if (e.shiftKey) { if (undoV) { set(Object.assign({}, undoV)); sync(); } } else randomise();
+    if (e.shiftKey) undo(); else randomise();
     return;
   }
   if (k === "a" || k === "A") { setAuto(p.id, { on: !auOf(p.id).on }); return; }
   if (k === " ") { setFreeze(!FREEZE); e.preventDefault(); return; }
+  if (k === "s" || k === "S") { $("bShuffle").onclick(); return; }
+  if (k === "n" || k === "N") { $("bSkip").onclick(); return; }
+  if (k === "v" || k === "V") { $("bWave").click(); return; }
   if ((k === "m" || k === "M") && !momentary) {
     momentary = { id: p.id, was: V[p.id] ?? p.default };
     set({ [p.id]: hiOf(p) }); paint(p);
@@ -625,15 +1080,29 @@ addEventListener("keyup", e => {
 });
 
 // ---------- transitions
-const T_LABEL = { auto: "Auto (smart)", cut: "Cut", none: "None (instant)", crossfade: "Crossfade", wipe: "Wipe", iris: "Iris",
+const T_LABEL = { pick: "Pick from a selection", auto: "Auto (smart)", cut: "Cut", none: "None (instant)", crossfade: "Crossfade", wipe: "Wipe", iris: "Iris",
   dissolve: "Dissolve (burning edge)", luma: "Luma (bright parts first)", tiles: "Tiles", slices: "Glitch slices",
   zoom: "Zoom through", swirl: "Swirl", stutter: "Stutter (16ths)", flash: "Flash cut", pixelate: "Pixelate" };
+let TTYPES = [], TPOOL = [];
 function showTrans(st) {
+  TPOOL = st.pool || [];
+  // Pick: tick the transitions it may choose from; each change takes one at random (never twice running).
+  $("tPool").hidden = st.type !== "pick";
+  if (st.type === "pick") {
+    const all = TTYPES.filter(x => !["auto", "pick", "none"].includes(x));
+    $("tPool").innerHTML = all.map(x => `<button type="button" data-t="${x}" class="${TPOOL.includes(x) ? "on" : ""}" aria-pressed="${TPOOL.includes(x)}">${(T_LABEL[x] || x).replace(/ \(.*\)$/, "")}</button>`).join("")
+      + `<p class="hint">${TPOOL.length ? `Each change picks one of these ${TPOOL.length}.` : "Tick some: until you do, it picks from all of them."}</p>`;
+    $("tPool").querySelectorAll("[data-t]").forEach(b => b.onclick = () => {
+      const cur = new Set(TPOOL); cur.has(b.dataset.t) ? cur.delete(b.dataset.t) : cur.add(b.dataset.t);
+      TPOOL = all.filter(x => cur.has(x)); postTrans({ pool: TPOOL }); showTrans(Object.assign({}, st, { pool: TPOOL }));
+    });
+  }
   $("tType").value = st.type; $("tBeats").value = String(st.beats || 0); $("tSync").value = st.sync; $("tPresets").checked = !!st.presets;
 }
 function postTrans(d) { fetch("/api/transition", { method: "POST", body: JSON.stringify(d) }).catch(() => {}); }
 (async () => {
   const r = await (await fetch("/api/transition")).json();
+  TTYPES = r.types;
   $("tType").innerHTML = r.types.map(t => `<option value="${t}">${T_LABEL[t] || t}</option>`).join("");
   showTrans(r.settings);
 })();
@@ -658,7 +1127,7 @@ $("bNext").onclick = async () => {
 };
 
 // Section tabs under the display (shared, /s5auth.js).
-if (window.S5AUTH && S5AUTH.sectionTabs) S5AUTH.sectionTabs({ panel: document.querySelector(".panel"), mount: document.querySelector(".hero"),
+const TABS = window.S5AUTH && S5AUTH.sectionTabs && S5AUTH.sectionTabs({ panel: document.querySelector(".panel"), mount: document.querySelector(".hero"),
   items: () => [...document.querySelectorAll(".panel > .card, .panel > #groups > .card")], title: c => (c.querySelector("h3").firstChild.textContent || "").trim() });
 </script>
 </body>
