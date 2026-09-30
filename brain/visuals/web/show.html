@@ -232,6 +232,14 @@
   .stcap2 { display: none; }   /* phones: the stage caption, under the pinned view instead of on it */
   .trans { display: grid; gap: 6px; }
   .trans .seg { display: grid; width: 100%; grid-auto-columns: minmax(0, 1fr); }
+  .tpool { display: flex; flex-wrap: wrap; gap: 6px; }
+  .tpool button { display: inline-flex; align-items: center; gap: 6px; height: 32px; padding: 0 10px; border-radius: 99px; background: var(--card);
+                  border: 1px solid var(--border); color: var(--dim); font-size: 12px; font-weight: 500; }
+  .tpool button::before { content: ""; width: 12px; height: 12px; border-radius: 4px; border: 1.5px solid var(--border2); box-sizing: border-box; }
+  .tpool button.on { color: var(--text); border-color: var(--accent-line); background: var(--accent-soft); }
+  .tpool button.on::before { background: var(--accent) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 12'%3E%3Cpath d='M2.5 6.2l2.2 2.2 4.8-4.8' fill='none' stroke='white' stroke-width='1.8' stroke-linecap='round'/%3E%3C/svg%3E") center/100% no-repeat; border-color: var(--accent); }
+  .tpool .hint3 { flex-basis: 100%; font-size: 12px; color: var(--faint); margin-top: 2px; }
+  @media (max-width: 560px) { .tpool button { height: 40px; padding: 0 12px; font-size: 13px; } }
   .trans select { height: var(--h-sm); padding: 0 10px; border-radius: 10px; background: var(--card); border: 1px solid var(--border); color: var(--text); font: 500 13px var(--font); }
   /* Phones: the picture stays put at the top; everything else scrolls under it. */
   @media (max-width: 560px) {
@@ -894,8 +902,9 @@
       <button class="randbtn" id="randPreset" title="A random preset for this look (R)"><span class="dice">⚄</span>Randomise<small>R</small></button>
       <div class="trans" id="trans">
         <div class="label">Changes <b id="tNow"></b></div>
-        <div class="seg sm" id="tType" title="How one look hands over to the next"><button data-v="auto">Auto</button><button data-v="cut">Cut</button><button data-v="crossfade">Fade</button><button data-v="more">More</button></div>
+        <div class="seg sm" id="tType" title="How one look hands over to the next"><button data-v="auto">Auto</button><button data-v="cut">Cut</button><button data-v="crossfade">Fade</button><button data-v="pick" title="Each change picks one of the ones you tick">Pick</button><button data-v="more">More</button></div>
         <select id="tMore" hidden title="Every transition"></select>
+        <div class="tpool" id="tPool" hidden></div>
         <div class="seg sm" id="tSync" title="When the change lands"><button data-v="now">Now</button><button data-v="beat">Beat</button><button data-v="bar">Bar</button><button data-v="drop">Drop</button></div>
       </div>
       <a class="padbtn" id="padBtn" href="pad.html"><span><b>Launchpad</b><small>Effects, push, chase: the visuals as pads</small></span><i>›</i></a>
@@ -1281,24 +1290,37 @@ $("wordsForm").onsubmit = async e => {
 fetch("/api/text").then(r => r.json()).then(j => { TEXT = j.text || ""; $("words").value = TEXT; }).catch(() => {});
 
 // Changes: how one look hands over to the next (the visuals service's transition settings).
-const T_NAME = { auto: "Auto", cut: "Cut", none: "None", crossfade: "Fade", wipe: "Wipe", iris: "Iris", dissolve: "Dissolve", luma: "Luma",
+const T_NAME = { pick: "Pick", auto: "Auto", cut: "Cut", none: "None", crossfade: "Fade", wipe: "Wipe", iris: "Iris", dissolve: "Dissolve", luma: "Luma",
                  tiles: "Tiles", slices: "Slices", zoom: "Zoom", swirl: "Swirl", stutter: "Stutter", flash: "Flash", pixelate: "Pixelate" };
-let TR = null;
+let TR = null, TYPES = [];
 function paintTrans() {
   if (!TR) return;
-  const t = TR.type, main = ["auto", "cut", "crossfade"].includes(t);
+  const t = TR.type, main = ["auto", "cut", "crossfade", "pick"].includes(t);
   on("#tType button", b => b.dataset.v === t || (b.dataset.v === "more" && !main));
+  // Pick: tick the transitions it may choose from, one at random each change (never twice running).
+  $("tPool").hidden = t !== "pick";
+  if (t === "pick" && TYPES.length) {
+    const pool = TR.pool && TR.pool.length ? TR.pool : [];
+    const all = TYPES.filter(x => !["auto", "pick", "none"].includes(x));
+    $("tPool").innerHTML = all.map(x => `<button type="button" data-t="${x}" class="${pool.includes(x) ? "on" : ""}" aria-pressed="${pool.includes(x)}">${T_NAME[x] || x}</button>`).join("")
+      + `<span class="hint3">${pool.length ? `Each change picks one of these ${pool.length}` : "Tick some: until you do, it picks from all of them"}</span>`;
+    $("tPool").querySelectorAll("[data-t]").forEach(b => b.onclick = () => {
+      const cur = new Set(TR.pool || []); cur.has(b.dataset.t) ? cur.delete(b.dataset.t) : cur.add(b.dataset.t);
+      setTrans({ pool: all.filter(x => cur.has(x)) });
+    });
+  }
   on("#tSync button", b => b.dataset.v === (TR.sync === "phrase" ? "bar" : TR.sync));
   $("tMore").hidden = main; $("tMore").value = t;
   $("tNow").textContent = "";
 }
 async function loadTrans() {
-  try { const j = await (await fetch("/api/transition", { cache: "no-store" })).json(); TR = j.settings;
-        $("tMore").innerHTML = j.types.map(t => `<option value="${t}">${T_NAME[t] || t}</option>`).join(""); paintTrans(); } catch (e) {}
+  try { const j = await (await fetch("/api/transition", { cache: "no-store" })).json(); TR = j.settings; TYPES = j.types;
+        $("tMore").innerHTML = j.types.filter(t => t !== "pick").map(t => `<option value="${t}">${T_NAME[t] || t}</option>`).join(""); paintTrans(); } catch (e) {}
 }
 async function setTrans(d) { if (await send("/api/transition", d, "Changes")) { Object.assign(TR, d); paintTrans(); } }
 $("tType").querySelectorAll("button").forEach(b => b.onclick = () => {
-  if (b.dataset.v === "more") { $("tMore").hidden = false; $("tMore").focus(); on("#tType button", x => x === b); return; }
+  if (b.dataset.v === "more") { $("tMore").hidden = false; $("tPool").hidden = true; $("tMore").focus(); on("#tType button", x => x === b); return; }
+  if (b.dataset.v === "pick") { setTrans({ type: "pick", beats: 0 }); return; }
   setTrans({ type: b.dataset.v, beats: 0 });
   toast(b.dataset.v === "cut" ? "Looks cut straight over" : b.dataset.v === "auto" ? "Changes suit the song section" : "Looks fade over");
 });

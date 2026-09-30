@@ -22,7 +22,7 @@ change to the projector and to the control page.
   /api/shuffle      GET Shuffle's state; POST {"on", "theme", "every", "skip"} to change it (see below)
   /api/presets      GET preset names for the active sketch (?sketch=NAME for another one)
   /api/presets/NAME GET a preset; POST saves current values as NAME; POST .../NAME/load
-  /api/transition   GET the transition settings (and the types); POST {"type", "beats", "sync"
+  /api/transition   GET the transition settings (and the types); POST {"type", "beats", "sync", "pool"
                     (now, beat, bar, phrase, or drop: land on the next predicted drop),
                     "presets"} to change them. Switching sketch (and loading a preset, if
                     "presets") hands over through a transition, synced to the beat.
@@ -252,7 +252,7 @@ def clean_trans(d):
         raise ValueError("transition must be an object")
     out = {}
     if "type" in d:
-        if d["type"] not in ["auto", "cut", "none"] + TRANS_TYPES:
+        if d["type"] not in ["auto", "pick", "cut", "none"] + TRANS_TYPES:
             raise ValueError(f"unknown transition type {d['type']!r}")
         out["type"] = d["type"]
     if "beats" in d:
@@ -266,6 +266,11 @@ def clean_trans(d):
         out["sync"] = d["sync"]
     if "presets" in d:
         out["presets"] = bool(d["presets"])
+    if "pool" in d:                  # the transitions "pick" chooses from (ticked on the page)
+        pool = d["pool"]
+        if not isinstance(pool, list) or any(x not in ["cut"] + TRANS_TYPES for x in pool):
+            raise ValueError("pool must be a list of transition types")
+        out["pool"] = [x for x in ["cut"] + TRANS_TYPES if x in pool]
     return out
 
 
@@ -286,6 +291,9 @@ def make_trans(override=None):
     kind, beats = t.get("type", "auto"), float(t.get("beats") or 0)
     if kind == "none":
         return None
+    if kind == "pick":               # one of the ticked ones, not the same as last time; none ticked, any
+        pool = t.get("pool") or ["cut"] + TRANS_TYPES
+        kind = random.choice([x for x in pool if x != last_type] or pool)
     if kind == "auto":
         scene = scene_now()
         pool, auto_beats = TRANS_GROOVE, None
@@ -756,7 +764,7 @@ class H(SimpleHTTPRequestHandler):
                     return self._json(404, {"error": "no such sketch"})
                 return self._json(200, {"presets": preset_names(name)})
             if path == "/api/transition":
-                return self._json(200, {"settings": transition, "types": ["auto", "cut"] + TRANS_TYPES + ["none"],
+                return self._json(200, {"settings": transition, "types": ["auto", "pick", "cut"] + TRANS_TYPES + ["none"],
                                         "last": last_type})
             # Any sketch, for a projection surface that shows it: definition + values (?preset=NAME)
             m = re.match(r"^/api/sketches/([^/]+)$", path)
