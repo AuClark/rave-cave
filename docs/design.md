@@ -8,6 +8,14 @@ Every control page (dashboard :8080, Commander :8090, projection mapping :8100/e
 - **Each page's own "design system" block** still sets its layout. Its colours are on the same neutral scale (below), so a page and the theme agree even where the theme doesn't reach, like canvas drawing.
 - The top bar, section tabs and phone tab bar are styled in the same file (`barCss`).
 
+## Light and dark
+
+The sun / moon in every top bar cycles **Dark → Light → Match device**. It's one setting for the whole app, shared with Live (`localStorage` `s5theme`), applied before the first paint, and it follows other open tabs.
+
+How it works: every neutral grey in the pages' styles is written as `var(--nRRGGBB, #rrggbb)`, the same colour in dark mode. Light mode (`html[data-theme=light]`, in `s5auth.js`) mirrors each one onto a light zinc scale with its role kept: page, panels, hover, lines, outlines, faint, dim, text. White overlays are `rgba(var(--inv), a)`, which flips to black. **Write new greys the same way**, or they won't flip.
+
+**Displays stay dark in both:** the previews, deck waveforms, the 3D stage and the fixture strips are canvases, and they're what the room sees. Controls that sit on top of a display (`#hud`, `.lanectl`) keep the dark values.
+
 ## Tokens
 
 | Token | Value | Use |
