@@ -35,6 +35,8 @@ Every control page (dashboard :8080, Commander :8090, projection mapping :8100/e
 - **Inputs and selects:** the well colour, a 1 px outline, and an orange focus ring.
 - **Status tags:** small, 6 px corners, outlined in their status colour.
 - **Pictures** (previews, the stage): soft 12 px corners where they sit in a page.
+- **Intensity fader** (`VJ.fader` in `vj.js`, styled in `s5auth.js`): the whole bar is the control, an orange fill that breathes on the beat. On the Visuals page, the Launchpad and Live.
+- **Live** (`/show.html`) has a design system of its own, with a light mode; it opts out of the shared theme with `<html data-s5-own-theme>`.
 
 ## Top bar and phones
 

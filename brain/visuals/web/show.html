@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="en">
+<html lang="en" data-s5-own-theme>
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
@@ -213,6 +213,7 @@
                  color: var(--text); font: 500 14px var(--font); outline: 0; transition: border-color .12s; }
   .words input:focus { border-color: var(--border2); box-shadow: 0 0 0 3px var(--accent-soft); }
   .hint2 { margin: 6px 2px 0; font-size: 12px; color: var(--faint); }
+  .under { margin-top: 10px; }
 
   /* ---------------------------------------------------------------- Decks */
   .decks { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; margin-top: 12px; }
@@ -636,6 +637,7 @@
   <span class="grow"></span>
   <button id="pilot" title="Everything follows the music. Tap to undo your changes."><i></i><span>Autopilot</span></button>
   <button class="pill exitfocus" id="exitFocus">Exit focus</button>
+  <span data-s5lock></span>
   <button class="round" id="gear" aria-label="Setup"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg></button>
 </header>
 <div id="off">Can't reach the lighting brain. Lights will come back when it does.</div>
@@ -787,7 +789,8 @@
         <div class="cap"><b id="skName">—</b><button class="pill" id="freeze">Freeze</button><button class="pill" id="next">Next look ›</button>
           <button class="pill focusbtn" id="focusBtn" title="The view to leave open while you play">⤢ Focus</button></div>
       </div>
-      <div class="level nonly" id="lvVis" style="margin-top:12px"><div class="fill"></div><div class="t"><span>Projectors</span><span class="v">–</span></div></div>
+      <div class="under"><div id="intensity" title="How busy the picture is, calm to full on. Stays on the beat."></div></div>
+      <div class="level nonly" id="lvVis" style="margin-top:10px"><div class="fill"></div><div class="t"><span>Projectors</span><span class="v">–</span></div></div>
     </div>
     <div class="side right o3">
       <div class="fonly">
@@ -1040,7 +1043,7 @@ async function poll() {
 poll();
 
 // ---------------------------------------------------------------- visuals
-let SK = null, AU = {}, FREEZE = false, lastPreset = "";
+let SK = null, AU = {}, FREEZE = false, lastPreset = "", PV = {};
 const R = new MapRenderer($("gl"), $("ov"));
 R.layout = { lead_ms: 60, brightness: 1, masks: [], surfaces: [
   { id: "p", content: "gen", opacity: 1, hue_shift: 0, corners: [[0, 0], [1, 0], [1, 1], [0, 1]] }] };
@@ -1056,6 +1059,7 @@ connectEvents(R, {
     $("liveTag").classList.toggle("frozen", FREEZE); $("liveTag").querySelector("span").textContent = FREEZE ? "Frozen" : "Live";
     renderPilot();
   },
+  onParams: p => { PV = p || {}; if (SK) INT.set(VJ.intensityOf(params(), loOf, hiOf, PV)); },
   onShuffle: sh => { const was = SHUF && SHUF.theme; SHUF = sh; if (sh.playing === (SK && SK.name) && sh.preset) { lastPreset = sh.preset; paintPresets(); }
                      if (was !== sh.theme) paintLooks(); else paintLookState(); paintShuffle(); },
   onText: t => { TEXT = t || ""; if (document.activeElement !== $("words")) $("words").value = TEXT; },
@@ -1166,6 +1170,15 @@ $("wordsForm").onsubmit = async e => {
 };
 fetch("/api/text").then(r => r.json()).then(j => { TEXT = j.text || ""; $("words").value = TEXT; }).catch(() => {});
 
+// Intensity: one fader for how busy the picture is, played live. It stays on the beat: speeds snap
+// to note values and nothing is retimed (see VJ.intensityValues).
+const INT = VJ.fader($("intensity"), e => {
+  if (!SK) return;
+  const v = VJ.intensityValues(params(), loOf, hiOf, e, PV);
+  if (PAL) Object.assign(v, palValues(PAL));
+  Object.assign(PV, v); send("/api/params", v, "Intensity"); lastPreset = ""; paintPresets();
+});
+
 // Keep the screen awake during a set (phones and tablets dim and lock mid-song otherwise).
 let wake = null;
 async function keepAwake() {
@@ -1186,6 +1199,7 @@ requestAnimationFrame(function frame(now) {
   if (mOn() && ML) M.draw(now, { handles: true, draft, projector: pid() });
   const f = R.lastFrame;
   if (f) dots.forEach((d, i) => d.classList.toggle("on", i === Math.round(f.bwb) - 1 && 1 - f.frac > 0.4));
+  INT.beat(f);
   requestAnimationFrame(frame);
 });
 

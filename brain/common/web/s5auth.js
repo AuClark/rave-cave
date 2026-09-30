@@ -40,6 +40,9 @@
     transition: color .15s, background .15s, opacity .2s; }
   .s5bar > nav.pages a:hover { color: #fafafa; background: #1c1c20; }
   .s5bar > nav.pages a.here { color: #09090b; background: #fafafa; }
+  .s5bar > nav.pages a.s5live { gap: 7px; margin-left: 8px; border: 1px solid #3a3a41; color: #fafafa; }
+  .s5bar > nav.pages a.s5live i { width: 6px; height: 6px; border-radius: 50%; background: #ff5a1f; box-shadow: 0 0 0 3px rgba(255,90,31,.2); }
+  .s5bar > nav.pages a.s5live:hover { border-color: #ff5a1f; }
   html.s5-fontwait .s5bar > nav.pages { visibility: hidden; }
   .s5bar > :not(.s5home):not(nav.pages):not(.s5who) { animation: s5in .45s ease; }
   .s5bar ~ :not(.s5tabs) { animation: s5in .35s ease; }   /* no fill: nothing lingers (stacking) once faded */
@@ -63,7 +66,7 @@
   @media (max-width: 760px) {
     .s5bar { padding: 0 12px; gap: 10px; }
     .s5bar > nav.pages, .s5bar #self, .s5bar .keys { display: none; }
-    .s5tabs { display: grid; grid-template-columns: repeat(5, 1fr); position: fixed; left: 0; right: 0; bottom: 0; z-index: 45;
+    .s5tabs { display: grid; grid-template-columns: repeat(6, 1fr); position: fixed; left: 0; right: 0; bottom: 0; z-index: 45;
       height: calc(60px + env(safe-area-inset-bottom)); padding: 0 0 env(safe-area-inset-bottom); background: rgba(12,12,14,.94); border-top: 1px solid var(--line, #26262b);
       backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px); }
     .s5tabs a { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 5px; color: #a1a1aa;
@@ -86,13 +89,29 @@
   // The theme: one design system over every page's own styles (see docs/design.md). Last in <head>,
   // so it wins over the page's blocks; moved there again once the page has parsed, in case a page
   // adds styles after this script.
+  // A page with a design system of its own (Live, /show.html) opts out with <html data-s5-own-theme>;
+  // it still gets the shared components (the fader).
   const theme = document.createElement("style");
   theme.id = "s5theme";
-  theme.textContent = themeCss();
+  theme.textContent = (document.documentElement.hasAttribute("data-s5-own-theme") ? "" : themeCss()) + faderCss();
   document.head.appendChild(theme);
   document.addEventListener("DOMContentLoaded", () => document.head.appendChild(theme));
   let quietUntil = 0, pending = null;
 
+  function faderCss() { return `
+  /* The intensity fader (VJ.fader, on the Visuals page, the Launchpad and Live). */
+  .s5fader { position: relative; height: 48px; border-radius: 12px; overflow: hidden; background: var(--well, var(--card, #08080a)); border: 1px solid var(--line, var(--border, #26262b));
+    touch-action: none; cursor: ew-resize; user-select: none; -webkit-user-select: none; }
+  .s5fader .f { position: absolute; inset: 0 auto 0 0; width: 50%;
+    background: linear-gradient(90deg, rgba(255,90,31,.25), rgba(255,90,31,calc(.55 + .35 * var(--pulse, 0))));
+    box-shadow: inset -2px 0 0 #ff5a1f; transition: width .06s linear; }
+  .s5fader.drag .f { transition: none; }
+  .s5fader .t { position: absolute; inset: 0; display: flex; align-items: center; justify-content: space-between; padding: 0 14px;
+    font: 500 13px ${FONT}; color: var(--text, #fafafa); pointer-events: none; }
+  .s5fader .t b { font-weight: 600; font-variant-numeric: tabular-nums; }
+  .s5fader:focus-visible { outline: 2px solid #ff5a1f; outline-offset: 2px; }
+  @media (max-width: 760px) { .s5fader { height: 56px; } }
+  `; }
   function themeCss() { return `
   :root:root { --bg: #0c0c0e; --panel: #131316; --card: #131316; --well: #08080a; --line: #26262b; --line2: #3a3a41;
     --text: #fafafa; --dim: #a1a1aa; --faint: #6b6b74; --hover: #1c1c20;
@@ -139,6 +158,9 @@
   .s5who.s5a-float { position: fixed; top: 12px; right: 12px; z-index: 9998; width: 38px; height: 38px; padding: 0; display: flex;
     align-items: center; justify-content: center; cursor: pointer; background: rgba(30,30,30,.92); border: 1px solid #555; }
   .s5who.s5a-float svg { width: 18px; height: 18px; }
+  .s5who.s5a-slot { width: 36px; height: 36px; padding: 0; display: flex; align-items: center; justify-content: center; cursor: pointer;
+    border-radius: 12px; background: var(--card, #131316); border: 1px solid var(--border, #26262b); }
+  .s5who.s5a-slot svg { width: 16px; height: 16px; }
   .s5a-back { position: fixed; inset: 0; z-index: 9999; background: rgba(0,0,0,.6); display: flex; align-items: center; justify-content: center; }
   .s5a-box { width: min(92vw, 340px); background: var(--panel, #2b2b2b); border: 1px solid var(--line, #3e3e3e); padding: 26px;
     font: 400 14px/1.45 var(--font, system-ui, sans-serif); color: var(--text, #f2f2f2); }
@@ -194,7 +216,11 @@
     Projection: '<rect x="2" y="8" width="20" height="10" rx="2"/><circle cx="8" cy="13" r="3"/><path d="M14 11h5M14 14h3M6 18v2M18 18v2"/>',
     Visuals: '<path d="M2 12c2.5-6 4.5-6 6.5 0s4.5 6 7 0 4-6 6.5 0"/><path d="M2 17c2.5-3 4.5-3 6.5 0s4.5 3 7 0 4-3 6.5 0" opacity=".5"/>',
     Stage: '<path d="M3 4h18M7 4v3M17 4v3"/><path d="M7 7 4 20M7 7l4 13M17 7l-4 13M17 7l3 13" opacity=".6"/><path d="M3 20h18"/>',
+    Live: '<circle cx="12" cy="12" r="3"/><path d="M7.8 7.8a6 6 0 0 0 0 8.4M16.2 7.8a6 6 0 0 1 0 8.4M5 5a10 10 0 0 0 0 14M19 5a10 10 0 0 1 0 14"/>',
   };
+  // The app has two modes: these full pages (setup and detail) and Live (/show.html on the visuals
+  // service), the phone-first remote for running the night. Every page's top bar links to Live.
+  const LIVE = [8110, "/show.html"];
   // Section tabs: one tab per section of a page's controls, in `mount` (under the display); only the
   // chosen section shows. Follows sections that come and go (e.g. a sketch's groups), and remembers
   // the choice per page. Returns { select(title) }.
@@ -233,11 +259,17 @@
     if (!top || document.querySelector(".s5tabs")) return;
     const here = (top.querySelector("a.here") || {}).textContent;
     const nav = el("nav", { class: "s5tabs", "aria-label": "Pages" });
-    nav.innerHTML = [["Lighting", 8090, "/"], ["Projection", 8100, "/edit"], ["Decks", 8080, "/"], ["Visuals", 8110, "/"], ["Stage", 8100, "/stage.html"]]
+    nav.innerHTML = [["Lighting", 8090, "/"], ["Projection", 8100, "/edit"], ["Decks", 8080, "/"], ["Visuals", 8110, "/"], ["Stage", 8100, "/stage.html"], ["Live", ...LIVE]]
       .map(([n, port, path]) => `<a data-port="${port}" data-path="${path}" class="${n === "Decks" ? "mid" : ""}${n === here ? " here" : ""}">${svg(n)}<span>${n}</span></a>`).join("");
     document.body.appendChild(nav);
   }
+  function liveLink() {
+    const top = document.querySelector(".s5bar nav.pages");
+    if (!top || top.querySelector(".s5live")) return;
+    top.appendChild(el("a", { class: "s5live", "data-port": LIVE[0], "data-path": LIVE[1], title: "Live: the remote for running the night" }, "<i></i>Live"));
+  }
   function links() {
+    liveLink();
     tabs();
     document.querySelectorAll("a[data-port]").forEach(a => {
       a.href = S5.url(a.dataset.port, a.dataset.path || "/");
@@ -278,7 +310,7 @@
     badge.title = S5.admin ? "Admin: unlocked on this browser. Click to lock it again." : "View only. Click to unlock with the admin PIN.";
     badge.setAttribute("aria-label", badge.title);
     badge.style.display = S5.enabled ? "" : "none";
-    if (badge.classList.contains("s5a-float")) badge.style.color = S5.admin ? "#7ccf8a" : "#ff5a1f";
+    if (badge.classList.contains("s5a-float") || badge.classList.contains("s5a-slot")) badge.style.color = S5.admin ? "#7ccf8a" : "#ff5a1f";
     links();
   }
 
@@ -350,8 +382,8 @@
   function mount() {
     const style = el("style"); style.textContent = css; document.head.appendChild(style);
     // The lock sits at the right end of the top bar; pages without one get it floating top right.
-    const bar = document.querySelector(".s5bar");
-    badge = el("button", { class: bar ? "s5who" : "s5who s5a-float", type: "button" });
+    const bar = document.querySelector(".s5bar"), slot = document.querySelector("[data-s5lock]");
+    badge = el("button", { class: bar ? "s5who" : slot ? "s5who s5a-slot" : "s5who s5a-float", type: "button" });
     badge.style.display = "none";
     badge.onclick = async () => {
       if (!S5.admin) return prompt();
@@ -359,7 +391,7 @@
       await rawFetch("/api/auth/logout", { method: "POST", credentials: "same-origin" }).catch(() => {});
       status();
     };
-    (bar || document.body).appendChild(badge);
+    (bar || slot || document.body).appendChild(badge);
     render();
     status();
     setInterval(status, 60000);

@@ -83,6 +83,70 @@ const VJ = (() => {
     return out;
   }
 
+  // Intensity: one fader, calm to full on, played live. Unlike energyValues nothing is random, so
+  // dragging it back and forth goes back and forth through the same looks rather than rolling new
+  // ones. Only the parameters that have a direction move (how busy, how hard the track drives
+  // the picture); the rest, the look itself, stays as it is.
+  //
+  // It stays on the beat: every speed is snapped to a note value (1/4, 1/8 ...), so a moving thing
+  // still lands on the grid at any intensity, and the track drives (Hit, Move, Change) are what
+  // the fader leans on most. It never retimes anything, it only says how much.
+  function intensityValues(params, lo, hi, e, cur = {}) {
+    const out = {};
+    for (const p of params) {
+      if (skip(p)) continue;
+      const dir = dirOf(p);
+      if (!dir) continue;
+      const a = lo(p), b = hi(p), t = dir > 0 ? e : 1 - e;
+      let v = a + t * (b - a);
+      if (isRate(p) && a < 0 && b > 0) {                  // a speed: how fast, keeping which way it turns
+        const sign = (cur[p.id] ?? p.default) < 0 ? -1 : 1;
+        v = sign * Math.max(Math.abs(a), Math.abs(b)) * Math.max(t, 0.06);
+      }
+      out[p.id] = quant(p, Math.max(a, Math.min(b, v)));
+    }
+    return out;
+  }
+  // Where the fader sits for a set of values: the average of the same mapping read backwards.
+  function intensityOf(params, lo, hi, cur = {}) {
+    let sum = 0, n = 0;
+    for (const p of params) {
+      if (skip(p) || !dirOf(p)) continue;
+      const a = lo(p), b = hi(p); if (b === a) continue;
+      let v = cur[p.id] ?? p.default;
+      if (isRate(p) && a < 0 && b > 0) { v = Math.abs(v); sum += v / Math.max(Math.abs(a), Math.abs(b)); n++; continue; }
+      const t = (v - a) / (b - a);
+      sum += dirOf(p) > 0 ? t : 1 - t; n++;
+    }
+    return n ? Math.max(0, Math.min(1, sum / n)) : 0.5;
+  }
+
+  // The fader itself, the same on every page that has one: the whole bar is the control (drag or
+  // tap anywhere on it), a fill that breathes on the beat, arrow keys for a laptop. onInput gets
+  // 0..1 while it moves, at most every 40 ms; set(v) moves it from outside (ignored mid-drag).
+  function fader(el, onInput, label = "Intensity") {
+    el.classList.add("s5fader"); el.tabIndex = 0; el.setAttribute("role", "slider");
+    el.setAttribute("aria-label", label); el.setAttribute("aria-valuemin", 0); el.setAttribute("aria-valuemax", 100);
+    el.innerHTML = `<div class="f"></div><div class="t"><span>${label}</span><b>–</b></div>`;
+    const fill = el.querySelector(".f"), num = el.querySelector("b");
+    let v = 0.5, busy = false, last = 0, tm = null;
+    const paint = x => { v = x; fill.style.width = (x * 100).toFixed(1) + "%"; num.textContent = Math.round(x * 100); el.setAttribute("aria-valuenow", Math.round(x * 100)); };
+    const emit = () => { clearTimeout(tm); const now = performance.now();
+      if (now - last > 40) { last = now; onInput(v); } else tm = setTimeout(() => { last = performance.now(); onInput(v); }, 40); };
+    const at = e => { const r = el.getBoundingClientRect(); return Math.max(0, Math.min(1, (e.clientX - r.left) / r.width)); };
+    el.addEventListener("pointerdown", e => { busy = true; el.setPointerCapture(e.pointerId); el.classList.add("drag"); paint(at(e)); emit(); });
+    el.addEventListener("pointermove", e => { if (busy) { paint(at(e)); emit(); } });
+    for (const ev of ["pointerup", "pointercancel"]) el.addEventListener(ev, () => { busy = false; el.classList.remove("drag"); });
+    el.addEventListener("keydown", e => { const d = { ArrowRight: .05, ArrowUp: .05, ArrowLeft: -.05, ArrowDown: -.05 }[e.key];
+      if (d) { e.preventDefault(); e.stopPropagation(); paint(Math.max(0, Math.min(1, v + d))); emit(); } });
+    paint(v);
+    return {
+      set: x => { if (!busy && x != null && Math.abs(x - v) > 0.004) paint(x); },
+      beat: f => el.style.setProperty("--pulse", f ? Math.pow(1 - f.frac, 3).toFixed(3) : 0),
+      get value() { return v; }, get busy() { return busy; },
+    };
+  }
+
   // ---------------------------------------------------------------- quantised launch
   // A tap can either happen now or wait for the next musical boundary, so a change always lands
   // on the beat however sloppily it was hit. Nothing here touches the shader or the network
@@ -144,6 +208,6 @@ const VJ = (() => {
     }
   }
 
-  return { NOTES, RNOTES, HZ, near, snapRate, isRate, skip, dirOf, quant, energyValues,
+  return { NOTES, RNOTES, HZ, near, snapRate, isRate, skip, dirOf, quant, energyValues, intensityValues, intensityOf, fader,
            GRID, barBeat, Launcher };
 })();

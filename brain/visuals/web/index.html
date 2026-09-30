@@ -81,6 +81,8 @@
   .s5logo .s5word { color: var(--text, #fafafa); flex: none; display: block; }
   .s5logo .s5five { fill: var(--accent, #ff5a1f); }
 
+  .faderrow { width: min(100%, calc(50vh * 16 / 9)); margin: 12px auto 0; }
+  @media (max-width: 760px) { .faderrow { width: auto; margin: 10px 12px 0; } }
   /* ---- Layout: the display is the hero (full-width band), a clean control panel underneath. ---- */
   main.hl { display: block; padding: 0; gap: 0; max-width: none; }
   .hero { background: #060608; border-bottom: 1px solid var(--line); padding: 24px 24px 0; }
@@ -285,6 +287,66 @@
   details.help summary { cursor: pointer; color: var(--dim); font-size: 11px; letter-spacing: .16em; text-transform: uppercase; }
   details.help[open] summary { margin-bottom: 10px; }
   details.help p { margin: 0 0 8px; }
+
+  /* ------------------------------------------------------------------ clean pass (2026-09)
+     Same behaviour as above; softer, quieter shapes, in line with the shared theme. */
+  .herobar { gap: 8px; }
+  #conn.pill { border-radius: 99px !important; padding: 4px 10px; font-size: 12px; font-weight: 500; }
+  #beat { gap: 4px; } #beat i { width: 22px; height: 5px; border: 0; border-radius: 99px; background: #26262b; }
+  #beat i.on { background: var(--text); } #beat i.b1.on { background: var(--accent); } #beat i.b1 { border: 0; }
+  .padlink { border-radius: 8px; padding: 8px 12px; font-weight: 500; font-size: 13px; color: var(--text); }
+  .padlink:hover { border-color: #52525b; }
+  #shufPill { border-radius: 99px; padding: 6px 12px; font-size: 12px; font-weight: 500; background: rgba(255,90,31,.1); }
+  .herobar > button, .herobar > a { height: 34px; display: inline-flex; align-items: center; }
+  /* Headings inside a tab */
+  .sec { font-size: 12px; font-weight: 600; color: var(--dim); margin: 0 0 10px; }
+  .now b { font-size: 24px; font-weight: 600; letter-spacing: -.02em; }
+  /* Themes: a single scrolling row of chips, never a wrapped grid */
+  .themes { flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; gap: 6px; border: 0; margin: 0 0 10px; padding: 1px; }
+  .themes::-webkit-scrollbar { display: none; }
+  .themes button { flex: none; border: 1px solid var(--line) !important; border-radius: 99px !important; padding: 0 14px; height: 32px;
+                   font-size: 13px; font-weight: 500 !important; color: var(--dim); background: transparent; }
+  .themes button:last-child { border-right: 1px solid var(--line); }
+  .themes button.on { background: var(--text); color: #09090b; border-color: var(--text) !important; }
+  /* Tiles and preset chips: rounded cards; "queue as next" is a quiet icon at the end */
+  .tiles, .chips { gap: 6px; }
+  .it { border: 1px solid var(--line); border-radius: 10px; overflow: hidden; background: #111114; transition: border-color .12s, background .12s; }
+  .it:hover { border-color: #52525b; }
+  .it .go { padding: 11px 12px; font-size: 13px; font-weight: 500; }
+  .it .nx { width: 36px; padding: 0; font-size: 15px; color: #6b6b74; border-left: 1px solid var(--line); border-radius: 0 !important; }
+  .it .nx:hover { color: var(--accent); background: rgba(255,90,31,.08); }
+  .it.on { background: var(--accent); border-color: var(--accent); }
+  .it.on .nx { color: rgba(255,255,255,.8); border-left-color: rgba(255,255,255,.25); }
+  .it.queued { box-shadow: none; border-color: var(--accent); background: rgba(255,90,31,.08); }
+  /* Shuffle: a toggle, a segmented "every", Skip */
+  .shuffle #bShuffle { border-radius: 10px !important; min-width: 130px; font-weight: 600 !important; }
+  .every { border: 1px solid var(--line); border-radius: 10px; padding: 3px; gap: 2px; background: #111114; overflow: hidden; }
+  .every span { font-size: 12px; padding: 0 8px; }
+  .every button { border: 0 !important; border-radius: 7px !important; color: var(--dim); }
+  .every button.on { background: var(--text); color: #09090b; }
+  .shufstat { height: 3px; border-radius: 99px; }
+  .nextup { border-radius: 10px; } .choosebar { border-radius: 10px; }
+  .nextup .lbl { font-size: 12px; font-weight: 600; }
+  /* Energy: neutral cards; the energy shows as a coloured dot, not three different borders */
+  .energy button { border-color: var(--line) !important; border-radius: 12px !important; background: #111114; font-size: 15px; font-weight: 600 !important; }
+  .energy button::before { content: ""; position: absolute; top: 14px; left: 14px; width: 8px; height: 8px; border-radius: 50%; background: #60a5fa; }
+  .energy .e2::before { background: #fbbf24; } .energy .e3::before { background: var(--accent); }
+  .energy button:hover { background: #17171a !important; border-color: #52525b !important; }
+  .energy button small { font-size: 12px; font-weight: 400; }
+  .energy button kbd { border-radius: 5px; font-size: 11px; }
+  .dice button { border-radius: 8px !important; color: var(--text); }
+  /* Transitions: a tidy form */
+  #transCard .p label { display: block; font-size: 12px; font-weight: 600; color: var(--dim); margin: 14px 0 6px; }
+  #transCard select { height: 40px; padding: 0 12px; font-size: 14px; }
+  #transCard .row { gap: 8px; margin: 8px 0; }
+  #transCard label.hint { display: flex; gap: 10px; align-items: flex-start; margin: 12px 0; font-size: 13px; color: var(--text); }
+  #transCard input[type=checkbox] { width: 18px; height: 18px; margin: 1px 0 0; accent-color: var(--accent); flex: none; }
+  #bNext { height: 42px; font-weight: 600 !important; }
+  details.help summary { font-size: 13px; font-weight: 500; }
+  @media (max-width: 760px) {
+    .themes button { height: 40px; } .it .go { padding: 13px 12px; } .it .nx { width: 44px; }
+    .every button { min-height: 36px; }
+  }
 </style>
 <script src="/s5auth.js"></script>
 </head>
@@ -296,6 +358,7 @@
 <main class="hl">
   <section class="hero">
     <div id="previewWrap"><canvas id="gl"></canvas><canvas id="ov"></canvas></div>
+    <div class="faderrow"><div id="intensity" title="How busy the picture is, calm to full on. Stays on the beat. (Arrow keys when focused)"></div></div>
     <div class="herobar">
       <span id="conn" class="pill">connecting</span>
       <span id="beat" title="Beat and bar"><i class="b1"></i><i></i><i></i><i></i></span>
@@ -617,7 +680,9 @@ function paint(p) {
   if (rg) rg.textContent = fmt(p, loOf(p)) + " – " + fmt(p, hiOf(p));
 }
 
-function sync() { if (SK) for (const p of params()) paint(p); }
+function sync() { if (SK) { for (const p of params()) paint(p); INT.set(VJ.intensityOf(params(), loOf, hiOf, V)); } }
+// Intensity: one fader for how busy the picture is, played live (see VJ.intensityValues).
+const INT = VJ.fader($("intensity"), e => { if (SK) { set(VJ.intensityValues(params(), loOf, hiOf, e, V)); lastPreset = ""; paintPresets(); } });
 
 function syncAuto() {
   if (!SK) return;
@@ -654,6 +719,7 @@ const beatDots = [...$("beat").children];
     }
     const f = R.lastFrame;
     if (f) beatDots.forEach((d, i) => d.classList.toggle("on", i === Math.round(f.bwb) - 1 && 1 - f.frac > 0.35));
+    INT.beat(f);
   }
   requestAnimationFrame(frame);
 })(performance.now());
@@ -761,7 +827,7 @@ const queue = (sketch, preset) => {
 };
 // One kind of button for tiles and preset chips: the name plays it, NEXT queues it.
 const item = (cls, label, title, data) =>
-  `<div class="it ${cls}" ${data}><button class="go" title="${title}">${label}</button><button class="nx" title="Play next: at Shuffle's next change, or on the next 1">${cls.includes("queued") ? "Queued" : "Next"}</button></div>`;
+  `<div class="it ${cls}" ${data}><button class="go" title="${title}">${label}</button><button class="nx" title="Play next: at Shuffle's next change, or on the next 1">${cls.includes("queued") ? "✓" : "+"}</button></div>`;
 function paintPicker() {
   const th = themeNow();
   $("themeChips").innerHTML = allThemes().map(t =>
