@@ -1,0 +1,17 @@
+{
+ "style": 2,
+ "mood": 6,
+ "change": 4,
+ "elastic": 0.3,
+ "pump": 0.3,
+ "bob": 0.35,
+ "talk": 0.2,
+ "sync": 0.3,
+ "bass": 0.4,
+ "exag": 1.15,
+ "bg": 3,
+ "busy": 0.3,
+ "hue": 0.76,
+ "follow": 0,
+ "spit": 0.6
+}

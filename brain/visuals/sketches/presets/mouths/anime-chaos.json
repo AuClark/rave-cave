@@ -1,0 +1,14 @@
+{
+ "style": 0,
+ "mood": 5,
+ "change": 1,
+ "fang": 1.0,
+ "elastic": 0.95,
+ "exag": 1.25,
+ "bg": 2,
+ "busy": 0.8,
+ "hue": 0.55,
+ "follow": 1,
+ "talk": 0.7,
+ "bob": 1.1
+}
