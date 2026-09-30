@@ -515,7 +515,7 @@ class MapRenderer {
     for (const [k, v] of [[gl.TEXTURE_MIN_FILTER, gl.NEAREST], [gl.TEXTURE_MAG_FILTER, gl.NEAREST],
                           [gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE], [gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE]])
       gl.texParameteri(gl.TEXTURE_2D, k, v);
-    this.wave = { w: w.w, h: w.h, spb: w.spb, beats: w.beats, loop: w.loop ? 1 : 0, title: w.title, source: w.source };
+    this.wave = { w: w.w, h: w.h, spb: w.spb, beats: w.beats, loop: w.loop ? 1 : 0, title: w.title, source: w.source, px };   // px: for pages that draw it (VJ.waveStrip)
   }
 
   // The words typed on the Visuals page, drawn into an eight-row atlas: one word per row,

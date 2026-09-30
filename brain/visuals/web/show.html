@@ -227,8 +227,17 @@
     #s-visuals .stagegrid .centre { display: contents; }
     /* Only the picture is pinned; the intensity fader scrolls with the rest, straight under it. */
     #s-visuals .stick { display: contents; }
-    #s-visuals .pv { order: 1; position: sticky; top: var(--hdr, 64px); z-index: 6; margin: 0 -14px; border-radius: 0; border-width: 0 0 1px;
-                     box-shadow: 0 12px 18px -14px rgba(0,0,0,.7); }
+    #s-visuals .pvstack { order: 1; position: sticky; top: var(--hdr, 64px); z-index: 6; margin: 0 -14px; background: var(--bg);
+                          box-shadow: 0 12px 18px -14px rgba(0,0,0,.7); }
+    #s-visuals .pv { border-radius: 0; border-width: 0 0 1px; }
+    #s-visuals .pvstack .s5wavebox { margin: 0; border-radius: 0; border-width: 0 0 1px; }
+    /* Stage: a shorter 3D view, pinned; Lights: the fixture strips, pinned. The rest scrolls under. */
+    #s-stage .stagegrid .centre { position: sticky; top: var(--hdr, 64px); z-index: 6; background: var(--bg); margin: 0 -14px; padding: 0 0 8px;
+                                  box-shadow: 0 12px 18px -14px rgba(0,0,0,.7); }
+    #s-stage .stagebox { height: 34vh; border-radius: 0; border-width: 0 0 1px; }
+    #s-stage .stagebox .cap { display: none; }
+    #s-lights .strip { position: sticky; top: var(--hdr, 64px); z-index: 6; background: var(--bg); margin: 0 -14px; padding: 8px 14px 10px;
+                       box-shadow: 0 12px 18px -14px rgba(0,0,0,.7); }
     #s-visuals .under { order: 2; }
     #s-visuals #lvVis { order: 5; margin-top: 20px !important; }
     #s-visuals .pv { max-height: 34vh; }
@@ -885,6 +894,8 @@
     <div class="theme" id="theme"><button data-t="dark">Dark</button><button data-t="light">Light</button><button data-t="auto">Match device</button></div>
     <div class="setrow"><div><b>Track waveforms</b><span>On the Decks screen: a scrolling waveform and an overview of each track</span></div>
       <button class="switch" id="wavesT" role="switch" aria-checked="false" aria-label="Show track waveforms"></button></div>
+    <div class="setrow"><div><b>Audio monitor</b><span>The track's waveform in a strip under the visuals, so you can see what the music is doing and what's coming. Only here, never on the projector. Scroll or pinch to zoom.</span></div>
+      <button class="switch" id="waveV" role="switch" aria-checked="false" aria-label="Audio monitor"></button></div>
     <p class="sub">Keys</p>
     <div class="keys">
       <kbd>Space</kbd><span>Flash</span><kbd>S</kbd><span>Strobe (hold)</span><kbd>W</kbd><span>Blinder (hold)</span><kbd>B</kbd><span>Blackout on / off</span>
@@ -1269,6 +1280,12 @@ keepAwake();
 addEventListener("pointerdown", e => { if (e.pointerType === "touch" && e.target.closest(".tile, .looklist button") && navigator.vibrate) navigator.vibrate(8); }, { passive: true });
 
 // One loop: the preview, the room glow behind the app, and the beat.
+// The audio monitor, stacked under the picture; on phones the two stay pinned together.
+const drawWave = VJ.waveStrip($("pv"), R);
+{ const st = document.createElement("div"); st.className = "pvstack"; const box = $("pv").nextElementSibling; $("pv").before(st); st.append($("pv"), box); }
+const paintWaveV = () => { const on = VJ.waveOn(); $("waveV").classList.toggle("on", on); $("waveV").setAttribute("aria-checked", on); };
+$("waveV").onclick = () => { VJ.waveOn(!VJ.waveOn()); paintWaveV(); };
+addEventListener("s5wavepv", paintWaveV); paintWaveV();
 const amb = $("amb").getContext("2d"), dots = [...$("beat").children], pvDots = [...$("pvBeat").children];
 requestAnimationFrame(function frame(now) {
   R.draw(now);
@@ -1277,6 +1294,7 @@ requestAnimationFrame(function frame(now) {
   const f = R.lastFrame;
   if (f) for (const set of [dots, pvDots]) set.forEach((d, i) => d.classList.toggle("on", i === Math.round(f.bwb) - 1 && 1 - f.frac > 0.4));
   INT.beat(f);
+  drawWave(f);
   requestAnimationFrame(frame);
 });
 

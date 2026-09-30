@@ -132,6 +132,13 @@
   .keymap { display: flex; flex-wrap: wrap; gap: 6px 14px; margin-top: 18px; padding-top: 14px; border-top: 1px solid var(--line); font-size: 12px; color: var(--dim); }
   .keymap kbd { font: 600 11px/1 var(--font); color: var(--text); border: 1px solid var(--line2); padding: 3px 6px; margin-right: 3px; }
   @media (pointer: coarse) { .keymap { display: none; } }
+  /* Phones: the pinned status kept compact (about a third of the screen), the controls scroll under it. */
+  @media (max-width: 760px) {
+    .wrap.tabbed > .card.span { padding: 12px 14px 0; }
+    .scene { font-size: clamp(28px, 9vw, 40px) !important; } .count { font-size: 20px !important; }
+    #title, #pos { font-size: 12px; } #viz { margin-top: 8px; }
+    .wrap.tabbed > .card.span > .s5sect { margin: 10px -14px 0; }
+  }
 </style>
 <script src="/s5auth.js"></script>
 </head>
@@ -294,14 +301,15 @@ function buildFixtures(ctl) {
 // Live view of what each fixture is outputting.
 function drawViz(preview) {
   const cv = $('viz'), dpr = devicePixelRatio || 1, names = Object.keys(preview || {});
-  const rowH = 22, W = cv.clientWidth, H = Math.max(1, names.length) * rowH;
+  const rowH = innerWidth <= 760 ? 14 : 22, W = cv.clientWidth,   // phones: thinner rows, so the pinned status stays small
+  H = Math.max(1, names.length) * rowH;
   if (cv.width !== Math.round(W * dpr) || cv.height !== Math.round(H * dpr)) { cv.width = Math.round(W * dpr); cv.height = Math.round(H * dpr); cv.style.height = H + 'px'; }
   const g = cv.getContext('2d'); g.setTransform(dpr, 0, 0, dpr, 0, 0); g.clearRect(0, 0, W, H);
   const lw = 64;
   names.forEach((n, i) => {
     const y = i * rowH, px = preview[n] || [];
-    g.fillStyle = '#9a9a9a'; g.font = '700 11px system-ui'; g.fillText(n, 0, y + 15);
-    g.fillStyle = '#1f1f1f'; g.fillRect(lw, y + 3, W - lw, rowH - 6);
+    g.fillStyle = '#a1a1aa'; g.font = `600 ${rowH < 20 ? 10 : 11}px system-ui`; g.fillText(n, 0, y + rowH / 2 + 4);
+    g.fillStyle = '#1f1f1f'; g.fillRect(lw, y + (rowH < 20 ? 2 : 3), W - lw, rowH - (rowH < 20 ? 4 : 6));
     const cw = (W - lw) / Math.max(1, px.length);
     px.forEach((c, k) => { g.fillStyle = c; g.fillRect(lw + k * cw, y + 3, Math.ceil(cw) - (px.length > 1 ? 1 : 0), rowH - 6); });
     if (!px.length) { g.fillStyle = '#6b6b6b'; g.fillText('idle / not streaming', lw + 8, y + 15); }

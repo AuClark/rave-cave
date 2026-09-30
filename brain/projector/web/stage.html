@@ -78,8 +78,8 @@
     /* The page grows with its content (not fixed to the window), so the pinned bar and view stay pinned. */
     html, body { height: auto; } body { display: block; }
     main { grid-template-columns: minmax(0, 1fr); grid-template-rows: auto auto; height: auto; } aside { border-left: 0; overflow: visible; min-width: 0; }
-    #view { position: sticky; top: var(--s5bar, 48px); z-index: 30; height: 48vh; }
-    aside > .s5sect { top: calc(var(--s5bar, 48px) + 48vh); z-index: 29; }
+    #view { position: sticky; top: var(--s5bar, 48px); z-index: 30; height: 36vh; }
+    aside > .s5sect { top: calc(var(--s5bar, 48px) + 36vh); z-index: 29; }
     #design { display: none; }
   }
   .s5logo { display: inline-flex; align-items: center; vertical-align: middle; line-height: 1; }

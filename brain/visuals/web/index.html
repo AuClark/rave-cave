@@ -81,6 +81,12 @@
   .s5logo .s5word { color: var(--text, #fafafa); flex: none; display: block; }
   .s5logo .s5five { fill: var(--accent, #ff5a1f); }
 
+  .hero .s5wavebox { width: min(100%, calc(50vh * 16 / 9)); margin: 6px auto 0; }
+  @media (max-width: 760px) { .hero .s5wavebox { width: auto; margin: 6px 12px 0; }
+    /* the strip under the preview on one line: counter, audio, Freeze, Launchpad, ? */
+    .hero .herobar { flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; gap: 6px; } .herobar::-webkit-scrollbar { display: none; }
+    .hero .herobar > * { flex: none; } .hero #beat { gap: 4px; } .hero #beat i { width: 14px; } .padlink .long { display: none; }
+    .hero .herobar > button:not(.icon), .hero .herobar > a { padding: 0 11px; } }
   .faderrow { max-width: 1100px; margin: 20px auto 4px; padding: 0 24px; }
   @media (max-width: 760px) { .faderrow { margin: 14px 0 0; padding: 0 12px; } }
   /* ---- Layout: the display is the hero (full-width band), a clean control panel underneath. ---- */
@@ -298,6 +304,7 @@
   .padlink:hover { border-color: var(--n52525b, #52525b); }
   #shufPill { border-radius: 99px; padding: 6px 12px; font-size: 12px; font-weight: 500; background: rgba(255,90,31,.1); }
   .herobar > button, .herobar > a { height: 34px; display: inline-flex; align-items: center; }
+  .herobar > button.icon { width: 34px; justify-content: center; padding: 0; } .herobar > button.icon svg { width: 17px; height: 17px; }
   /* Headings inside a tab */
   .sec { font-size: 12px; font-weight: 600; color: var(--dim); margin: 0 0 10px; }
   .now b { font-size: 24px; font-weight: 600; letter-spacing: -.02em; }
@@ -361,8 +368,9 @@
     <div class="herobar">
       <span id="conn" class="pill">connecting</span>
       <span id="beat" title="The bar's four beats (the 1 in orange)"><i class="b1"></i><i></i><i></i><i></i></span>
+      <button id="bWave" class="icon" title="Audio monitor: the track's waveform under the preview, for you, not on the projector (V)" aria-label="Audio monitor"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M3 12h2M7 8v8M11 5v14M15 9v6M19 11v2M21 12h0"/></svg></button>
       <button id="bFreeze" title="Freeze all automation (Space)">Freeze</button>
-      <a href="pad.html" class="padlink">Launchpad →</a>
+      <a href="pad.html" class="padlink">Launchpad<span class="long"> →</span></a>
       <button id="bKeys" title="Keyboard shortcuts (?)">?</button>
       <span id="shout"></span>
       <span class="hint">Live on every projector surface set to <b>generative</b>
@@ -707,6 +715,11 @@ function syncAuto() {
 
 // The moving marker, the beat pulse, and the preview, all on the same frame.
 const beatDots = [...$("beat").children];
+// The audio monitor under the preview (a setting shared with Live).
+const drawWave = VJ.waveStrip($("previewWrap"), R);
+const paintWaveBtn = () => { $("bWave").classList.toggle("on", VJ.waveOn()); $("bWave").setAttribute("aria-pressed", VJ.waveOn()); };
+$("bWave").onclick = () => { VJ.waveOn(!VJ.waveOn()); paintWaveBtn(); };
+addEventListener("s5wavepv", paintWaveBtn); paintWaveBtn();
 (function frame(now) {
   R.draw(now);
   if (SK) {
@@ -722,6 +735,7 @@ const beatDots = [...$("beat").children];
   }
   // The beat counter: the beat you're on stays lit the whole beat (brightest on the hit).
   const bf = R.lastFrame;
+  drawWave(bf);
   beatDots.forEach((d, i) => { const now = !!bf && i === Math.round(bf.bwb) - 1; d.classList.toggle("on", now);
     d.style.opacity = now ? (0.55 + 0.45 * Math.pow(1 - bf.frac, 2)).toFixed(2) : ""; });
   requestAnimationFrame(frame);
@@ -964,6 +978,7 @@ const KEYS = [
   ["M (hold)", "Selected parameter to its maximum while held"],
   ["Esc", "Panic: back to the loaded preset"],
   ["S  ·  N", "Shuffle on or off  ·  skip to the next one, on the 1"],
+  ["V", "Audio monitor (the track's waveform, under the preview) on or off"],
   ["?", "This list"],
 ];
 $("keysTable").innerHTML = KEYS.map(([k, d]) => `<tr><td>${k}</td><td>${d}</td></tr>`).join("");
@@ -996,6 +1011,7 @@ addEventListener("keydown", e => {
   if (k === " ") { setFreeze(!FREEZE); e.preventDefault(); return; }
   if (k === "s" || k === "S") { $("bShuffle").onclick(); return; }
   if (k === "n" || k === "N") { $("bSkip").onclick(); return; }
+  if (k === "v" || k === "V") { $("bWave").click(); return; }
   if ((k === "m" || k === "M") && !momentary) {
     momentary = { id: p.id, was: V[p.id] ?? p.default };
     set({ [p.id]: hiOf(p) }); paint(p);

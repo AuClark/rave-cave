@@ -150,6 +150,23 @@
   .s5fader .t b { font-weight: 600; font-variant-numeric: tabular-nums; }
   .s5fader:focus-visible { outline: 2px solid #ff5a1f; outline-offset: 2px; }
   @media (max-width: 760px) { .s5fader { height: 56px; } }
+  /* The audio monitor (VJ.waveStrip): its own dark panel stacked under a preview, never on it. */
+  .s5wavebox { position: relative; display: none; flex-direction: column; height: 84px; margin-top: 6px; background: #08080a; border: 1px solid #26262b;
+    border-radius: 10px; overflow: hidden; user-select: none; -webkit-user-select: none; }
+  html.s5wave-on .s5wavebox { display: flex; }
+  .s5wavebox .hd { flex: none; display: flex; align-items: center; justify-content: space-between; gap: 8px; height: 26px; padding: 0 4px 0 10px;
+    border-bottom: 1px solid #1c1c20; }
+  .s5wavebox .tag { font: 600 11px/1 ${FONT}; color: #a1a1aa; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
+  .s5wavebox .tag i { font-style: normal; font-weight: 400; color: #6b6b74; }
+  .s5wavebox .s5wv { position: relative; flex: 1; min-height: 0; }
+  .s5wavebox canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
+  .s5wavebox .zoom { flex: none; display: flex; align-items: center; gap: 2px; }
+  .s5wavebox .zoom b { font: 500 11px/1 ${FONT}; color: #a1a1aa; min-width: 46px; text-align: center; font-variant-numeric: tabular-nums; }
+  .s5wavebox .zoom button { width: 24px; height: 20px; min-width: 0; min-height: 0; padding: 0; border: 0; background: transparent; color: #fafafa;
+    font: 600 15px/1 ${FONT}; cursor: pointer; border-radius: 5px; }
+  .s5wavebox .zoom button:hover { background: #26262b; }
+  @media (max-width: 760px) { .s5wavebox { height: 88px; } .s5wavebox .hd { height: 34px; } .s5wavebox .tag i { display: none; }
+    .s5wavebox .zoom button { width: 34px; height: 30px; } }
   `; }
   function darkVars() { return lightVars().replace(/--n([0-9a-f]{6}):#[0-9a-f]{6}/g, "--n$1:#$1"); }
   function lightVars() { return "--n050507:#fafafb; --n060608:#fafafb; --n07070c:#fafafb; --n08080a:#fafafb; --n09090b:#f4f4f5; --n0a0a0c:#f4f4f5; --n0b0c13:#f4f4f5; --n0c0c0e:#f4f4f5; --n0c0d14:#f4f4f5; --n111114:#ffffff; --n131315:#ffffff; --n131316:#ffffff; --n141416:#ffffff; --n171719:#ffffff; --n17171a:#ffffff; --n18181a:#ececf0; --n18181c:#ececf0; --n19191b:#ececf0; --n1b1b1d:#ececf0; --n1c1c20:#ececf0; --n1d1d1f:#ececf0; --n1f1f23:#ececf0; --n222224:#ececf0; --n262628:#e4e4e8; --n26262b:#e4e4e8; --n2c2c2e:#e4e4e8; --n33312a:#d4d4d8; --n3a3a3c:#d4d4d8; --n3a3a41:#d4d4d8; --n4d4d4f:#a1a1a5; --n525254:#a1a1a5; --n52525b:#a1a1a5; --n646464:#a1a1a5; --n686868:#a1a1a5; --n6b6b74:#a1a1a5; --n808080:#626266; --na1a1a1:#626266; --na1a1aa:#626266; --nc4c4c4:#3f3f43; --nd2d2d2:#3f3f43; --nd8d8d8:#09090d; --nfafafa:#09090d;"; }
@@ -208,9 +225,9 @@
   /* Phones: nothing smaller than 40 px to hit with a thumb in a dark room. Not the deck lanes'
      overlay buttons, which are laid out to the waveform's height. */
   @media (max-width: 760px) {
-    html body button:not(.lanectl button):not(.s5sect button), html body select, html body a.padlink,
+    html body button:not(.lanectl button):not(.s5sect button):not(.s5wavebox button), html body select, html body a.padlink,
     html body input:not([type=range]):not([type=checkbox]):not([type=radio]):not([type=color]) { min-height: 40px; }
-    html body button:not(.lanectl button):not(.s5sect button) { min-width: 40px; }
+    html body button:not(.lanectl button):not(.s5sect button):not(.s5wavebox button) { min-width: 40px; }
     html body .s5bar .s5mode, html body .s5bar .s5spk, html body .s5bar .s5who { width: 36px; height: 36px; min-height: 36px; min-width: 36px; }
     html body .s5sect button { height: 40px; }
     html body input[type=range] { min-height: 40px; }

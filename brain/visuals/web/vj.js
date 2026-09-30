@@ -151,6 +151,73 @@ const VJ = (() => {
     };
   }
 
+  // The track's waveform, for whoever is running the visuals: what the audio is doing and what's
+  // coming. It's a monitor, not part of the picture, so it sits in its own panel under the preview
+  // (never over it) and says so. On or off by one setting shared by every page that has it (Live
+  // and the Visuals page). The track scrolls past a playhead a third of the way in, bars marked,
+  // bass in orange, what's been played dimmed. It reads the same per-beat waveform the sketches do
+  // (MapRenderer.wave), on the same beat clock. Zoom: scroll wheel, pinch, or the − / + buttons,
+  // from 4 beats across to 64 (remembered).
+  const WAVE_KEY = "s5wavepv", ZOOM_KEY = "s5wavezoom";
+  const waveOn = v => {
+    if (v !== undefined) { localStorage.setItem(WAVE_KEY, v ? "1" : "0"); dispatchEvent(new Event("s5wavepv")); }
+    const on = localStorage.getItem(WAVE_KEY) === "1";
+    document.documentElement.classList.toggle("s5wave-on", on);
+    return on;
+  };
+  addEventListener("storage", e => { if (e.key === WAVE_KEY) { waveOn(); dispatchEvent(new Event("s5wavepv")); } });
+  function waveStrip(after, R) {
+    const box = document.createElement("div"); box.className = "s5wavebox";
+    box.innerHTML = `<div class="hd"><span class="tag">Audio monitor <i>· only here, not on the projector</i></span>
+      <span class="zoom"><button type="button" data-z="1.5" aria-label="Zoom out">−</button><b></b><button type="button" data-z="0.667" aria-label="Zoom in">+</button></span></div>
+      <div class="s5wv"><canvas></canvas></div>`;
+    after.insertAdjacentElement("afterend", box);
+    const cv = box.querySelector("canvas"), g = cv.getContext("2d"), zl = box.querySelector(".zoom b");
+    let beats = Math.max(4, Math.min(64, +localStorage.getItem(ZOOM_KEY) || 16));
+    const zoom = k => { beats = Math.max(4, Math.min(64, beats * k)); localStorage.setItem(ZOOM_KEY, beats.toFixed(2)); };
+    box.querySelectorAll("[data-z]").forEach(b => b.onclick = () => zoom(+b.dataset.z));
+    box.addEventListener("wheel", e => { e.preventDefault(); zoom(Math.exp(e.deltaY * 0.0025)); }, { passive: false });
+    const pts = new Map(); let pinch = 0;
+    box.addEventListener("pointerdown", e => { if (e.target.closest("button")) return; pts.set(e.pointerId, e.clientX); box.setPointerCapture(e.pointerId); });
+    box.addEventListener("pointermove", e => {
+      if (!pts.has(e.pointerId)) return; pts.set(e.pointerId, e.clientX);
+      if (pts.size === 2) { const [a, b] = [...pts.values()], d = Math.abs(a - b); if (pinch) zoom(pinch / Math.max(d, 1)); pinch = d; }
+    });
+    for (const ev of ["pointerup", "pointercancel"]) box.addEventListener(ev, e => { pts.delete(e.pointerId); pinch = 0; });
+    box.style.touchAction = "pan-y";
+    waveOn();
+    return f => {
+      if (!document.documentElement.classList.contains("s5wave-on")) return;
+      zl.textContent = Math.round(beats / 4 * 10) / 10 + " bars";
+      const dpr = Math.min(2, devicePixelRatio || 1), W = Math.round(cv.clientWidth * dpr), H = Math.round(cv.clientHeight * dpr);
+      if (!W || !H) return;
+      if (cv.width !== W || cv.height !== H) { cv.width = W; cv.height = H; }
+      g.clearRect(0, 0, W, H);
+      const wv = R.wave, px = wv && wv.px, n = wv ? wv.beats * wv.spb : 0, mid = H * 0.5, amp = H * 0.42, head = Math.round(W * 0.33);
+      if (!f || !px || !n) { g.fillStyle = "rgba(255,255,255,.4)"; g.font = `500 ${11 * dpr}px system-ui, sans-serif`;
+        g.textAlign = "center"; g.fillText("Waiting for a track", W / 2, mid + 4 * dpr); g.textAlign = "left"; return; }
+      const at = beat => { let i = Math.floor((beat - 1) * wv.spb); if (wv.loop) i = ((i % n) + n) % n;
+        return i < 0 || i >= n ? null : i * 4; };
+      const step = Math.max(1, Math.round(2 * dpr)), gap = step > 2 ? 1 : 0, off = f.beat - barBeat(f);
+      for (let x = 0; x < W; x += step) {
+        const o = at(f.beat + (x - head) / W * beats); if (o === null) continue;
+        const hgt = Math.min(1, Math.sqrt(px[o] / 255) * 1.15), bass = px[o + 1] / 255, past = x < head;
+        g.fillStyle = past ? "rgba(255,255,255,.22)" : "rgba(255,255,255,.7)";
+        g.fillRect(x, mid - hgt * amp, step - gap, hgt * amp * 2);
+        g.fillStyle = past ? "rgba(255,90,31,.4)" : "rgba(255,90,31,.95)";
+        g.fillRect(x, mid - bass * hgt * amp, step - gap, bass * hgt * amp * 2);
+      }
+      const b0 = Math.ceil(f.beat - head / W * beats), b1 = f.beat + (W - head) / W * beats;
+      for (let b = b0; b <= b1; b++) {
+        const x = head + (b - f.beat) / beats * W, one = (((Math.round(b - off)) % 4) + 4) % 4 === 0;
+        if (!one && beats > 32) continue;
+        g.fillStyle = one ? "rgba(255,255,255,.4)" : "rgba(255,255,255,.12)";
+        g.fillRect(Math.round(x), 0, dpr, H);
+      }
+      g.fillStyle = "#fff"; g.fillRect(head - dpr, 0, 2 * dpr, H);
+    };
+  }
+
   // ---------------------------------------------------------------- quantised launch
   // A tap can either happen now or wait for the next musical boundary, so a change always lands
   // on the beat however sloppily it was hit. Nothing here touches the shader or the network
@@ -212,6 +279,6 @@ const VJ = (() => {
     }
   }
 
-  return { NOTES, RNOTES, HZ, near, snapRate, isRate, skip, dirOf, quant, energyValues, intensityValues, intensityOf, fader,
+  return { NOTES, RNOTES, HZ, near, snapRate, isRate, skip, dirOf, quant, energyValues, intensityValues, intensityOf, fader, waveStrip, waveOn,
            GRID, barBeat, Launcher };
 })();
