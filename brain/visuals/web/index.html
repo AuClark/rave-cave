@@ -310,6 +310,7 @@
   .padlink:hover { border-color: var(--n52525b, #52525b); }
   #shufPill { border-radius: 99px; padding: 6px 12px; font-size: 12px; font-weight: 500; background: rgba(255,90,31,.1); }
   .herobar > button, .herobar > a { height: 34px; display: inline-flex; align-items: center; }
+  .herobar > #barN { height: 26px; padding: 0 7px; margin-right: -2px; }
   .herobar > button.icon { width: 34px; justify-content: center; padding: 0; } .herobar > button.icon svg { width: 17px; height: 17px; }
   /* Headings inside a tab */
   .sec { font-size: 12px; font-weight: 600; color: var(--dim); margin: 0 0 10px; }
@@ -373,7 +374,7 @@
     <div id="previewWrap"><canvas id="gl"></canvas><canvas id="ov"></canvas><span id="shout" aria-live="polite"></span></div>
     <div class="herobar">
       <span id="conn" class="pill">connecting</span>
-      <span id="beat" title="The bar's four beats (the 1 in orange)"><i class="b1"></i><i></i><i></i><i></i></span>
+      <button id="barN"></button><span id="beat" title="The bar's four beats (the 1 in orange)"><i class="b1"></i><i></i><i></i><i></i></span>
       <button id="bWave" class="icon" title="Audio monitor: the track's waveform under the preview, for you, not on the projector (V)" aria-label="Audio monitor"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M3 12h2M7 8v8M11 5v14M15 9v6M19 11v2M21 12h0"/></svg></button>
       <button id="bFreeze" title="Freeze all automation (Space)">Freeze</button>
       <a href="pad.html" class="padlink">Launchpad<span class="long"> →</span></a>
@@ -719,7 +720,7 @@ function syncAuto() {
 }
 
 // The moving marker, the beat pulse, and the preview, all on the same frame.
-const beatDots = [...$("beat").children];
+const beatDots = [...$("beat").children], barN = VJ.barCounter($("barN"));
 // The audio monitor under the preview (a setting shared with Live).
 const drawWave = VJ.waveStrip($("previewWrap"), R);
 const paintWaveBtn = () => { $("bWave").classList.toggle("on", VJ.waveOn()); $("bWave").setAttribute("aria-pressed", VJ.waveOn()); };
@@ -740,7 +741,7 @@ addEventListener("s5wavepv", paintWaveBtn); paintWaveBtn();
   }
   // The beat counter: the beat you're on stays lit the whole beat (brightest on the hit).
   const bf = R.lastFrame;
-  drawWave(bf);
+  drawWave(bf); barN(bf);
   beatDots.forEach((d, i) => { const now = !!bf && i === Math.round(bf.bwb) - 1; d.classList.toggle("on", now);
     d.style.opacity = now ? (0.55 + 0.45 * Math.pow(1 - bf.frac, 2)).toFixed(2) : ""; });
   requestAnimationFrame(frame);

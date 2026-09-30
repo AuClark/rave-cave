@@ -150,6 +150,11 @@
   .s5fader .t b { font-weight: 600; font-variant-numeric: tabular-nums; }
   .s5fader:focus-visible { outline: 2px solid #ff5a1f; outline-offset: 2px; }
   @media (max-width: 760px) { .s5fader { height: 56px; } }
+  /* The bar number beside a beat counter (VJ.barCounter): tap to change what it counts to. */
+  .s5barn { flex: none; min-width: 22px; height: 22px; padding: 0 5px; margin: 0 4px 0 0; border: 0; border-radius: 6px; background: rgba(255,255,255,.08);
+    color: #fafafa; font: 700 12px/22px ${FONT}; font-variant-numeric: tabular-nums; text-align: center; cursor: pointer; white-space: nowrap; }
+  .s5barn.one { background: rgba(255,90,31,.22); color: #ff8a5c; }
+  html[data-theme=light] .s5barn:not(.pvbeat .s5barn) { background: rgba(0,0,0,.06); color: #09090b; }
   /* The audio monitor (VJ.waveStrip): its own dark panel stacked under a preview, never on it. */
   .s5wavebox { position: relative; display: none; flex-direction: column; height: 84px; margin-top: 6px; background: #08080a; border: 1px solid #26262b;
     border-radius: 10px; overflow: hidden; user-select: none; -webkit-user-select: none; }
@@ -225,9 +230,9 @@
   /* Phones: nothing smaller than 40 px to hit with a thumb in a dark room. Not the deck lanes'
      overlay buttons, which are laid out to the waveform's height. */
   @media (max-width: 760px) {
-    html body button:not(.lanectl button):not(.s5sect button):not(.s5wavebox button), html body select, html body a.padlink,
+    html body button:not(.lanectl button):not(.s5sect button):not(.s5wavebox button):not(.s5barn), html body select, html body a.padlink,
     html body input:not([type=range]):not([type=checkbox]):not([type=radio]):not([type=color]) { min-height: 40px; }
-    html body button:not(.lanectl button):not(.s5sect button):not(.s5wavebox button) { min-width: 40px; }
+    html body button:not(.lanectl button):not(.s5sect button):not(.s5wavebox button):not(.s5barn) { min-width: 40px; }
     html body .s5bar .s5mode, html body .s5bar .s5spk, html body .s5bar .s5who { width: 36px; height: 36px; min-height: 36px; min-width: 36px; }
     html body .s5sect button { height: 40px; }
     html body input[type=range] { min-height: 40px; }

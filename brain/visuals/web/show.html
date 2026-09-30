@@ -186,6 +186,8 @@
   .pv .pvbeat { position: absolute; top: 12px; right: 12px; display: flex; gap: 4px; align-items: center; height: 24px; padding: 0 9px;
                 border-radius: 99px; background: rgba(0,0,0,.55); }
   .pv .pvbeat i { width: 14px; height: 5px; border-radius: 99px; background: rgba(255,255,255,.28); transition: background .05s; }
+  .pv .pvbeat .s5barn { height: 18px; min-width: 18px; font-size: 11px; line-height: 18px; margin-right: 3px; background: rgba(255,255,255,.14); }
+  .beat .s5barn { align-self: center; margin-right: 6px; }
   .pv .pvbeat i.on { background: #fff; } .pv .pvbeat i.on:first-child { background: var(--accent); }
   .pill { height: var(--h-sm); padding: 0 14px; border-radius: 10px; background: rgba(255,255,255,.12); border: 1px solid rgba(255,255,255,.14);
           backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); font-weight: 500; font-size: 13px; white-space: nowrap; transition: background .12s; }
@@ -824,7 +826,7 @@
       <div class="fonly fhud hero">
         <div class="scene" id="scene">—</div>
         <div class="meta" id="meta">&nbsp;</div>
-        <div class="beat" id="beat"><i></i><i></i><i></i><i></i></div>
+        <div class="beat" id="beat"><button id="barF"></button><i></i><i></i><i></i><i></i></div>
         <div class="drop idle" id="drop">
           <svg viewBox="0 0 64 64"><circle class="bg" cx="32" cy="32" r="28"/><circle class="fg" id="dropArc" cx="32" cy="32" r="28" stroke-dasharray="175.9" stroke-dashoffset="175.9"/></svg>
           <div class="txt"><b id="dropBig">No drop ahead</b><span id="dropSmall">Autopilot will catch the next one</span></div>
@@ -856,7 +858,7 @@
       <div class="stick">
       <div class="pv" id="pv"><canvas id="gl"></canvas><canvas id="ov"></canvas>
         <div class="live" id="liveTag"><i></i><span>Live</span></div>
-        <div class="pvbeat" id="pvBeat" aria-hidden="true"><i></i><i></i><i></i><i></i></div>
+        <div class="pvbeat" id="pvBeat"><button id="barP"></button><i></i><i></i><i></i><i></i></div>
         <div class="cap"><b id="skName">—</b><button class="pill" id="freeze">Freeze</button><button class="pill" id="next">Next look ›</button>
           <button class="pill focusbtn" id="focusBtn" title="The view to leave open while you play">⤢ Focus</button></div>
       </div>
@@ -1332,7 +1334,8 @@ const drawWave = VJ.waveStrip($("pv"), R);
 const paintWaveV = () => { const on = VJ.waveOn(); $("waveV").classList.toggle("on", on); $("waveV").setAttribute("aria-checked", on); };
 $("waveV").onclick = () => { VJ.waveOn(!VJ.waveOn()); paintWaveV(); };
 addEventListener("s5wavepv", paintWaveV); paintWaveV();
-const amb = $("amb").getContext("2d"), dots = [...$("beat").children], pvDots = [...$("pvBeat").children];
+const amb = $("amb").getContext("2d"), dots = [...$("beat").querySelectorAll("i")], pvDots = [...$("pvBeat").querySelectorAll("i")];
+const barF = VJ.barCounter($("barF")), barP = VJ.barCounter($("barP"));
 requestAnimationFrame(function frame(now) {
   R.draw(now);
   try { amb.drawImage($("gl"), 0, 0, 32, 18); } catch (e) {}
@@ -1340,7 +1343,7 @@ requestAnimationFrame(function frame(now) {
   const f = R.lastFrame;
   if (f) for (const set of [dots, pvDots]) set.forEach((d, i) => d.classList.toggle("on", i === Math.round(f.bwb) - 1 && 1 - f.frac > 0.4));
   INT.beat(f);
-  drawWave(f);
+  drawWave(f); barF(f); barP(f);
   requestAnimationFrame(frame);
 });
 

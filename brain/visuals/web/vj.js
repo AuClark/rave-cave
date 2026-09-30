@@ -218,6 +218,30 @@ const VJ = (() => {
     };
   }
 
+  // The bar within the phrase, next to a beat counter: 1, 2, 3, 4 (a cycle of four beats each), then
+  // round again. Tap it for how many bars it counts to: 4, 8, 16 or 2, one setting for every page.
+  const BARS_KEY = "s5barsof", BARS = [4, 8, 16, 2];
+  function barCounter(el) {
+    el.classList.add("s5barn"); el.type = "button";
+    let of = BARS.includes(+localStorage.getItem(BARS_KEY)) ? +localStorage.getItem(BARS_KEY) : 4, showOf = 0;
+    const title = () => { el.title = `Bar ${el.dataset.n || 1} of ${of}. Tap to count to ${BARS[(BARS.indexOf(of) + 1) % BARS.length]}.`; el.setAttribute("aria-label", el.title); };
+    el.addEventListener("click", e => { e.stopPropagation(); of = BARS[(BARS.indexOf(of) + 1) % BARS.length]; localStorage.setItem(BARS_KEY, of);
+      showOf = performance.now() + 1200; dispatchEvent(new Event("s5barsof")); title(); });
+    addEventListener("s5barsof", () => { of = +localStorage.getItem(BARS_KEY) || 4; });
+    addEventListener("storage", e => { if (e.key === BARS_KEY) of = +e.newValue || 4; });
+    title();
+    // Right on a bar line the beat-in-bar and the beat can disagree for a frame; a new bar only shows
+    // once it has held for ~120 ms, so the number never flickers.
+    let shown = 1, cand = 1, since = 0;
+    return f => {
+      const raw = f ? (((Math.floor(barBeat(f) / 4) % of) + of) % of) + 1 : 1, now = performance.now();
+      if (raw !== cand) { cand = raw; since = now; }
+      if (cand !== shown && now - since > 120) shown = cand;
+      const n = shown, txt = now < showOf ? `of ${of}` : String(n);
+      if (el.textContent !== txt) { el.textContent = txt; el.dataset.n = n; el.classList.toggle("one", n === 1); title(); }
+    };
+  }
+
   // ---------------------------------------------------------------- quantised launch
   // A tap can either happen now or wait for the next musical boundary, so a change always lands
   // on the beat however sloppily it was hit. Nothing here touches the shader or the network
@@ -279,6 +303,6 @@ const VJ = (() => {
     }
   }
 
-  return { NOTES, RNOTES, HZ, near, snapRate, isRate, skip, dirOf, quant, energyValues, intensityValues, intensityOf, fader, waveStrip, waveOn,
+  return { NOTES, RNOTES, HZ, near, snapRate, isRate, skip, dirOf, quant, energyValues, intensityValues, intensityOf, fader, waveStrip, waveOn, barCounter,
            GRID, barBeat, Launcher };
 })();
