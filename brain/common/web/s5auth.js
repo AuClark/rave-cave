@@ -333,14 +333,15 @@
   };
   const svg = (name, extra = "") => `<svg viewBox="0 0 24 24" aria-hidden="true" ${extra}>${ICON[name]}</svg>`;
   S5.icon = svg;
-  // Phones: a tab bar with the same links as the top bar: Lighting · Projection · Decks · Visuals · Stage.
+  // Phones: a tab bar with the same links as the top bar.
   function tabs() {
     const top = document.querySelector(".s5bar nav.pages");
     if (!top || document.querySelector(".s5tabs")) return;
     const here = (top.querySelector("a.here") || {}).textContent;
     const nav = el("nav", { class: "s5tabs", "aria-label": "Pages" });
-    nav.innerHTML = [["Lighting", 8090, "/"], ["Projection", 8100, "/edit"], ["Decks", 8080, "/"], ["Visuals", 8110, "/"], ["Stage", 8100, "/stage.html"], ["Live", ...LIVE]]
-      .map(([n, port, path]) => `<a data-port="${port}" data-path="${path}" class="${n === "Decks" ? "mid" : ""}${n === here ? " here" : ""}">${svg(n)}<span>${n}</span></a>`).join("");
+    // The same order as Live's tab bar (Decks · Lights · Visuals · Mapping · Stage), then Live.
+    nav.innerHTML = [["Decks", 8080, "/"], ["Lighting", 8090, "/"], ["Visuals", 8110, "/"], ["Projection", 8100, "/edit"], ["Stage", 8100, "/stage.html"], ["Live", ...LIVE]]
+      .map(([n, port, path]) => `<a data-port="${port}" data-path="${path}" class="${n === here ? "here" : ""}">${svg(n)}<span>${n}</span></a>`).join("");
     document.body.appendChild(nav);
   }
   function liveLink() {
