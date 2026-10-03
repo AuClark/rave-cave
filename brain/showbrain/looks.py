@@ -45,6 +45,16 @@ def clock(ctx, role):
     return beat % 1.0, ((int(beat) - 1) % 4) + 1 if beat >= 1 else ctx["bwb"], beat
 
 
+def drive(ctx):
+    """How hard the beat hits outside drops and builds: 0.8 in the quietest bars, 1.3 in the loudest."""
+    return 0.8 + 0.5 * min(1.0, max(0.0, ctx.get("energy", 0.5)))
+
+
+def hat(frac):
+    """The off-beat hi-hat: a short flick on the 'and' of every beat."""
+    return math.exp(-14 * (frac - 0.5)) if frac >= 0.5 else 0.0
+
+
 # ---------------------------------------------------------------- strips
 
 def strip(ctx, n, role, state):
@@ -54,15 +64,20 @@ def strip(ctx, n, role, state):
     kick = math.exp(-6 * frac)
     flip = 0.5 if role.get("flip") else 0.0
 
+    if s == "PAUSED":
+        kick = 0.0                         # the clock is frozen: no pulse stuck on
+
     if s == "INTRO":
-        v = 0.08 + 0.12 * (0.5 + 0.5 * math.sin(2 * math.pi * beat / 8))
+        v = 0.1 + 0.06 * math.sin(2 * math.pi * beat / 8) + 0.6 * kick * drive(ctx)
         return hsv(hue + x * 0.1, 0.8, v)
 
     if s in ("GROOVE", "OUTRO", "PAUSED"):
-        fade = {"OUTRO": 0.5, "PAUSED": 0.3}.get(s, 1.0)
+        fade = {"OUTRO": 0.8, "PAUSED": 0.3}.get(s, 1.0)
+        k = min(1.0, kick * drive(ctx))
         accent = 0.35 if (bwb == 1) != bool(role.get("flip")) and bwb in (1, 3) else 0.0
-        base = hsv(hue + 0.03 * (ctx["bar"] % 4) + x * 0.05, 1.0, (0.12 + 0.7 * kick) * fade)
-        out = lerp(base, np.full_like(base, (0.12 + 0.7 * kick) * fade), accent * kick)
+        lvl = (0.18 + 0.82 * k + (0.25 * hat(frac) if s != "PAUSED" else 0.0)) * fade
+        base = hsv(hue + 0.03 * (ctx["bar"] % 4) + x * 0.05, 1.0, lvl)
+        out = lerp(base, np.full_like(base, lvl), accent * k)
         # Comet climbs the tubes once per bar, handed from one tube to the next.
         g = max(1, role.get("group", 1))
         bar_phase = ((bwb - 1) + frac) / 4
@@ -186,16 +201,18 @@ def pyramid(ctx, n, role, state):
         sp = _spiral(order, x, mirrored=mir, stations=st)
         head = 1 - (beat / 8) % 1.0
         glow = np.exp(-np.abs(sp - head) * 30) * 0.5
-        lvl = (0.06 + 0.25 * breathe) * (0.5 + 0.5 * x) + glow
+        lvl = (0.1 + 0.3 * breathe) * (0.5 + 0.5 * x) + glow
         out = hsv(hue + 0.5 + 0.1 * x, 0.8 - 0.4 * glow, lvl)
     elif s in ("INTRO", "OUTRO", "PAUSED"):
-        fade = {"PAUSED": 0.4}.get(s, 1.0)
+        fade = {"PAUSED": 0.4, "OUTRO": 0.8}.get(s, 1.0)
         breathe = 0.5 - 0.5 * math.cos(beat * math.pi / 4)
-        out = hsv(hue + 0.1 * x + 0.03 * order, 0.8, (0.05 + 0.15 * breathe) * (0.4 + 0.6 * x) * fade)
+        k = 0.0 if s == "PAUSED" else min(1.0, kick * drive(ctx))
+        out = hsv(hue + 0.1 * x + 0.03 * order, 0.8, (0.08 + 0.12 * breathe + 0.55 * k) * (0.4 + 0.6 * x) * fade)
     else:
         # GROOVE (and anything else): the feet pulse with the kick, plus, by track and every 16
         # bars, an orbiting comet (one leg a beat, round the pyramid) or a spiral chase (a bar a lap).
-        base = hsv(hue + 0.06 * x + 0.03 * (ctx.get("bar", 0) % 4), 1.0, (0.12 + 0.5 * kick) * (1 - 0.6 * x))
+        k = min(1.0, kick * drive(ctx))
+        base = hsv(hue + 0.06 * x + 0.03 * (ctx.get("bar", 0) % 4), 1.0, (0.2 + 0.8 * k + 0.2 * hat(frac)) * (1 - 0.4 * x))
         if _pyr_mode(ctx, ("orbit", "spiral")) == "orbit":
             headx = frac * 1.15
             tail = np.clip(1 - (headx - x) * 5, 0, 1) * (x <= headx) * (True if mir else (order == (bwb - 1) % st))   # mirrored: up every leg each beat
@@ -217,13 +234,17 @@ def panel(ctx, w, h, role, state):
     frac, bwb, beat = clock(ctx, role)
     kick = math.exp(-6 * frac)
 
+    if s == "PAUSED":
+        kick = 0.0
+    centre = 1 - np.abs(Y - (h - 1) / 2) / (h * 0.62)
+
     if s == "INTRO":
-        v = 0.06 + 0.1 * (0.5 + 0.5 * math.sin(2 * math.pi * beat / 8))
+        v = 0.08 + 0.04 * math.sin(2 * math.pi * beat / 8) + 0.5 * min(1.0, kick * drive(ctx)) * centre
         return hsv(hue + X / w * 0.2, 0.8, v)
 
     if s in ("GROOVE", "OUTRO", "PAUSED"):
-        fade = {"OUTRO": 0.5, "PAUSED": 0.3}.get(s, 1.0)
-        v = (0.08 + 0.6 * kick * (1 - np.abs(Y - (h - 1) / 2) / (h * 0.62))) * fade
+        fade = {"OUTRO": 0.8, "PAUSED": 0.3}.get(s, 1.0)
+        v = (0.12 + 0.85 * min(1.0, kick * drive(ctx)) * centre) * fade
         out = hsv(hue + X / w * 0.15, 1.0, v)
         head = ((bwb - 1 + frac) / 4) * (w + 24)
         d = head - X
@@ -276,10 +297,12 @@ def par(ctx, role, state):
     if s == "IDLE":
         colour(ctx["t"] * 0.01, 0.9, 0.15)            # slow dim colour drift
     elif s == "INTRO":
-        colour(hue, 0.8, 0.10 + 0.15 * (0.5 + 0.5 * math.sin(2 * math.pi * beat / 8)))
+        colour(hue, 0.8, 0.12 + 0.6 * min(1.0, kick * drive(ctx)))
     elif s in ("GROOVE", "OUTRO", "PAUSED"):
-        fade = {"OUTRO": 0.5, "PAUSED": 0.25}.get(s, 1.0)
-        v = (0.18 + 0.82 * kick) * fade
+        fade = {"OUTRO": 0.8, "PAUSED": 0.25}.get(s, 1.0)
+        if s == "PAUSED":
+            kick = 0.0
+        v = (0.18 + 0.82 * min(1.0, kick * drive(ctx))) * fade
         colour(hue + 0.03 * (ctx["bar"] % 4), 1.0, v)
         if bwb == 1:                                  # bar accent: push toward white
             out["w"] = 0.6 * kick * fade
@@ -331,7 +354,7 @@ def strip_breakdown(ctx, n, role, state, x, beat):
     flip = 0.5 if role.get("flip") else 0.0
     half = 0.5 + 0.5 * math.cos(math.pi * (beat % 2))
     # Faint ember: a single soft glow near the bottom, breathing in half-time.
-    ember = np.exp(-x * 6) * (0.03 + 0.05 * en + 0.04 * sp) * (0.4 + 0.6 * half)
+    ember = np.exp(-x * 4) * (0.08 + 0.12 * en + 0.08 * sp) * (0.4 + 0.6 * half)
     out = hsv(hue - 0.06 + flip * 0.25, 0.7, 1.0)[None, :] * ember[:, None]
 
     # Sparkles spawned exactly on eighth-note boundaries; decay measured in beats.
@@ -340,7 +363,7 @@ def strip_breakdown(ctx, n, role, state, x, beat):
     last = state.get("eighth")
     if last is not None and 0 < e - last <= 2:
         on_beat = e % 2 == 0
-        count = (1 + int(2 * sp)) * (2 if on_beat else 1)
+        count = (2 + int(3 * sp)) * (2 if on_beat else 1)
         strength = (0.9 if on_beat else 0.55) * (0.6 + 0.4 * en)
         for px in rng.integers(0, n, size=count):
             sparks.append([int(px), e / 2.0, strength])
@@ -382,7 +405,7 @@ def panel_breakdown(ctx, w, h, role, state, X, Y, beat):
     half = 0.5 + 0.5 * math.cos(math.pi * (beat % 2))
     t = beat / 4
     plasma = 0.5 + 0.25 * np.sin(X / 11 + t * 1.3) + 0.25 * np.sin((X + Y * 3) / 17 - t * 0.9)
-    level = (0.06 + 0.14 * en + 0.10 * sp) * (0.55 + 0.45 * half)
+    level = (0.1 + 0.2 * en + 0.12 * sp) * (0.55 + 0.45 * half)
     out = hsv(hue - 0.05 + 0.5 * plasma * (0.35 + 0.3 * sp), 0.5 + 0.35 * sp, level * (0.5 + 0.8 * plasma))
 
     streaks = state.setdefault("streaks", [])           # [x, y, speed rows/beat, hue]

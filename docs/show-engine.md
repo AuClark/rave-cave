@@ -112,12 +112,15 @@ IDLE ──track playing──> GROOVE <─────────────�
 | Scene | Looks (tube and panel) | Timing |
 |---|---|---|
 | IDLE | WLED's own ambient effect (Pi stops streaming) | No deck playing |
-| GROOVE | Pulse on every beat, stronger on beat 1; palette from the artwork or key; comet or chase every bar | Beat-locked |
+| INTRO / OUTRO | A hit on every kick over a slow colour breath; the outro at 80% | Beat-locked |
+| GROOVE | Hard pulse on every beat, stronger on beat 1, a flick on the off-beat hi-hat; palette from the artwork or key; comet or chase every bar | Beat-locked |
 | BREAKDOWN | Slow breathing, desaturated, around 30% brightness, sparkles on the hi-hats | Bar-locked |
 | **BUILD** | Brightness climbs; strobe rate doubles every 2 bars (1/4 → 1/8 → 1/16 → 1/32); fill rises up the tube; colour drifts to white; panel chase accelerates | Intensity = progress through the build window |
 | HOLD | Freeze build intensity, keep strobing at the current rate | DJ is looping the build |
 | **PRE-DROP** | Near-blackout for the last beat (or half bar) | The "inhale" |
 | **DROP** | Full white hit on the drop beat, then 8-16 bars of the high-energy scene (strobe on the beat, saturated palette hits); **smoke burst** if armed | Fires early by the measured output latency |
+
+Outside drops and builds the kick's punch scales with the track's energy in that bar (`drive()` in `looks.py`: 0.8× in the quietest bars, 1.3× in the loudest).
 
 Robustness:
 - **Loops**: never drop while looping. Drop when the loop exits and the playhead crosses the drop beat.
@@ -200,7 +203,7 @@ A deck that is tempo master can't be retimed remotely: nothing can move its pitc
 
 **What the lights do** (`Engine.react`, toggle **MIXER REACT** in the Commander, default on from `mixer.react` in `config.json`):
 - **Bass out:** GROOVE, DROP, INTRO and OUTRO switch to the sparse breakdown look. When the bass comes back there's a white hit (not during BUILD or HOLD, which have their own drop).
-- **Fader level:** master loudness scales brightness from 35% to 100%, so the lights come down with the faders.
+- **Fader level:** master loudness scales brightness from 60% to 100%, so the lights come down with the faders.
 - **Kicks:** on a track with no beat grid, the kicks in the mix drive the beat.
 - **Beat FX on:** strobes at the Commander's strobe rate.
 - **Filter:** sweeps the colour on the live deck's channel.
