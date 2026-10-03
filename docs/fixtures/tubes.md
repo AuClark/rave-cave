@@ -5,7 +5,7 @@ Two 103 cm standing RGB tubes (STAR LIGHTING `XSD-DD15`), each converted to an E
 | Tube | Hostname | Controller | LEDs |
 |---|---|---|---|
 | 1 | `rave-tube-1.local` | **ESP32-C3 SuperMini**, WLED 16.0.1 (ESP32-C3 build), data on **GPIO 10** (since 3 Oct 2026; see [the C3](#the-esp32-c3-supermini)) | 60 × WS2812-type, GRB |
-| 2 | `rave-tube-2.local` | Moving to an ESP32-C3 too. Its old ESP-32S board is now Pyramid R's controller ([leg-pyramids.md](leg-pyramids.md)), so tube 2 is offline until its C3 is fitted. | same |
+| 2 | `rave-tube-2.local` | same as tube 1 (since 3 Oct 2026; its old ESP-32S board is Pyramid R's controller) | same |
 
 The tubes' original ESP-32S NodeMCU boards (38-pin, CP2102) now run the [leg pyramids](leg-pyramids.md). The sections below on the ESP-32S still apply to those boards.
 
