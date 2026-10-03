@@ -30,7 +30,7 @@
       "name": "pyramidL",
       "kind": "pyramid",
       "host": "${S5_PYRAMID_L_HOST:-rave-pyramid-l.local}",
-      "leds_per_leg": 60,
+      "leds_per_leg": 56,
       "brightness": 0.7,
       "role": {
         "side": -1
@@ -40,7 +40,7 @@
       "name": "pyramidR",
       "kind": "pyramid",
       "host": "${S5_PYRAMID_R_HOST:-rave-pyramid-r.local}",
-      "leds_per_leg": 60,
+      "leds_per_leg": 56,
       "brightness": 0.7,
       "role": {
         "side": 1
