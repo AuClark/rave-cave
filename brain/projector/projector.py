@@ -26,8 +26,10 @@ Layouts live in layouts/ next to this file (not in git): current.json plus prese
 
     python3 projector.py [port]
 """
+import gzip
 import hashlib
 import json
+import os
 import queue
 import re
 import sys
@@ -35,6 +37,8 @@ import threading
 import time
 import urllib.parse
 import urllib.request
+import zlib
+from email.utils import formatdate
 from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
 
 import s5auth
@@ -208,7 +212,101 @@ def state_pump():
         time.sleep(max(0.0, 1 / STATE_HZ - (time.time() - t0)))
 
 
-class H(SimpleHTTPRequestHandler):
+# ---------------------------------------------------------------- compression and caching
+# Phones on the rig's Wi-Fi get files, JSON and the event stream gzipped (pages, three.js and the
+# state shrink several times over), and a file they already have costs a 304, not the whole file
+# again (an ETag from its size and time). Through deckdash's HTTPS proxy nothing changes: it passes
+# neither Accept-Encoding nor If-None-Match on, so it gets plain responses as before.
+GZIP_TYPES = (".html", ".js", ".mjs", ".css", ".json", ".svg", ".glb", ".gltf", ".txt", ".map")
+_gz_files = {}          # path -> (mtime_ns, size, gzipped bytes)
+
+
+class Gz:
+    """Mixed into the handler: compressed JSON, static files with ETags, gzipped event streams."""
+
+    def accepts_gzip(self):
+        return "gzip" in (self.headers.get("Accept-Encoding") or "")
+
+    def send_bytes(self, code, body, ctype, extra=()):
+        gz = len(body) > 1024 and self.accepts_gzip()
+        if gz:
+            body = gzip.compress(body, compresslevel=6, mtime=0)
+        self.send_response(code)
+        self.send_header("Content-Type", ctype)
+        if gz:
+            self.send_header("Content-Encoding", "gzip")
+            self.send_header("Vary", "Accept-Encoding")
+        for k, v in extra:
+            self.send_header(k, v)
+        self.send_header("Content-Length", str(len(body)))
+        self.end_headers()
+        self.wfile.write(body)
+
+    def send_file(self, fpath, ctype=None):
+        """A static file: 304 if the browser has this version already, else gzipped if it's worth it."""
+        st = os.stat(fpath)
+        etag = f'"{st.st_mtime_ns:x}-{st.st_size:x}"'
+        if etag in (self.headers.get("If-None-Match") or ""):
+            self.send_response(304)
+            self.send_header("ETag", etag)
+            self.end_headers()
+            return
+        with open(fpath, "rb") as f:
+            body = f.read()
+        gz = self.accepts_gzip() and fpath.lower().endswith(GZIP_TYPES) and len(body) > 1024
+        if gz:
+            hit = _gz_files.get(fpath)
+            if not hit or hit[0] != st.st_mtime_ns or hit[1] != st.st_size:
+                hit = _gz_files[fpath] = (st.st_mtime_ns, st.st_size, gzip.compress(body, compresslevel=6, mtime=0))
+            body = hit[2]
+        self.send_response(200)
+        self.send_header("Content-Type", ctype or self.guess_type(fpath))
+        self.send_header("ETag", etag)
+        self.send_header("Last-Modified", formatdate(st.st_mtime, usegmt=True))
+        if gz:
+            self.send_header("Content-Encoding", "gzip")
+            self.send_header("Vary", "Accept-Encoding")
+        self.send_header("Content-Length", str(len(body)))
+        self.end_headers()
+        self.wfile.write(body)
+
+    def static(self):
+        """Serve the request from the web folder through send_file; False to leave it to the base class."""
+        fpath = self.translate_path(self.path)
+        if os.path.isdir(fpath):
+            if not self.path.split("?", 1)[0].endswith("/"):
+                return False                       # the base class redirects to the slash
+            fpath = os.path.join(fpath, "index.html")
+        if not os.path.isfile(fpath):
+            return False
+        self.send_file(fpath)
+        return True
+
+    def stream_start(self, compress=False):
+        """Start an event stream; returns write(bytes). Gzipped (each message flushed at once) only when
+        asked for: the Stage's light frames (~200 KB/s, 16x smaller). Small streams stay plain, which is
+        cheaper on the brain and the safest for every browser."""
+        gz = compress and self.accepts_gzip()
+        self.send_response(200)
+        self.send_header("Content-Type", "text/event-stream")
+        if gz:
+            self.send_header("Content-Encoding", "gzip")
+            self.send_header("Vary", "Accept-Encoding")
+        self.end_headers()
+        if not gz:
+            def write(d):
+                self.wfile.write(d)
+                self.wfile.flush()
+            return write
+        z = zlib.compressobj(1, zlib.DEFLATED, 31)     # level 1: nearly all the gain, a fraction of the CPU
+
+        def write(d):
+            self.wfile.write(z.compress(d) + z.flush(zlib.Z_SYNC_FLUSH))
+            self.wfile.flush()
+        return write
+
+
+class H(Gz, SimpleHTTPRequestHandler):
     def __init__(self, *a, **kw):
         super().__init__(*a, directory=str(WEB), **kw)
 
@@ -221,12 +319,7 @@ class H(SimpleHTTPRequestHandler):
         super().end_headers()
 
     def _json(self, code, obj):
-        body = json.dumps(obj).encode()
-        self.send_response(code)
-        self.send_header("Content-Type", "application/json")
-        self.send_header("Content-Length", str(len(body)))
-        self.end_headers()
-        self.wfile.write(body)
+        self.send_bytes(code, json.dumps(obj).encode(), "application/json")
 
     def _body(self):
         n = int(self.headers.get("Content-Length", 0))
@@ -277,7 +370,7 @@ class H(SimpleHTTPRequestHandler):
             self.path = "/edit.html"
         if path == "/stage":
             self.path = "/stage.html"
-        return super().do_GET()
+        return self.static() or super().do_GET()
 
     def do_POST(self):
         global layout, screen, screens
@@ -360,9 +453,7 @@ class H(SimpleHTTPRequestHandler):
     def _events(self):
         wants_frames = "frames=1" in self.path
         q = queue.Queue(maxsize=150 if wants_frames else 60)
-        self.send_response(200)
-        self.send_header("Content-Type", "text/event-stream")
-        self.end_headers()
+        write = self.stream_start(compress=wants_frames)
         with lock:
             clients.append(q)
             if wants_frames:
@@ -372,15 +463,13 @@ class H(SimpleHTTPRequestHandler):
                      "data: " + json.dumps({"t": "screen", "screen": screen}) + "\n\n"
                      "data: " + json.dumps({"t": "screens", "screens": screens}) + "\n\n").encode()
         try:
-            self.wfile.write(first)
-            self.wfile.flush()
+            write(first)
             while True:
                 try:
                     data = q.get(timeout=15)
                 except queue.Empty:
                     data = b": keep-alive\n\n"
-                self.wfile.write(data)
-                self.wfile.flush()
+                write(data)
         except (BrokenPipeError, ConnectionResetError, OSError):
             pass
         finally:

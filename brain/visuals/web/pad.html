@@ -190,8 +190,9 @@ let ramp = null, heldAuto = null, panicTo = null;
 const R = new MapRenderer($("gl"), $("ov"));
 R.layout = { lead_ms: 60, brightness: 1, masks: [], surfaces: [
   { id: "p", content: "gen", opacity: 1, hue_shift: 0, corners: [[0, 0], [1, 0], [1, 1], [0, 1]] }] };
+const AR = new AutoRes(() => resize());   // drops the preview's resolution only if this device can't keep up
 function resize() {
-  const r = $("pv").getBoundingClientRect(), d = Math.min(2, devicePixelRatio || 1);
+  const r = $("pv").getBoundingClientRect(), d = Math.min(2, devicePixelRatio || 1) * AR.scale;
   R.resize(Math.max(2, Math.round(r.width * d)), Math.max(2, Math.round(r.height * d)));
 }
 addEventListener("resize", resize);
@@ -202,7 +203,7 @@ strobeRate = +(localStorage.getItem("s5pad.str") ?? 2);
 sweepBeats = +(localStorage.getItem("s5pad.sw") ?? 4);
 chaseBars = +(localStorage.getItem("s5pad.ch") ?? 0);
 
-connectEvents(R, {
+connectEvents(R, { pauseHidden: true,
   onStatus: ok => { $("conn").innerHTML = `<span>${ok ? "live" : "reconnecting"}</span>`; $("conn").className = ok ? "ok" : ""; },
   onSketch: sk => {
     SK = sk;
@@ -578,7 +579,7 @@ const INT = VJ.fader($("intensity"), e => { if (SK) { set(VJ.intensityValues(par
 const dots = [...$("beat").children];
 resize();
 (function frame(now) {
-  R.draw(now);
+  R.draw(now); AR.frame(now);
   const f0 = R.lastFrame;
 
   // A sweep in beat time: it takes the same number of beats whatever the tempo, and it is the

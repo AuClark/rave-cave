@@ -922,8 +922,36 @@ class MapRenderer {
 // Connect to an event stream (the projector host's by default); calls the handlers as messages arrive.
 // Each service says hello with a version of its page code; when that changes (a deploy),
 // the page reloads itself so nobody has to hard-refresh the projector. reload: false opts out.
-function connectEvents(renderer, { onLayout, onScreen, onScreens, onStatus, onSketch, onParams, onAuto, onText, onTransition, onShuffle, onBackdrop, url = "/api/events", state = true, reload = true } = {}) {
-  let es, version = null;
+// Keeps a preview smooth on a slow phone or tablet. Once a second it looks at the frame rate: under
+// ~45 fps it draws a little smaller (down to half the resolution, the browser scales it up), over
+// ~57 it climbs back. A device that keeps up never changes. If going smaller didn't help (a phone in
+// Low Power Mode is held at 30 fps whatever it draws), it goes back to full and stops trying.
+// apply() is the page's resize; it multiplies its pixel size by .scale. Call frame(now) every frame.
+class AutoRes {
+  constructor(apply) { this.apply = apply; this.scale = 1; this.n = 0; this.t0 = 0; this.hold = 0; this.prev = null; this.stuck = false; }
+  frame(now) {
+    if (document.hidden) { this.t0 = 0; return; }
+    if (!this.t0) { this.t0 = now; this.n = 0; if (!this.hold) this.hold = now + 3000; return; }   // settle after loading
+    this.n++;
+    const dt = now - this.t0;
+    if (dt < 1000) return;
+    const fps = this.n * 1000 / dt;
+    this.t0 = now; this.n = 0;
+    if (now < this.hold) return;
+    let s = this.scale;
+    if (this.prev && fps <= this.prev.fps + 2) { s = this.prev.scale; this.stuck = true; }      // smaller didn't help
+    else if (fps < 45 && s > 0.5 && !this.stuck) s = Math.max(0.5, Math.round(s * 0.85 * 100) / 100);
+    else if (fps > 57 && s < 1) { s = Math.min(1, Math.round(s * 1.1 * 100) / 100); this.stuck = false; }
+    this.prev = s < this.scale ? { fps, scale: this.scale } : null;
+    if (s !== this.scale) { this.scale = s; this.hold = now + 2000; this.apply(); }
+  }
+}
+
+// pauseHidden: close the stream while the page is hidden (a phone's screen off, another tab) and open it
+// again when it's back: the server starts every connection with everything (sketch, values, ...), so
+// nothing is missed, and nothing piles up in the meantime. Off for the projector's own output.
+function connectEvents(renderer, { onLayout, onScreen, onScreens, onStatus, onSketch, onParams, onAuto, onText, onTransition, onShuffle, onBackdrop, url = "/api/events", state = true, reload = true, pauseHidden = false } = {}) {
+  let es, version = null, glsl = null;
   const open = () => {
     es = new EventSource(url);
     es.onopen = () => onStatus && onStatus(true);
@@ -938,7 +966,14 @@ function connectEvents(renderer, { onLayout, onScreen, onScreens, onStatus, onSk
       else if (m.t === "layout") onLayout ? onLayout(m.layout) : (renderer.layout = m.layout);
       else if (m.t === "screen" && onScreen) onScreen(m.screen);
       else if (m.t === "screens" && onScreens) onScreens(m.screens);
-      else if (m.t === "sketch") { renderer.setSketch(m.sketch, m.trans); onSketch && onSketch(m.sketch); }
+      else if (m.t === "sketch") {
+        // The same sketch again (a reconnect): no need to rebuild its shader, which would hitch the picture.
+        const key = m.sketch ? m.sketch.name + "\n" + m.sketch.glsl + "\n" + JSON.stringify([m.sketch.groups, m.sketch.climax || null]) : null;
+        const same = !m.trans && key && key === glsl && m.sketch.name === renderer.liveSketch && renderer.progs.gen;
+        if (!same) renderer.setSketch(m.sketch, m.trans);
+        glsl = key;                      // name, shader, settings and climax: anything else is a different sketch
+        onSketch && onSketch(m.sketch);
+      }
       else if (m.t === "params") { renderer.setParams(m.params, m.trans); onParams && onParams(m.params); }
       else if (m.t === "transition" && onTransition) onTransition(m.settings);
       else if (m.t === "backdrop" && onBackdrop) onBackdrop(m);
@@ -953,6 +988,10 @@ function connectEvents(renderer, { onLayout, onScreen, onScreens, onStatus, onSk
     };
   };
   open();
+  if (pauseHidden) document.addEventListener("visibilitychange", () => {
+    if (document.hidden) { if (es) { es.close(); es = null; } }
+    else if (!es) open();
+  });
   return () => es && es.close();
 }
 
@@ -966,7 +1005,7 @@ function visualsBase() {
 
 // The visuals service (:8110, same host) feeds content "gen": its sketch and live params.
 // The beat clock comes from the projector's own stream, so this one's state is ignored.
-function connectVisuals(renderer, opts = {}) {
+function connectVisuals(renderer, opts = {}) {   // opts as connectEvents (e.g. pauseHidden)
   // The visuals page's address comes from /s5auth.js (a port on the rig's network, /visuals over HTTPS).
   const url = visualsBase() + "/api/events";
   return connectEvents(renderer, { state: false, reload: false, ...opts, url });

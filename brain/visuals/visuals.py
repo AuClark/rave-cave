@@ -37,9 +37,11 @@ with a sketch in sketches/presets/NAME/ (in git); one saved on the brain with th
 
     python3 visuals.py [port]
 """
+import gzip
 import hashlib
 import json
 import math
+import os
 import queue
 import random
 import re
@@ -48,6 +50,8 @@ import threading
 import time
 import urllib.parse
 import urllib.request
+import zlib
+from email.utils import formatdate
 from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
 
 import s5auth
@@ -380,13 +384,32 @@ def set_wave(msg):
     broadcast({"t": "wave", "wave": msg})
 
 
+# What the pages don't need from showbrain's state: the lights' pixels and DMX, per-fixture detail and
+# the mixer. They're most of its ~23 KB, sent ~20 times a second to every open page; the pages only
+# read the clock and the show (beat, bpm, bar, scene, title...). The service itself keeps the whole
+# state (last_state) for Shuffle and the drop-timed changes.
+PAGE_DROP = ("frames", "preview", "dmx", "fixture_info", "fixture_ctl", "fixtures", "mix", "mixer_share")
+
+
+def page_state(raw):
+    try:
+        s = json.loads(raw)
+        if isinstance(s, dict):
+            for k in PAGE_DROP:
+                s.pop(k, None)
+            return json.dumps(s, separators=(",", ":")).encode()
+    except ValueError:
+        pass
+    return raw
+
+
 def poll_state():
     global last_state, last_state_at
     try:
         with urllib.request.urlopen(SHOWBRAIN, timeout=0.3) as r:
             last_state = r.read()
         last_state_at = time.time()
-        return b'{"t":"state","s":' + last_state + b"}"
+        return b'{"t":"state","s":' + page_state(last_state) + b"}"
     except Exception:
         last_state = b"null"
         return b'{"t":"state","s":null}'
@@ -703,7 +726,101 @@ def shuffle_loop():
                 log(f"shuffle: could not change: {e}")
 
 
-class H(SimpleHTTPRequestHandler):
+# ---------------------------------------------------------------- compression and caching
+# Phones on the rig's Wi-Fi get files, JSON and the event stream gzipped (pages, three.js and the
+# state shrink several times over), and a file they already have costs a 304, not the whole file
+# again (an ETag from its size and time). Through deckdash's HTTPS proxy nothing changes: it passes
+# neither Accept-Encoding nor If-None-Match on, so it gets plain responses as before.
+GZIP_TYPES = (".html", ".js", ".mjs", ".css", ".json", ".svg", ".glb", ".gltf", ".txt", ".map")
+_gz_files = {}          # path -> (mtime_ns, size, gzipped bytes)
+
+
+class Gz:
+    """Mixed into the handler: compressed JSON, static files with ETags, gzipped event streams."""
+
+    def accepts_gzip(self):
+        return "gzip" in (self.headers.get("Accept-Encoding") or "")
+
+    def send_bytes(self, code, body, ctype, extra=()):
+        gz = len(body) > 1024 and self.accepts_gzip()
+        if gz:
+            body = gzip.compress(body, compresslevel=6, mtime=0)
+        self.send_response(code)
+        self.send_header("Content-Type", ctype)
+        if gz:
+            self.send_header("Content-Encoding", "gzip")
+            self.send_header("Vary", "Accept-Encoding")
+        for k, v in extra:
+            self.send_header(k, v)
+        self.send_header("Content-Length", str(len(body)))
+        self.end_headers()
+        self.wfile.write(body)
+
+    def send_file(self, fpath, ctype=None):
+        """A static file: 304 if the browser has this version already, else gzipped if it's worth it."""
+        st = os.stat(fpath)
+        etag = f'"{st.st_mtime_ns:x}-{st.st_size:x}"'
+        if etag in (self.headers.get("If-None-Match") or ""):
+            self.send_response(304)
+            self.send_header("ETag", etag)
+            self.end_headers()
+            return
+        with open(fpath, "rb") as f:
+            body = f.read()
+        gz = self.accepts_gzip() and fpath.lower().endswith(GZIP_TYPES) and len(body) > 1024
+        if gz:
+            hit = _gz_files.get(fpath)
+            if not hit or hit[0] != st.st_mtime_ns or hit[1] != st.st_size:
+                hit = _gz_files[fpath] = (st.st_mtime_ns, st.st_size, gzip.compress(body, compresslevel=6, mtime=0))
+            body = hit[2]
+        self.send_response(200)
+        self.send_header("Content-Type", ctype or self.guess_type(fpath))
+        self.send_header("ETag", etag)
+        self.send_header("Last-Modified", formatdate(st.st_mtime, usegmt=True))
+        if gz:
+            self.send_header("Content-Encoding", "gzip")
+            self.send_header("Vary", "Accept-Encoding")
+        self.send_header("Content-Length", str(len(body)))
+        self.end_headers()
+        self.wfile.write(body)
+
+    def static(self):
+        """Serve the request from the web folder through send_file; False to leave it to the base class."""
+        fpath = self.translate_path(self.path)
+        if os.path.isdir(fpath):
+            if not self.path.split("?", 1)[0].endswith("/"):
+                return False                       # the base class redirects to the slash
+            fpath = os.path.join(fpath, "index.html")
+        if not os.path.isfile(fpath):
+            return False
+        self.send_file(fpath)
+        return True
+
+    def stream_start(self, compress=False):
+        """Start an event stream; returns write(bytes). Gzipped (each message flushed at once) only when
+        asked for: the Stage's light frames (~200 KB/s, 16x smaller). Small streams stay plain, which is
+        cheaper on the brain and the safest for every browser."""
+        gz = compress and self.accepts_gzip()
+        self.send_response(200)
+        self.send_header("Content-Type", "text/event-stream")
+        if gz:
+            self.send_header("Content-Encoding", "gzip")
+            self.send_header("Vary", "Accept-Encoding")
+        self.end_headers()
+        if not gz:
+            def write(d):
+                self.wfile.write(d)
+                self.wfile.flush()
+            return write
+        z = zlib.compressobj(1, zlib.DEFLATED, 31)     # level 1: nearly all the gain, a fraction of the CPU
+
+        def write(d):
+            self.wfile.write(z.compress(d) + z.flush(zlib.Z_SYNC_FLUSH))
+            self.wfile.flush()
+        return write
+
+
+class H(Gz, SimpleHTTPRequestHandler):
     def __init__(self, *a, **kw):
         super().__init__(*a, directory=str(WEB), **kw)
 
@@ -716,12 +833,7 @@ class H(SimpleHTTPRequestHandler):
         super().end_headers()
 
     def _json(self, code, obj):
-        body = json.dumps(obj).encode()
-        self.send_response(code)
-        self.send_header("Content-Type", "application/json")
-        self.send_header("Content-Length", str(len(body)))
-        self.end_headers()
-        self.wfile.write(body)
+        self.send_bytes(code, json.dumps(obj).encode(), "application/json")
 
     def _body(self):
         n = int(self.headers.get("Content-Length", 0))
@@ -734,13 +846,7 @@ class H(SimpleHTTPRequestHandler):
         if path == "/api/events":
             return self._events()
         if path == "/render.js":
-            body = RENDER_JS.read_bytes()
-            self.send_response(200)
-            self.send_header("Content-Type", "text/javascript")
-            self.send_header("Content-Length", str(len(body)))
-            self.end_headers()
-            self.wfile.write(body)
-            return
+            return self.send_file(str(RENDER_JS), "text/javascript")
         with lock:
             if path == "/api/sketch":
                 return self._json(200, sketch)
@@ -782,7 +888,7 @@ class H(SimpleHTTPRequestHandler):
                 if SAFE_NAME.match(name) and f.is_file():
                     return self._json(200, json.loads(f.read_text()))
                 return self._json(404, {"error": "no such preset"})
-        return super().do_GET()
+        return self.static() or super().do_GET()
 
     def do_POST(self):
         global values, auto, auto_freeze, text
@@ -882,9 +988,7 @@ class H(SimpleHTTPRequestHandler):
 
     def _events(self):
         q = queue.Queue(maxsize=60)
-        self.send_response(200)
-        self.send_header("Content-Type", "text/event-stream")
-        self.end_headers()
+        write = self.stream_start()
         with lock:
             clients.append(q)
             first = ("data: " + json.dumps({"t": "hello", "version": code_version()}) + "\n\n"
@@ -896,15 +1000,13 @@ class H(SimpleHTTPRequestHandler):
                      "data: " + json.dumps({"t": "transition", "settings": transition}) + "\n\n"
                      + ("data: " + json.dumps({"t": "wave", "wave": wave}) + "\n\n" if wave else "")).encode()
         try:
-            self.wfile.write(first)
-            self.wfile.flush()
+            write(first)
             while True:
                 try:
                     data = q.get(timeout=15)
                 except queue.Empty:
                     data = b": keep-alive\n\n"
-                self.wfile.write(data)
-                self.wfile.flush()
+                write(data)
         except (BrokenPipeError, ConnectionResetError, OSError):
             pass
         finally:

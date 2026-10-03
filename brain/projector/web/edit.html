@@ -244,12 +244,13 @@ function push(immediate) {
 }
 
 // ---------- stage sizing: same aspect as the projector
+const AR = new AutoRes(() => sizeStage());   // drops the preview's resolution only if this device can't keep up
 function sizeStage() {
   const screen = curScreen();
   stage.style.setProperty("--ar", screen.w / screen.h);   // the hero fits the screen height, same aspect as the projector
   const w = stage.clientWidth, h = Math.round(w * screen.h / screen.w);
   stage.style.height = h + "px";
-  const d = devicePixelRatio || 1;
+  const d = Math.min(2, devicePixelRatio || 1) * AR.scale;   // the preview: 2x is as sharp as it looks
   R.resize(Math.round(w * d), Math.round(h * d));
   $("scr").textContent = `${screen.w}×${screen.h}` + (screen.fps != null
     ? ` · ${Math.round(screen.fps)} fps · ${Math.round((screen.scale ?? 1) * 100)}% res` : "");
@@ -473,7 +474,7 @@ function ui() {
 }
 
 function frame(now) {
-  R.draw(now, { handles: true, draft, projector: curId() });
+  R.draw(now, { handles: true, draft, projector: curId() }); AR.frame(now);
   const st = R.clock.s;
   $("show").textContent = st ? `${st.scene} · deck ${st.live ?? "-"} · ${st.bpm ? st.bpm.toFixed(1) : "-"} BPM` : "show engine offline";
   requestAnimationFrame(frame);
