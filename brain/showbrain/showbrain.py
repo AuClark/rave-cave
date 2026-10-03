@@ -544,7 +544,7 @@ class Engine:
         intensity = self.intensity
         level = self.mix.get("level")
         if self.mixer_react and level is not None and ctx["scene"] not in ("IDLE", "PREDROP"):
-            intensity *= 0.35 + 0.65 * level          # faders down, lights down
+            intensity *= 0.6 + 0.4 * level            # faders down, lights down
         return {"intensity": intensity, "strobe": strobe, "white": white, "black": self.black_hold}
 
     # --- commands --------------------------------------------------------

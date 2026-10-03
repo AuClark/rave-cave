@@ -3,7 +3,7 @@
   "commander_port": 8090,
   "fps": 50,
   "lead_ms": 40,
-  "intensity": 0.8,
+  "intensity": 1.0,
   "drop_bars": 16,
   "fixtures": [
     {
@@ -11,7 +11,7 @@
       "kind": "strip",
       "host": "${S5_TUBE1_HOST:-rave-tube-1.local}",
       "leds": 60,
-      "brightness": 0.6,
+      "brightness": 0.85,
       "role": {
         "flip": false
       }
@@ -21,7 +21,7 @@
       "kind": "strip",
       "host": "${S5_TUBE2_HOST:-rave-tube-2.local}",
       "leds": 60,
-      "brightness": 0.6,
+      "brightness": 0.85,
       "role": {
         "flip": true
       }
