@@ -110,13 +110,19 @@ MIRROR = (1, 0, 3, 2)     # FL<->FR, BR<->BL
 
 
 def _pyr_grid(n, role):
-    """(order of each leg round the pyramid, 4 x 1), (height of each LED, 1 x n)."""
+    """(order of each leg round the pyramid, 4 x 1), (height of each LED, 1 x n). A mirrored pyramid
+    (all four legs on one data line, e.g. an SP901E's copies) has every leg in the same place."""
+    if role.get("mirrored"):
+        return np.zeros((4, 1), np.float32), np.linspace(0, 1, n, dtype=np.float32)[None, :]
     order = np.arange(4, dtype=np.float32) if role.get("side", -1) < 0 else np.array(MIRROR, np.float32)
     return order[:, None], np.linspace(0, 1, n, dtype=np.float32)[None, :]
 
 
-def _spiral(order, x, turns=SPIRAL_TURNS):
-    """Where each LED sits along a spiral that climbs the four legs in turn (0 at the feet, 1 at the apex)."""
+def _spiral(order, x, turns=SPIRAL_TURNS, mirrored=False):
+    """Where each LED sits along a spiral that climbs the four legs in turn (0 at the feet, 1 at the
+    apex). With mirrored legs there's no spiral to follow: straight up every leg at once."""
+    if mirrored:
+        return x + 0 * order
     t = x * turns
     seg = np.minimum(np.floor(t), turns - 1)
     return (4 * seg + order + (t - seg)) / (4 * turns)
@@ -134,6 +140,7 @@ def pyramid(ctx, n, role, state):
     frac, bwb, beat = clock(ctx, role)
     kick = math.exp(-6 * frac)
     order, x = _pyr_grid(n, role)
+    mir = bool(role.get("mirrored"))
     laser = 0.0
     white = np.ones(3, np.float32)
 
@@ -141,7 +148,7 @@ def pyramid(ctx, n, role, state):
         # The spiral fill: the legs light from the feet in a spiral round the outside, reaching
         # the apex as the build ends; a white head leads it, and the lit part flickers faster near the end.
         p = ctx["progress"]
-        sp = _spiral(order, x)
+        sp = _spiral(order, x, mirrored=mir)
         head = 0.02 + 0.98 * p
         lit = sp <= head
         rate = 1 if p < 0.5 else 2 if p < 0.75 else 4 if p < 0.9 else 8
@@ -163,7 +170,8 @@ def pyramid(ctx, n, role, state):
             base = hsv(hue + alt, 1.0, 0.5 + 0.5 * kick)
             ring = np.clip(1 - np.abs((1 - x) - frac) * 7, 0, 1)
             if sd >= 16:                               # after 4 bars: a white highlight turns round the legs, a leg a beat
-                ring = np.maximum(ring, (order == (int(beat) % 4)) * (0.35 + 0.4 * kick) * np.ones_like(x))
+                lit = (int(beat) % 2 == 0) if mir else (order == (int(beat) % 4))   # mirrored: every other beat
+                ring = np.maximum(ring, lit * (0.35 + 0.4 * kick) * np.ones_like(x))
             out = lerp(base, white[None, None, :], ring * 0.75)
         # The laser comes on with the drop: held for the first bar, then on the kick, then on the one.
         laser = 1.0 if sd < 4 else (1.0 if frac < 0.5 else 0.0) if sd < 32 else (1.0 if bwb == 1 and frac < 0.5 else 0.0)
@@ -171,7 +179,7 @@ def pyramid(ctx, n, role, state):
         # Slow breathing in the complementary colour, brighter towards the apex, and a soft
         # spiral head drifting down every 2 bars.
         breathe = 0.5 - 0.5 * math.cos(beat * math.pi / 4)
-        sp = _spiral(order, x)
+        sp = _spiral(order, x, mirrored=mir)
         head = 1 - (beat / 8) % 1.0
         glow = np.exp(-np.abs(sp - head) * 30) * 0.5
         lvl = (0.06 + 0.25 * breathe) * (0.5 + 0.5 * x) + glow
@@ -186,14 +194,14 @@ def pyramid(ctx, n, role, state):
         base = hsv(hue + 0.06 * x + 0.03 * (ctx.get("bar", 0) % 4), 1.0, (0.12 + 0.5 * kick) * (1 - 0.6 * x))
         if _pyr_mode(ctx, ("orbit", "spiral")) == "orbit":
             headx = frac * 1.15
-            tail = np.clip(1 - (headx - x) * 5, 0, 1) * (x <= headx) * (order == (bwb - 1))
+            tail = np.clip(1 - (headx - x) * 5, 0, 1) * (x <= headx) * (True if mir else (order == (bwb - 1)))   # mirrored: up every leg each beat
         else:
-            sp = _spiral(order, x)
+            sp = _spiral(order, x, mirrored=mir)
             headp = ((bwb - 1) + frac) / 4
             d = headp - sp
             tail = np.where((d >= 0) & (d < 0.12), np.exp(-d * 30), 0.0)
         out = lerp(base, hsv(hue + 0.5, 0.35, 1.0)[None, None, :], tail * 0.9)
-    legs = np.asarray(out, np.float32).reshape(4 * n, 3)
+    legs = np.broadcast_to(np.asarray(out, np.float32), (4, n, 3)).reshape(4 * n, 3)   # a look can be one leg tall
     return np.vstack([legs, np.full((1, 3), laser, np.float32)])
 
 
