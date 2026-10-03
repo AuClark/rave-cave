@@ -706,11 +706,18 @@ class Fixture:
         # A "mirrored" pyramid has all four legs on one data line (an SP901E's four copies): it gets
         # looks for identical legs and is sent one leg (no laser). "from_apex": its strips are fed
         # from the top, so each leg is sent apex first. The preview stays four legs, foot first.
+        # "diagonals": two data lines (an SP901E's DAT 1 and DAT 2), front-left + back-right on the
+        # first, front-right + back-left on the second: sent as two streams of one leg each, to
+        # "ports" (default 4048 and 4049) on the host. No laser.
         self.mirrored = self.kind == "pyramid" and cfg.get("wiring") == "mirrored"
-        self.role["mirrored"] = self.mirrored
-        count = (cfg["leds"] if self.kind == "strip" else (self.legs if self.mirrored else 4 * self.legs + 1)
+        self.diagonals = self.kind == "pyramid" and cfg.get("wiring") == "diagonals"
+        self.role["mirrored"], self.role["diagonals"] = self.mirrored, self.diagonals
+        count = (cfg["leds"] if self.kind == "strip" else (self.legs if self.mirrored or self.diagonals else 4 * self.legs + 1)
                  if self.kind == "pyramid" else self.w * self.h)
-        self.out = DDPOutput(cfg["host"], count, brightness=cfg.get("brightness", 0.6), name=cfg.get("name"))
+        ports = cfg.get("ports") or [4048, 4049]
+        self.out = DDPOutput(cfg["host"], count, port=ports[0], brightness=cfg.get("brightness", 0.6), name=cfg.get("name"))
+        self.out2 = (DDPOutput(cfg["host"], count, port=ports[1], brightness=cfg.get("brightness", 0.6), name=cfg.get("name"))
+                     if self.diagonals else None)
 
     @property
     def always(self):
@@ -829,6 +836,9 @@ class Fixture:
             legs = frame[: 4 * n].reshape(4, n, 3)
             if self.cfg.get("from_apex"):
                 legs = legs[:, ::-1]
+            if self.diagonals:
+                self.out.send_array(legs[0]); self.out2.send_array(legs[1])
+                return
             frame = legs[0] if self.mirrored else np.vstack([legs.reshape(4 * n, 3), frame[4 * n:]])
         self.out.send_array(frame)
 
