@@ -56,7 +56,14 @@ WS2815 data is meant to be 5 V logic; the ESP32 gives 3.3 V. With the ESP32 at t
 2. If it glitches: a BSS138 converter channel in line (LV = the ESP32's 3V3, HV = the BEC's 5 V, grounds common). These are made for I2C: the 5 V side is pulled up through a resistor, so its rising edge is slow for WS281x data (a "0" bit is high for only about 0.35 µs). They often work over short leads anyway.
 3. If that's flaky too: a 74AHCT125.
 
-Record what worked here.
+What we found (3 Oct 2026, one 56-LED leg strip, 12 V):
+
+- **These strips are RGB order**, not GRB (red and green come out swapped on GRB). Set RGB in WLED's output settings, or `--order RGB` on a Pi receiver.
+- **BI must be tied low.** Left floating, or fed from the SP901E's unused DAT 2 output, the strip shows drifting colours and white bands. Grounding DAT 2's input on the SP901E also works, since its output then holds BI low.
+- **ESP32 + WLED: not clean yet.** Direct 3.3 V from GPIO 13 or 22 gave drifting colours. Through the SP901E (with BI held low) it was mostly right but still threw white flashes and bands. Not yet tried: a 330 Ω series resistor at the SP901E output, and a ground wire run alongside the data.
+- **Pi + SP901E: clean.** `rave-box` (Pi 3 A+, the [LED pyramid](pyramid.md)'s receiver: GPIO 10 SPI → SP901E DAT 1) drove the same strip steadily through red, green, blue and white with clean blackouts between. Its `pyramid` service now runs with `--order RGB` (changed on the Pi; [`setup_rave_box.sh`](../../fixtures/pyramid/setup_rave_box.sh) still installs GRB).
+
+So the strip, its power and the SP901E are fine; the problem is on the ESP32 side. A Pi has one data line, so on the Pi the four legs would be chained into one run (down leg 1 from the apex, along the base and up leg 2, across the apex and down leg 3, along the base and up leg 4), with showbrain flipping legs 2 and 4.
 - The strips are fed **from the top**, where the ESP32 is, so each strip's first LED is at the apex. WLED reverses each output (below) so that pixel 0 is at the foot, which is what the show and the Stage view expect.
 
 ## WLED setup
