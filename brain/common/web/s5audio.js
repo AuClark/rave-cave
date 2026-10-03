@@ -150,6 +150,7 @@
   const AUDIO = path => (window.S5AUTH && S5AUTH.url ? S5AUTH.url(8080, path) : path);
   const decks = {};          // deck number -> { el, src, low, gain, url, ready }
   let real = false, deckTimer = null, deckBus = null;
+  const rtts = [];           // recent round trips to the deck state: this connection's normal speed
   function deck(n) {
     if (decks[n]) return decks[n];
     const el = new Audio(); el.preload = "auto"; el.preservesPitch = false; el.mozPreservesPitch = false; el.webkitPreservesPitch = false;
@@ -177,7 +178,10 @@
     const lag = rtt / 2000;                                          // seconds since the position was sampled
     // A slow answer is usually the page being busy (a heavy sketch, a transition), not the network:
     // its lag guess is wrong, and correcting from it would make the audio jump. Keep the faders, skip the sync.
-    const trust = rtt < 120;
+    // "Slow" is against this connection's own best recent round trip, not a fixed number: over the public
+    // link every answer takes 100 ms or more, and a fixed cut-off would never trust one, so it never synced.
+    rtts.push(rtt); if (rtts.length > 40) rtts.shift();
+    const trust = rtt < Math.min(...rtts) + 80;
     let any = false;
     for (const p of st.players || []) {
       const url = p.track && p.track.audio;
