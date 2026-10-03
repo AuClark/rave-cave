@@ -173,7 +173,11 @@
     let st;
     const t0 = performance.now();
     try { st = await (await fetch(DECKS, { cache: "no-store" })).json(); } catch (e) { return; }
-    const lag = (performance.now() - t0) / 2000;                     // seconds since the position was sampled
+    const rtt = performance.now() - t0;
+    const lag = rtt / 2000;                                          // seconds since the position was sampled
+    // A slow answer is usually the page being busy (a heavy sketch, a transition), not the network:
+    // its lag guess is wrong, and correcting from it would make the audio jump. Keep the faders, skip the sync.
+    const trust = rtt < 120;
     let any = false;
     for (const p of st.players || []) {
       const url = p.track && p.track.audio;
@@ -187,11 +191,13 @@
       d.gain.gain.setTargetAtTime(fader, ctx.currentTime, 0.08);
       d.low.gain.setTargetAtTime(-26 * (1 - bass), ctx.currentTime, 0.15);   // the sim's bass swap
       if (!p.status.playing) { if (!d.el.paused) d.el.pause(); continue; }
+      if (!trust && !d.el.paused) continue;
       // Drift, smoothed over a few readings (each one has network jitter in it). Within 40 ms: play at the
-      // deck's exact pitch; beyond: nudge the speed by at most 0.5% (inaudible); over 200 ms: jump back.
+      // deck's exact pitch; beyond: nudge the speed by at most 0.5% (inaudible); over 200 ms smoothed (or a
+      // second at once: a seek, a new track): jump. One bad reading never makes it jump.
       const drift = d.el.currentTime - want;
       d.drift = d.drift === undefined ? drift : d.drift * 0.7 + drift * 0.3;
-      if (d.el.paused || Math.abs(drift) > 0.2) {
+      if (d.el.paused || Math.abs(d.drift) > 0.2 || Math.abs(drift) > 1.0) {
         d.el.currentTime = Math.max(0, want); d.el.playbackRate = rate; d.drift = 0;
         if (d.el.paused) d.el.play().catch(() => {});
       } else if (Math.abs(d.drift) > 0.04) d.el.playbackRate = rate * (1 - Math.max(-0.005, Math.min(0.005, d.drift * 0.1)));
