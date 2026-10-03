@@ -703,7 +703,13 @@ class Fixture:
         self.w = cfg.get("width", 128)
         self.h = cfg.get("height", 16)
         self.legs = cfg.get("leds_per_leg", 60)       # pyramid: four legs of this many, then the laser
-        count = cfg["leds"] if self.kind == "strip" else 4 * self.legs + 1 if self.kind == "pyramid" else self.w * self.h
+        # A "mirrored" pyramid has all four legs on one data line (an SP901E's four copies): it gets
+        # looks for identical legs and is sent one leg (no laser). "from_apex": its strips are fed
+        # from the top, so each leg is sent apex first. The preview stays four legs, foot first.
+        self.mirrored = self.kind == "pyramid" and cfg.get("wiring") == "mirrored"
+        self.role["mirrored"] = self.mirrored
+        count = (cfg["leds"] if self.kind == "strip" else (self.legs if self.mirrored else 4 * self.legs + 1)
+                 if self.kind == "pyramid" else self.w * self.h)
         self.out = DDPOutput(cfg["host"], count, brightness=cfg.get("brightness", 0.6), name=cfg.get("name"))
 
     @property
@@ -817,8 +823,14 @@ class Fixture:
     def _send(self, frame):
         if self.kind == "dmx_par":
             self.dmx.set(frame, start=self.addr)
-        else:
-            self.out.send_array(frame)
+            return
+        if self.kind == "pyramid":
+            n = self.legs
+            legs = frame[: 4 * n].reshape(4, n, 3)
+            if self.cfg.get("from_apex"):
+                legs = legs[:, ::-1]
+            frame = legs[0] if self.mirrored else np.vstack([legs.reshape(4 * n, 3), frame[4 * n:]])
+        self.out.send_array(frame)
 
 
 # ---------------------------------------------------------------- commander
