@@ -4,7 +4,7 @@ Two 103 cm standing RGB tubes (STAR LIGHTING `XSD-DD15`), each converted to an E
 
 | Tube | Hostname | Controller | LEDs |
 |---|---|---|---|
-| 1 | `rave-tube-1.local` | ESP-32S NodeMCU (38-pin, CP2102), WLED 16.0.1 | 60 × WS2812-type, GRB |
+| 1 | `rave-tube-1.local` | ESP-32S NodeMCU (38-pin, CP2102), WLED 16.0.1. **Since 3 Oct 2026 that board is Pyramid L's controller ([leg-pyramids.md](leg-pyramids.md)); tube 1 is offline until it gets an ESP32-C3.** | 60 × WS2812-type, GRB |
 | 2 | `rave-tube-2.local` | same | same |
 
 ## How a tube is built
