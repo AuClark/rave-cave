@@ -4,8 +4,10 @@ Two 103 cm standing RGB tubes (STAR LIGHTING `XSD-DD15`), each converted to an E
 
 | Tube | Hostname | Controller | LEDs |
 |---|---|---|---|
-| 1 | `rave-tube-1.local` | ESP-32S NodeMCU (38-pin, CP2102), WLED 16.0.1. **Since 3 Oct 2026 that board is Pyramid L's controller ([leg-pyramids.md](leg-pyramids.md)); tube 1 is offline until it gets an ESP32-C3.** | 60 × WS2812-type, GRB |
-| 2 | `rave-tube-2.local` | same | same |
+| 1 | `rave-tube-1.local` | **ESP32-C3 SuperMini**, WLED 16.0.1 (ESP32-C3 build), data on **GPIO 10** (since 3 Oct 2026; see [the C3](#the-esp32-c3-supermini)) | 60 × WS2812-type, GRB |
+| 2 | `rave-tube-2.local` | Moving to an ESP32-C3 too. Its old ESP-32S board is now Pyramid R's controller ([leg-pyramids.md](leg-pyramids.md)), so tube 2 is offline until its C3 is fitted. | same |
+
+The tubes' original ESP-32S NodeMCU boards (38-pin, CP2102) now run the [leg pyramids](leg-pyramids.md). The sections below on the ESP-32S still apply to those boards.
 
 ## How a tube is built
 
@@ -49,6 +51,32 @@ esptool --port /dev/cu.usbserial-0001 --chip esp32 --baud 460800 write-flash \
 ```
 
 `bootloader_esp32_8m.bin` is re-flagged to 4 MB by esptool. `partitions_c3_4m.bin` is the shared 4 MB table. Or just use [install.wled.me](https://install.wled.me) in Chrome.
+
+### The ESP32-C3 SuperMini
+
+The tubes' controllers since October 2026: smaller, so they fit the new mounts.
+
+| Strip wire | C3 pin |
+|---|---|
+| C, data | **GPIO 10**, with a 330 Ω series resistor |
+| G, GND | `GND` |
+| V, 5 V | `5V` (the tube's USB-C supply goes into the C3) |
+
+Pins to leave alone on the C3: **8** (a strapping pin, and the board's blue LED; WLED often defaults to it), **9** (the BOOT button), **2** (strapping), **18 / 19** (native USB: using them breaks USB flashing and serial) and **20 / 21** (the UART). 4, 5, 6, 7 and 10 are clean.
+
+**Flashing** (the C3 is native USB: `/dev/cu.usbmodem*`; if it isn't detected, hold BOOT while plugging it in). The bootloader goes at **0x0** on a C3 (0x1000 on the ESP32). Boot files from [wled/WLED-WebInstaller](https://github.com/wled/WLED-WebInstaller) `bin/boot/`, the app from the WLED release:
+
+```bash
+esptool --chip esp32c3 --port /dev/cu.usbmodem1101 erase-flash
+esptool --chip esp32c3 --port /dev/cu.usbmodem1101 --baud 460800 write-flash \
+  --flash-mode dio --flash-size 4MB \
+  0x0     bootloaders/esp32-c3/bootloader_c3_8m.bin \
+  0x8000  partitions/partitions_c3_4m.bin \
+  0xe000  boot_app0.bin \
+  0x10000 WLED_16.0.1_ESP32-C3.bin
+```
+
+Then Wi-Fi over USB with `fixtures/tubes/scripts/wled_wifi_serial.py "SSID" "password" /dev/cu.usbmodem1101` (or from `.env`), and the settings below with GPIO 10 instead of 13. A fresh C3 boots with 30 LEDs on GPIO 2 and a button on GPIO 0: change the output, and set the button to none. On the C3, `{"rb":true}` does restart it (unlike the ESP-32S boards).
 
 ### 4. Wi-Fi and settings
 
