@@ -17,9 +17,8 @@ presets and a desk section, with a launch-on-the-beat quantise. The **full contr
 for rigging a look up. They share the same state over the same event stream, so one device can set
 up while another plays. Both are described in **[visuals-live.md](visuals-live.md)**.
 
-**The Show app** (`:8110/show.html`) puts decks, lights, visuals, mapping and the stage on one page,
-with a Focus view to leave open while playing, colour palettes that set the lights and the sketch's
-colours together, and automix. See **[show-app.md](show-app.md)**.
+**Live** (`:8110/show.html`) is the remote for the night: the lights and the visuals on one page,
+with the track that's playing above the picture. See **[show-app.md](show-app.md)**.
 
 **Playing it live — [visuals-live.md](visuals-live.md).** Every parameter has a **range** (the orange
 band on its track, with two ▲ arrows) that everything else respects, and an **automation** toggle that
@@ -292,6 +291,12 @@ can read them immediately.
 - Shaders get `u_px` (one output pixel in surface units), so lines never go thinner than a pixel and don't shimmer as they move.
 - Live values and presets are kept on the brain in `~/visuals/state/`, not in git.
 
+## Speed
+
+- **Compression and caching.** The visuals and projector services gzip what they send when the browser asks (pages and three.js shrink 3–4×, the venue 3×, and the Stage's light-frames stream 16×, each message still sent at once; the small event streams stay plain), and give every static file an ETag, so a browser that already has a file gets a 304 and no body. deckdash's HTTPS proxy passes neither header on, so it gets plain responses as before.
+- **Adaptive resolution.** The previews (Visuals page, Live, the Launchpad, the Projection editor) draw at no more than 2× the screen's pixels, and `AutoRes` (in `render.js`) steps one down, to half at most, if the device can't hold ~45 fps, and back up when it can. A device that keeps up never changes; one held at 30 fps whatever it draws (Low Power Mode) is left at full.
+- **Hidden pages pause.** Live, the Visuals page and the Launchpad close the event stream and stop polling while hidden (`pauseHidden`), and catch up the moment they're back. Live asks showbrain for its state 5 times a second on the Lights screen and twice a second on Visuals.
+
 ## API (on :8110)
 
-`GET /api/events` (SSE: `sketch`, `params`, `state`, and `wave` once per track), `GET /api/wave`, `GET /api/sketch`, `GET /api/sketches`, `GET/POST /api/params` (POST any subset, values are clamped to their ranges), `POST /api/select {"sketch": NAME}`, `GET /api/presets`, `GET/POST /api/presets/NAME`, `POST /api/presets/NAME/load`.
+`GET /api/events` (SSE: `sketch`, `params`, `state` ~20 times a second, which is showbrain's state without the lights' pixels, DMX, per-fixture detail and mixer, about 0.7 KB, and `wave` once per track; pages pass `pauseHidden` to `connectEvents` to close it while they're hidden, and it starts each connection with everything), `GET /api/wave`, `GET /api/sketch`, `GET /api/sketches`, `GET/POST /api/params` (POST any subset, values are clamped to their ranges), `POST /api/select {"sketch": NAME}`, `GET /api/presets`, `GET/POST /api/presets/NAME`, `POST /api/presets/NAME/load`.
